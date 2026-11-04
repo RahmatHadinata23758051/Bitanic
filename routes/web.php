@@ -4,8 +4,8 @@ use App\Http\Controllers\ActivityScheduleController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\FirstPasswordChangeController;
-use App\Http\Controllers\CompetencyAssessmentController;
 use App\Http\Controllers\ClassroomController;
+use App\Http\Controllers\CompetencyAssessmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IotMonitoringController;
 use App\Http\Controllers\ModulePracticumController;
@@ -55,8 +55,11 @@ Route::post('/modules/{id}/submit-lks', [ModulePracticumController::class, 'subm
     ->middleware('auth')
     ->name('modules.submit-lks');
 Route::post('/modules/reports/{id}/grade', [ModulePracticumController::class, 'grade'])
-    ->middleware(['auth', 'role:guru'])
+    ->middleware(['auth', 'role:guru,superuser'])
     ->name('modules.grade-report');
+Route::post('/modules/reports/{id}/request-revision', [ModulePracticumController::class, 'requestRevision'])
+    ->middleware(['auth', 'role:guru,superuser'])
+    ->name('modules.request-revision');
 
 // 6. Manajemen Jadwal Praktikum & Alokasi Meja Trainer Kit
 Route::get('/schedules', [ActivityScheduleController::class, 'index'])->name('schedules.index');

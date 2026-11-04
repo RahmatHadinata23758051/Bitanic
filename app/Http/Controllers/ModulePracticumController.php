@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Practicum\AuthorizeReportRevisionAction;
 use App\Actions\Practicum\GradeStudentReportAction;
 use App\Actions\Practicum\SubmitStudentReportAction;
 use App\Models\ModulePracticum;
@@ -104,7 +105,9 @@ class ModulePracticumController extends Controller
     {
         $request->validate([
             'rubric_scores' => 'required|array',
-            'teacher_feedback' => 'nullable|string',
+            'rubric_scores.*' => 'required|integer|between:1,4',
+            'teacher_feedback' => 'nullable|string|max:5000',
+            'adjustment_reason' => 'nullable|string|max:2000',
         ]);
 
         $report = StudentReport::with('module')->findOrFail($reportId);
@@ -118,10 +121,36 @@ class ModulePracticumController extends Controller
             $report,
             $teacher,
             $request->input('rubric_scores'),
-            $request->input('teacher_feedback')
+            $request->input('teacher_feedback'),
+            $request->input('adjustment_reason')
         );
 
         return redirect()->route('modules.show', $report->module_id)
             ->with('success', 'Nilai rubrik kompetensi untuk siswa berhasil disimpan.');
+    }
+
+    /**
+     * Authorize a revision request for a student report.
+     */
+    public function requestRevision(
+        Request $request,
+        int $reportId,
+        AuthorizeReportRevisionAction $action
+    ): RedirectResponse {
+        $request->validate([
+            'instructions' => 'required|string|max:2000',
+        ]);
+
+        $report = StudentReport::with(['module', 'user'])->findOrFail($reportId);
+        $teacher = Auth::user();
+
+        if (! $teacher) {
+            return redirect()->back()->with('error', 'Otorisasi guru diperlukan.');
+        }
+
+        $action->execute($report, $teacher, $request->input('instructions'));
+
+        return redirect()->route('modules.show', $report->module_id)
+            ->with('success', 'Permintaan revisi berhasil dikirim ke siswa.');
     }
 }

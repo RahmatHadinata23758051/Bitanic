@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Practicum\AuthorizeReportRevisionAction;
 use App\Actions\Practicum\GradeStudentReportAction;
 use App\Actions\Practicum\SubmitStudentReportAction;
 use App\Models\ModulePracticum;
@@ -294,5 +295,114 @@ class ImmutableGradeHistoryTest extends TestCase
         $report->refresh();
         $this->assertEquals($teacher->id, $report->graded_by);
         $this->assertEquals('graded', $report->status);
+    }
+
+    // -------------------------------------------------------------------
+    // AC-7: Teacher-authorized revision request workflow (Action + HTTP).
+    // -------------------------------------------------------------------
+
+    public function test_teacher_can_request_revision_via_action(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $teacher->school_id]);
+        $module = ModulePracticum::firstOrFail();
+
+        $report = app(SubmitStudentReportAction::class)->execute($student, $module, [
+            'lks_answers' => ['q1' => 'Jawaban awal'],
+        ]);
+
+        // Grade report
+        app(GradeStudentReportAction::class)->execute($report, $teacher, ['r1' => 2, 'r2' => 2, 'r3' => 2]);
+        $report->refresh();
+        $this->assertEquals('graded', $report->status);
+
+        // Teacher authorizes revision
+        $action = app(AuthorizeReportRevisionAction::class);
+        $revised = $action->execute($report, $teacher, 'Mohon lengkapi analisis grafik pH dan EC');
+
+        $this->assertEquals('revision', $revised->status);
+        $this->assertEquals('Mohon lengkapi analisis grafik pH dan EC', $revised->teacher_feedback);
+
+        // Student can now submit another attempt
+        $newAttempt = app(SubmitStudentReportAction::class)->execute($student, $module, [
+            'lks_answers' => ['q1' => 'Jawaban lengkap dengan analisis pH dan EC'],
+        ]);
+
+        $this->assertEquals(2, $newAttempt->attempt_count);
+        $this->assertEquals('submitted', $newAttempt->status);
+    }
+
+    public function test_teacher_can_request_revision_via_http_route(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $teacher->school_id]);
+        $module = ModulePracticum::firstOrFail();
+
+        $report = app(SubmitStudentReportAction::class)->execute($student, $module, [
+            'lks_answers' => ['q1' => 'Jawaban'],
+        ]);
+
+        app(GradeStudentReportAction::class)->execute($report, $teacher, ['r1' => 2, 'r2' => 2, 'r3' => 2]);
+        $report->refresh();
+
+        $response = $this->actingAs($teacher)->post(route('modules.request-revision', $report->id), [
+            'instructions' => 'Perbaiki perhitungan persentase lengas',
+        ]);
+
+        $response->assertRedirect(route('modules.show', $module->id));
+        $response->assertSessionHas('success');
+
+        $report->refresh();
+        $this->assertEquals('revision', $report->status);
+        $this->assertEquals('Perbaiki perhitungan persentase lengas', $report->teacher_feedback);
+    }
+
+    public function test_cross_school_teacher_cannot_request_revision(): void
+    {
+        $schoolB = School::create(['npsn' => '88888888', 'name' => 'SMK B', 'slug' => 'smk-b']);
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $schoolB->id]);
+        $module = ModulePracticum::firstOrFail();
+
+        $report = app(SubmitStudentReportAction::class)->execute($student, $module, [
+            'lks_answers' => ['q1' => 'Jawaban'],
+        ]);
+
+        $this->actingAs($teacher)->post(route('modules.request-revision', $report->id), [
+            'instructions' => 'Mencoba revisi sekolah lain',
+        ])->assertForbidden();
+    }
+
+    public function test_student_cannot_request_revision(): void
+    {
+        $student = User::factory()->create(['role' => 'siswa']);
+        $module = ModulePracticum::firstOrFail();
+
+        $report = app(SubmitStudentReportAction::class)->execute($student, $module, [
+            'lks_answers' => ['q1' => 'Jawaban'],
+        ]);
+
+        $response = $this->actingAs($student)->post(route('modules.request-revision', $report->id), [
+            'instructions' => 'Siswa mencoba membuka revisi sendiri',
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_revision_request_requires_instructions(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $teacher->school_id]);
+        $module = ModulePracticum::firstOrFail();
+
+        $report = app(SubmitStudentReportAction::class)->execute($student, $module, [
+            'lks_answers' => ['q1' => 'Jawaban'],
+        ]);
+
+        $response = $this->actingAs($teacher)->post(route('modules.request-revision', $report->id), [
+            'instructions' => '',
+        ]);
+
+        $response->assertSessionHasErrors('instructions');
     }
 }
