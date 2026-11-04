@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Actions\Schedule\CreateScheduleAction;
 use App\Models\ActivitySchedule;
+use App\Models\Classroom;
 use App\Models\Device;
 use App\Models\ModulePracticum;
+use App\Models\StudentGroup;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,7 +28,7 @@ class ActivityScheduleController extends Controller
             abort(403, 'Akses jadwal praktikum memerlukan asosiasi sekolah yang valid.');
         }
 
-        $schedules = ActivitySchedule::with(['device', 'participants.user'])
+        $schedules = ActivitySchedule::with(['device', 'participants.user', 'classroom', 'studentGroup', 'modulePracticum'])
             ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
             ->orderBy('activity_date', 'asc')
             ->orderBy('start_time', 'asc')
@@ -35,6 +37,12 @@ class ActivityScheduleController extends Controller
         $devices = Device::where('is_active', true)
             ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
             ->orderBy('code')
+            ->get();
+        $classrooms = Classroom::when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
+            ->orderBy('name')
+            ->get();
+        $studentGroups = StudentGroup::when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
+            ->orderBy('name')
             ->get();
         $modules = ModulePracticum::orderBy('meeting_number')->get();
 
@@ -50,6 +58,8 @@ class ActivityScheduleController extends Controller
         return view('pages.schedules.index', [
             'schedules' => $schedules,
             'devices' => $devices,
+            'classrooms' => $classrooms,
+            'studentGroups' => $studentGroups,
             'modules' => $modules,
             'bookedDevicesToday' => $bookedDevicesToday,
             'todayDate' => $today,
@@ -88,6 +98,33 @@ class ActivityScheduleController extends Controller
                     }
                 },
             ],
+            'classroom_id' => [
+                'nullable',
+                'integer',
+                'exists:classrooms,id',
+                function ($attribute, $value, $fail) use ($schoolId, $isSuperuser) {
+                    if ($value && ! $isSuperuser) {
+                        $classroom = Classroom::find($value);
+                        if (! $schoolId || ! $classroom || (int) $classroom->school_id !== (int) $schoolId) {
+                            $fail('Kelas tersebut bukan milik sekolah Anda.');
+                        }
+                    }
+                },
+            ],
+            'student_group_id' => [
+                'nullable',
+                'integer',
+                'exists:student_groups,id',
+                function ($attribute, $value, $fail) use ($schoolId, $isSuperuser) {
+                    if ($value && ! $isSuperuser) {
+                        $group = StudentGroup::find($value);
+                        if (! $schoolId || ! $group || (int) $group->school_id !== (int) $schoolId) {
+                            $fail('Kelompok siswa tersebut bukan milik sekolah Anda.');
+                        }
+                    }
+                },
+            ],
+            'module_practicum_id' => 'nullable|integer|exists:module_practicums,id',
             'activity_date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',

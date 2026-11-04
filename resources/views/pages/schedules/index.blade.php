@@ -144,7 +144,16 @@
 
                             <!-- Judul Kelas -->
                             <td class="py-3 px-3 font-medium text-slate-900 whitespace-nowrap">
-                                {{ $sched->title }}
+                                <div>{{ $sched->title }}</div>
+                                @if($sched->classroom)
+                                    <span class="text-[10px] font-semibold text-slate-500">{{ $sched->classroom->name }}</span>
+                                @endif
+                                @if($sched->studentGroup)
+                                    <span class="text-[10px] text-slate-500">· {{ $sched->studentGroup->name }}</span>
+                                @endif
+                                @if($sched->modulePracticum)
+                                    <span class="block text-[10px] font-medium text-emerald-700">{{ $sched->modulePracticum->meeting_number }}. {{ $sched->modulePracticum->title }}</span>
+                                @endif
                             </td>
 
                             <!-- Alokasi Meja -->
@@ -266,22 +275,70 @@
                         />
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Alokasi Meja Trainer Kit <span class="text-rose-500">*</span>
-                        </label>
-                        <select
-                            name="device_id"
-                            required
-                            class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
-                        >
-                            <option value="">-- Pilih Stasiun Trainer Kit --</option>
-                            @foreach($devices as $kit)
-                                <option value="{{ $kit->id }}">
-                                    {{ $kit->code }} — {{ $kit->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Kelas Praktikum
+                            </label>
+                            <select
+                                name="classroom_id"
+                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
+                            >
+                                <option value="">-- Pilih Kelas (Opsional) --</option>
+                                @foreach($classrooms ?? [] as $cls)
+                                    <option value="{{ $cls->id }}">{{ $cls->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Kelompok Praktikum
+                            </label>
+                            <select
+                                name="student_group_id"
+                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
+                            >
+                                <option value="">-- Pilih Kelompok (Opsional) --</option>
+                                @foreach($studentGroups ?? [] as $grp)
+                                    <option value="{{ $grp->id }}">{{ $grp->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Modul Praktikum
+                            </label>
+                            <select
+                                name="module_practicum_id"
+                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
+                            >
+                                <option value="">-- Pilih Modul (Opsional) --</option>
+                                @foreach($modules ?? [] as $mod)
+                                    <option value="{{ $mod->id }}">Modul {{ $mod->meeting_number }}: {{ $mod->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Alokasi Meja Trainer Kit
+                            </label>
+                            <select
+                                name="device_id"
+                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
+                            >
+                                <option value="">-- Pilih Stasiun Trainer Kit (Opsional) --</option>
+                                @foreach($devices as $kit)
+                                    <option value="{{ $kit->id }}">
+                                        {{ $kit->code }} — {{ $kit->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
