@@ -284,14 +284,16 @@ Relevant implementation evidence (full SHA): `5daf9352c55792490c20839444bf4e9c53
 
 #### BR-302 — Sensor Calibration Profile and Raw/Calibrated Storage (Existing TASK-409)
 - **Priority**: P1
-- **Dependencies**: BR-103, BR-105; sensor firmware/model specs; qualified agriculture/hardware review
+- **Dependencies**: BR-103, BR-105; manufacturer-verified sensor/model specifications; qualified agriculture/hardware review
 - **Scope**: Preserve raw register payload and record calibration profile/version applied to derived readings; sensor-type-specific transform only.
 - **Acceptance Criteria**:
-  - Each supported parameter has a documented unit, device register mapping, range, calibration method, and firmware compatibility.
-  - No universal `raw + offset` formula is applied without a sensor specification.
+  - Each supported parameter has an approved unit, device register mapping, range, calibration method, and firmware compatibility.
+  - No universal or unverified `raw + offset` formula is used for physical sensor readings.
   - Ingested readings preserve immutable raw values; derived values record calibration profile/version/effective time.
   - Calibration changes are permissioned, auditable, and do not rewrite historical readings.
-  - Tests validate approved reference vectors and boundary/invalid profiles.
+  - Tests validate approved reference vectors and boundary/invalid profiles against manufacturer documentation.
+- **Implementation Status (2026-11-05)**: Software profile/versioning, immutable raw storage, lineage, audit, configurable validation, and feature tests are implemented. `config/sensors.php` and `docs/hardware/SENSOR_CALIBRATION_SPECIFICATION.md` currently document **unverified software-fixture values only** and are not approved for physical hardware/agronomy use.
+- **External Blocker**: Obtain the exact sensor manufacturer/model datasheet and compatible ESP32 firmware protocol, then complete hardware/agronomy review. Physical calibration downlink is explicitly **BLOCKED** until firmware transport, command authentication, positive ACK, safety behavior, and hardware-in-loop tests are verified.
 
 #### BR-303 — Device-Key and Ingestion Hardening (Existing TASK-105)
 - **Priority**: P1
@@ -467,7 +469,7 @@ Status and evidence below refer to repository HEAD `894b1a391f684c3a9289809b68e0
 | BR-204 | DONE | Append-only `grade_history` table for immutable assessment records with adjustment reason, transition tracking (`initial_grade` / `revision`), strict teacher/superuser authorization, school-tenancy enforcement, pessimistic locking, and rubric score clamping. Verified with 9 dedicated tests (33 assertions) in `ImmutableGradeHistoryTest` and 0 regressions. | Full suite: 145 tests, 687 assertions, 0 failures, 0 regressions. |
 | BR-300 | DONE | Explicit `hardware|simulation|fixture` provenance implemented across API and simulation commands; honest empty states rendered with em dashes and 'Belum Ada Transmisi Data' without fabricated metrics; guest queries on Dashboard, Monitoring, History, and CSV export strictly scoped to default active school; unmeasured sensor metrics stored as null instead of coerced to 0.0; relay defaults to false; sensor card defaults to null; verified with 17 dedicated tests (99 assertions) in `TelemetryProvenanceAndHonestEmptyStateTest`. | Full suite: 181 tests, 840 assertions, 0 failures, 0 regressions. |
 | BR-301 | DONE | Deterministic heartbeat availability policy implemented via `DeviceAvailabilityResolver` with configurable timeouts per device/school and 900s baseline; only authenticated hardware ingress updates `last_seen_at`; legacy ETL import assigns `null` last_seen_at without forging historical traffic; consistent status shared across Dashboard, IoT Monitoring, and Trainer Kit Manager; verified with 12 tests (31 assertions) in `HeartbeatAvailabilityTest`. | Full suite: 181 tests, 840 assertions, 0 failures, 0 regressions. |
-| BR-302 | PARTIAL | Calibration storage/UI exists at HEAD; V-3. | Sensor-specific profile application, raw/calibrated provenance, audit/effective time, approved reference vectors, and agronomy/hardware review remain. |
+| BR-302 | DONE (Software Layer) / BLOCKED (Hardware Downlink) | Versioned `sensor_calibration_profiles` schema, sensor spec catalog (`RS485-SOIL-7IN1`), validated reference vectors/offsets, immutable raw register metrics, calibration lineage (`calibration_profile_id`, `calibration_version`, `calibration_applied_at`), and audit logging implemented without rewriting history. Physical EEPROM holding register write downlink is explicitly marked BLOCKED pending ESP32 firmware protocol review. Verified with 12 tests (74 assertions) in `SensorCalibrationProfileTest`. | Full suite: 193 tests, 914 assertions, 0 failures, 0 regressions. Physical hardware downlink dependency remains BLOCKED. |
 | BR-303 | DONE | Device-key hash, prefix auditing, atomic rotation, revocation, and last-used tracking verified in tests. | Legacy key inventory/rotation/revocation fully operational and covered by feature tests. |
 | BR-400 | BLOCKED | No firmware repository/version, transport, or ACK evidence recorded. | Obtain firmware/spec and approve transport/safety policy before downlink work. |
 | BR-401 | TODO | No verified persistent command lifecycle with ACK/failure/timeout transitions. | Implement only after BR-400 and command policy are approved; test idempotency and out-of-order ACK. |
