@@ -16,7 +16,7 @@ class CropRecommendationController extends Controller
 {
     public function requestRecommendation(Request $request, SubscriptionService $subService): JsonResponse
     {
-        $user = Auth::user() ?? User::where('role', 'guru')->first() ?? User::first();
+        $user = $request->user() ?? Auth::user();
 
         if (!$user) {
             return response()->json([
@@ -51,6 +51,7 @@ class CropRecommendationController extends Controller
         Cache::put('crop_recommendation_' . $ticketId, [
             'status' => 'queued',
             'ticket_id' => $ticketId,
+            'user_id' => $user->id,
             'queued_at' => now()->toIso8601String(),
         ], now()->addHour());
 
@@ -64,8 +65,17 @@ class CropRecommendationController extends Controller
         ], 202);
     }
 
-    public function checkStatus(string $ticketId): JsonResponse
+    public function checkStatus(Request $request, string $ticketId): JsonResponse
     {
+        $user = $request->user() ?? Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Autentikasi diperlukan.',
+            ], 401);
+        }
+
         $cacheKey = 'crop_recommendation_' . $ticketId;
         $data = Cache::get($cacheKey);
 
@@ -74,6 +84,13 @@ class CropRecommendationController extends Controller
                 'success' => false,
                 'message' => 'Tiket rekomendasi AI tidak ditemukan atau telah kedaluwarsa.',
             ], 404);
+        }
+
+        if (isset($data['user_id']) && (int) $data['user_id'] !== (int) $user->id && !$user->isSuperuser()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak: Anda tidak memiliki wewenang untuk memeriksa status tiket rekomendasi ini.',
+            ], 403);
         }
 
         return response()->json([

@@ -52,6 +52,7 @@ class GenerateCropRecommendationJob implements ShouldQueue
         Cache::put($cacheKey, [
             'status' => 'processing',
             'ticket_id' => $this->ticketId,
+            'user_id' => $this->user->id,
             'started_at' => now()->toIso8601String(),
         ], now()->addHour());
 
@@ -84,6 +85,7 @@ class GenerateCropRecommendationJob implements ShouldQueue
         Cache::put($cacheKey, [
             'status' => 'completed',
             'ticket_id' => $this->ticketId,
+            'user_id' => $this->user->id,
             'soil_classification' => $recommendationData['soil_classification'],
             'recommendations' => $recommendationData['recommendations'],
             'completed_at' => now()->toIso8601String(),
@@ -102,6 +104,7 @@ class GenerateCropRecommendationJob implements ShouldQueue
         Cache::put('crop_recommendation_' . $this->ticketId, [
             'status' => 'failed',
             'ticket_id' => $this->ticketId,
+            'user_id' => $this->user->id,
             'error' => 'Gagal memproses rekomendasi AI dalam batas waktu 15 detik. Silakan coba kembali.',
             'failed_at' => now()->toIso8601String(),
         ], now()->addHour());
