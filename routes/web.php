@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityScheduleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ModulePracticumController;
 use App\Http\Controllers\PlantingMediaController;
+use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TelemetryHistoryController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,6 @@ Route::get('/reports', function () {
 Route::get('/trainer-kits', function () {
     return view('pages.kits.index');
 })->name('kits.index');
-Route::get('/subscription', function () {
-    return view('pages.subscription.index');
-})->name('subscription.index');
+// Paket Langganan & Midtrans Snap Checkout
+Route::get('/subscription', [SubscriptionCheckoutController::class, 'index'])->name('subscription.index');
+Route::post('/subscription/checkout', [SubscriptionCheckoutController::class, 'checkout'])->name('subscription.checkout');
