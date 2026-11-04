@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityScheduleController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CompetencyAssessmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IotMonitoringController;
@@ -15,6 +16,13 @@ use App\Http\Controllers\TelemetryHistoryController;
 use App\Http\Controllers\TrainerKitManagerController;
 use App\Http\Controllers\UserDirectoryController;
 use Illuminate\Support\Facades\Route;
+
+// Authentication portal
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.store');
+});
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 // 1. Pusat Kendali Laboratorium Vokasi IoT (Dashboard Utama)
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
