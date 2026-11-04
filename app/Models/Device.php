@@ -12,6 +12,7 @@ class Device extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'code',
         'name',
         'bench_location',
@@ -44,6 +45,20 @@ class Device extends Model
             'is_active' => 'boolean',
             'last_seen_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Device $device) {
+            if (empty($device->school_id)) {
+                $device->school_id = School::where('slug', 'smk-ppn-1-sukaraja')->value('id') ?? School::first()?->id;
+            }
+        });
+    }
+
+    public function school(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(School::class);
     }
 
     public function apiKeys(): HasMany

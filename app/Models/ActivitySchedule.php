@@ -12,6 +12,7 @@ class ActivitySchedule extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'device_id',
         'title',
         'activity_date',
@@ -25,6 +26,20 @@ class ActivitySchedule extends Model
         return [
             'activity_date' => 'date',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (ActivitySchedule $schedule) {
+            if (empty($schedule->school_id)) {
+                $schedule->school_id = School::where('slug', 'smk-ppn-1-sukaraja')->value('id') ?? School::first()?->id;
+            }
+        });
+    }
+
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
     }
 
     public function device(): BelongsTo
