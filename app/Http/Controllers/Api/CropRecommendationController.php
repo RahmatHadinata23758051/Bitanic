@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Jobs\GenerateCropRecommendationJob;
+use App\Models\TelemetryReading;
+use App\Services\SubscriptionService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+
+class CropRecommendationController extends Controller
+{
+    public function requestRecommendation(Request $request, SubscriptionService $subService): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Autentikasi diperlukan.',
+            ], 401);
+        }
+
+        $request->validate([
+            'reading_id' => 'required|exists:telemetry_readings,id',
+        ], [
+            'reading_id.required' => 'ID data telemetri harus dicantumkan.',
+            'reading_id.exists' => 'Data telemetri tidak ditemukan.',
+        ]);
+
+        if (!$subService->canConsumeAi($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kuota AI habis atau masa langganan berakhir. Silakan upgrade paket langganan Anda.',
+            ], 402);
+        }
+
+        $reading = TelemetryReading::findOrFail($request->input('reading_id'));
+        $ticketId = (string) Str::uuid();
+
+        Cache::put('crop_recommendation_' . $ticketId, [
+            'status' => 'queued',
+            'ticket_id' => $ticketId,
+            'queued_at' => now()->toIso8601String(),
+        ], now()->addHour());
+
+        GenerateCropRecommendationJob::dispatch($user, $reading, $ticketId);
+
+        return response()->json([
+            'success' => true,
+            'ticket_id' => $ticketId,
+            'status' => 'processing',
+            'message' => 'Permintaan rekomendasi AI berhasil dijadwalkan ke antrean sistem.',
+        ], 202);
+    }
+
+    public function checkStatus(string $ticketId): JsonResponse
+    {
+        $cacheKey = 'crop_recommendation_' . $ticketId;
+        $data = Cache::get($cacheKey);
+
+        if (!$data) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tiket rekomendasi AI tidak ditemukan atau telah kedaluwarsa.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+}
