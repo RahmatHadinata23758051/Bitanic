@@ -81,9 +81,32 @@ class Device extends Model
         return $this->hasMany(SensorThreshold::class);
     }
 
+    public function calibrationProfiles(): HasMany
+    {
+        return $this->hasMany(SensorCalibrationProfile::class);
+    }
+
     public function latestReading(): HasOne
     {
         return $this->hasOne(TelemetryReading::class)->latestOfMany('recorded_at');
+    }
+
+    /**
+     * Get the currently active calibration profile for a given parameter at a point in time.
+     */
+    public function getActiveCalibrationProfile(string $parameter, ?\Carbon\CarbonInterface $at = null): ?SensorCalibrationProfile
+    {
+        $moment = $at ?? now();
+
+        return $this->calibrationProfiles()
+            ->where('parameter', $parameter)
+            ->where('effective_from', '<=', $moment)
+            ->where(function ($query) use ($moment) {
+                $query->whereNull('effective_until')
+                    ->orWhere('effective_until', '>', $moment);
+            })
+            ->latest('version')
+            ->first();
     }
 
     /**

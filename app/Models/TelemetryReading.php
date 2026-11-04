@@ -25,7 +25,11 @@ class TelemetryReading extends Model
         'temperature',
         'humidity',
         'raw_payload',
+        'raw_metrics',
         'applied_offsets',
+        'calibration_profile_id',
+        'calibration_version',
+        'calibration_applied_at',
         'threshold_flags',
         'recorded_at',
     ];
@@ -41,7 +45,10 @@ class TelemetryReading extends Model
             'temperature' => 'decimal:2',
             'humidity' => 'decimal:2',
             'raw_payload' => 'array',
+            'raw_metrics' => 'array',
             'applied_offsets' => 'array',
+            'calibration_version' => 'integer',
+            'calibration_applied_at' => 'datetime',
             'threshold_flags' => 'array',
             'recorded_at' => 'datetime',
             'provenance' => 'string',
@@ -51,6 +58,11 @@ class TelemetryReading extends Model
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
+    }
+
+    public function calibrationProfile(): BelongsTo
+    {
+        return $this->belongsTo(SensorCalibrationProfile::class, 'calibration_profile_id');
     }
 
     public function isHardware(): bool
