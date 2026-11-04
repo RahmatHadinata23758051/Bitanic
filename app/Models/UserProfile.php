@@ -17,7 +17,9 @@ class UserProfile extends Model
         'department',
         'semester',
         'class_grade',
+        'classroom_id',
         'assigned_kit_id',
+        'student_group_id',
         'group_name',
         'specialization',
         'phone',
@@ -33,5 +35,15 @@ class UserProfile extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function classroom(): BelongsTo
+    {
+        return $this->belongsTo(Classroom::class);
+    }
+
+    public function studentGroup(): BelongsTo
+    {
+        return $this->belongsTo(StudentGroup::class);
     }
 }

@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityScheduleController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CompetencyAssessmentController;
+use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IotMonitoringController;
 use App\Http\Controllers\ModulePracticumController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TelemetryHistoryController;
 use App\Http\Controllers\TrainerKitManagerController;
 use App\Http\Controllers\UserDirectoryController;
+use App\Http\Controllers\UserImportController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication portal
@@ -70,6 +72,17 @@ Route::get('/assessment', [CompetencyAssessmentController::class, 'index'])->nam
 Route::get('/users-data', [UserDirectoryController::class, 'index'])
     ->middleware(['auth', 'role:guru'])
     ->name('users.index');
+
+Route::middleware(['auth', 'role:guru'])->group(function () {
+    Route::get('/classes', [ClassroomController::class, 'index'])->name('classes.index');
+    Route::post('/classes', [ClassroomController::class, 'store'])->name('classes.store');
+    Route::put('/classes/{classroom}', [ClassroomController::class, 'update'])->name('classes.update');
+    Route::delete('/classes/{classroom}', [ClassroomController::class, 'destroy'])->name('classes.destroy');
+    Route::post('/classes/{classroom}/groups', [ClassroomController::class, 'storeGroup'])->name('classes.groups.store');
+    Route::put('/groups/{group}', [ClassroomController::class, 'updateGroup'])->name('groups.update');
+    Route::delete('/groups/{group}', [ClassroomController::class, 'destroyGroup'])->name('groups.destroy');
+    Route::post('/students/{student}/allocation', [ClassroomController::class, 'allocateStudent'])->name('students.allocate');
+});
 
 // 10. Manajemen Armada Trainer Kit Hardware & Kalibrasi Sensor
 Route::get('/trainer-kits', [TrainerKitManagerController::class, 'index'])->name('kits.index');

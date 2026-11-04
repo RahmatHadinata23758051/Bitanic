@@ -117,6 +117,14 @@
             </a>
 
             <a
+                href="{{ url('/classes') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('classes*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+            >
+                <i data-lucide="graduation-cap" class="w-4 h-4 {{ Request::is('classes*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Kelas & Kelompok</span>
+            </a>
+
+            <a
                 href="{{ url('/reports') }}"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('reports*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
             >
