@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityScheduleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ModulePracticumController;
 use App\Http\Controllers\PlantingMediaController;
@@ -22,9 +23,10 @@ Route::get('/modules', [ModulePracticumController::class, 'index'])->name('modul
 Route::get('/modules/{id}', [ModulePracticumController::class, 'show'])->name('modules.show');
 Route::post('/modules/{id}/submit-lks', [ModulePracticumController::class, 'submitLks'])->name('modules.submit-lks');
 Route::post('/modules/reports/{id}/grade', [ModulePracticumController::class, 'grade'])->name('modules.grade-report');
-Route::get('/schedules', function () {
-    return view('pages.schedules.index');
-})->name('schedules.index');
+// Manajemen Jadwal Praktikum & Alokasi Meja Trainer Kit
+Route::get('/schedules', [ActivityScheduleController::class, 'index'])->name('schedules.index');
+Route::post('/schedules', [ActivityScheduleController::class, 'store'])->name('schedules.store');
+Route::delete('/schedules/{id}', [ActivityScheduleController::class, 'destroy'])->name('schedules.destroy');
 Route::get('/reports', function () {
     return view('pages.reports.index');
 })->name('reports.index');
