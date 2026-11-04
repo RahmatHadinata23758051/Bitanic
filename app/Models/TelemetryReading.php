@@ -10,6 +10,10 @@ class TelemetryReading extends Model
 {
     use HasFactory;
 
+    protected $attributes = [
+        'raw_payload' => '{}',
+    ];
+
     protected $fillable = [
         'device_id',
         'nitrogen',
