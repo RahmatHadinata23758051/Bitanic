@@ -14,6 +14,16 @@ class Device extends Model
     protected $fillable = [
         'code',
         'name',
+        'bench_location',
+        'ip_address',
+        'mac_address',
+        'firmware_version',
+        'protocol',
+        'status',
+        'battery_percent',
+        'rssi_signal',
+        'relays_state',
+        'calibration_offsets',
         'connection_type',
         'connection_config',
         'installation_date',
@@ -26,6 +36,10 @@ class Device extends Model
     {
         return [
             'connection_config' => 'array',
+            'relays_state' => 'array',
+            'calibration_offsets' => 'array',
+            'battery_percent' => 'integer',
+            'rssi_signal' => 'integer',
             'installation_date' => 'date',
             'is_active' => 'boolean',
             'last_seen_at' => 'datetime',

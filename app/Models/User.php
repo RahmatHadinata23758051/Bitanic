@@ -54,6 +54,11 @@ class User extends Authenticatable
         return $this->hasOne(UserProfile::class);
     }
 
+    public function studentReports(): HasMany
+    {
+        return $this->hasMany(StudentReport::class);
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(UserSubscription::class);
