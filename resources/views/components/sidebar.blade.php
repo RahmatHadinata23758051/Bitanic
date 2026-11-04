@@ -59,24 +59,32 @@
             </span>
         </div>
 
-        <!-- Section 1: Monitoring & Telemetri -->
+        <!-- Section 1: Pusat Kendali & Telemetri -->
         <div class="space-y-1">
-            <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Telemetri & Lahan</p>
+            <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Telemetri & Workstation</p>
 
             <a
                 href="{{ url('/') }}"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('/') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
             >
-                <i data-lucide="gauge" class="w-4 h-4 {{ Request::is('/') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
-                <span>Live IoT Dashboard</span>
+                <i data-lucide="layout-dashboard" class="w-4 h-4 {{ Request::is('/') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Pusat Kendali Lab</span>
             </a>
 
             <a
-                href="{{ url('/telemetry/charts') }}"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('telemetry/charts*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                href="{{ url('/iot-monitoring') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('iot*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
             >
-                <i data-lucide="line-chart" class="w-4 h-4 {{ Request::is('telemetry/charts*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
-                <span>Multi-Parameter Chart</span>
+                <i data-lucide="gauge" class="w-4 h-4 {{ Request::is('iot*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Stasiun Meja Praktik</span>
+            </a>
+
+            <a
+                href="{{ url('/analytics') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('analytics*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+            >
+                <i data-lucide="line-chart" class="w-4 h-4 {{ Request::is('analytics*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Analitik Agronomi</span>
             </a>
 
             <a
@@ -90,7 +98,7 @@
 
         <!-- Section 2: Kurikulum & Pembelajaran SMK -->
         <div class="space-y-1">
-            <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kurikulum & Praktikum</p>
+            <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kurikulum & Pembelajaran</p>
 
             <a
                 href="{{ url('/modules') }}"
@@ -112,42 +120,54 @@
                 href="{{ url('/reports') }}"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('reports*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
             >
-                <i data-lucide="clipboard-check" class="w-4 h-4 {{ Request::is('reports*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
-                <span>Laporan & Rubrik Nilai</span>
+                <i data-lucide="file-check" class="w-4 h-4 {{ Request::is('reports*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Laporan LKS Siswa</span>
+            </a>
+
+            <a
+                href="{{ url('/assessment') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('assessment*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+            >
+                <i data-lucide="award" class="w-4 h-4 {{ Request::is('assessment*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Rapor Kompetensi</span>
             </a>
         </div>
 
-        <!-- Section 3: Manajemen Lahan & Perangkat -->
+        <!-- Section 3: Manajemen Lab & Hardware Fleet -->
         <div class="space-y-1">
-            <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Instrumen & Agronomi</p>
-
-            <a
-                href="{{ url('/media') }}"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('media*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
-            >
-                <i data-lucide="layers" class="w-4 h-4 {{ Request::is('media*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
-                <span>Media Tanam Substrat</span>
-            </a>
+            <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lab & Perangkat</p>
 
             <a
                 href="{{ url('/trainer-kits') }}"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('trainer-kits*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
             >
                 <i data-lucide="cpu" class="w-4 h-4 {{ Request::is('trainer-kits*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
-                <span>Trainer Kits & Relai</span>
+                <span>Armada Trainer Kit</span>
             </a>
 
-            <button
-                type="button"
-                @click="$dispatch('open-ai-drawer')"
-                class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left"
+            <a
+                href="{{ url('/raw-logs') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('raw-logs*') || Request::is('rawlogs*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
             >
-                <div class="flex items-center gap-3">
-                    <i data-lucide="sparkles" class="w-4 h-4 text-emerald-600"></i>
-                    <span>Konsultan AI Gemini</span>
-                </div>
-                <span class="px-1.5 py-0.5 text-[10px] font-mono rounded bg-emerald-100 text-emerald-800 font-bold">2.0 Flash</span>
-            </button>
+                <i data-lucide="terminal" class="w-4 h-4 {{ Request::is('raw-logs*') || Request::is('rawlogs*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Raw RS485 Debugger</span>
+            </a>
+
+            <a
+                href="{{ url('/users-data') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('users-data*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+            >
+                <i data-lucide="users" class="w-4 h-4 {{ Request::is('users-data*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Data Siswa & Guru</span>
+            </a>
+
+            <a
+                href="{{ url('/settings') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('settings*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+            >
+                <i data-lucide="settings" class="w-4 h-4 {{ Request::is('settings*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Pengaturan & Audit</span>
+            </a>
         </div>
     </div>
 
@@ -158,7 +178,7 @@
             <div class="flex items-center justify-between text-xs">
                 <span class="font-semibold text-slate-600 flex items-center gap-1.5">
                     <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
-                    <span>Kuota Konsultasi AI</span>
+                    <span>Konsultan AI Gemini</span>
                 </span>
                 <span class="font-mono font-bold text-slate-800">{{ $remainingQuota }} / {{ $maxQuota }}</span>
             </div>
@@ -170,7 +190,7 @@
             </div>
             <div class="flex items-center justify-between text-[11px] text-slate-500">
                 <span>Respon < 15 dtk</span>
-                <a href="{{ url('/subscription') }}" class="font-semibold text-emerald-700 hover:text-emerald-800">Top-up →</a>
+                <button type="button" @click="$dispatch('open-ai-drawer')" class="font-semibold text-emerald-700 hover:text-emerald-800">Buka AI →</button>
             </div>
         </div>
 

@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\CropRecommendationController;
 use App\Http\Controllers\Api\PaymentWebhookController;
 use App\Http\Controllers\Api\TelemetryIngestController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IotMonitoringController;
 use Illuminate\Support\Facades\Route;
 
 // Endpoint IoT Edge yang diproteksi X-Device-Key
@@ -14,7 +14,7 @@ Route::middleware('device.key')->group(function () {
 });
 
 // Endpoint Kontrol Relai Aktuator Hardware Trainer Kit
-Route::post('/v1/devices/relay/toggle', [DashboardController::class, 'toggleRelay']);
+Route::post('/v1/devices/relay/toggle', [IotMonitoringController::class, 'toggleRelay']);
 
 // Endpoint Rekomendasi AI Gemini Asinkronus (Job Queue)
 Route::post('/v1/recommendations/request', [CropRecommendationController::class, 'requestRecommendation']);

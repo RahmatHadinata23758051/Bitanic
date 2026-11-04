@@ -2,17 +2,29 @@
 
 @section('content')
 <div class="space-y-6">
-    <!-- Top Hero Banner: Station Context & Soil Health Index -->
+    <!-- Top Hero Banner: Station Context, Kit Selector & Soil Health Index -->
     <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div class="space-y-2 max-w-2xl">
             <div class="flex items-center gap-2 flex-wrap">
-                <span class="px-2.5 py-1 rounded-md text-xs font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    {{ $activeDevice->code ?? 'BITANIC-TK-01' }}
-                </span>
+                <!-- Device Selector Dropdown -->
+                <form method="GET" action="{{ url('/iot-monitoring') }}" class="inline-flex items-center">
+                    <select
+                        name="device_id"
+                        onchange="this.form.submit()"
+                        class="px-2.5 py-1 rounded-md text-xs font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                        @foreach($devices as $dev)
+                            <option value="{{ $dev->id }}" {{ ($activeDevice->id ?? null) == $dev->id ? 'selected' : '' }}>
+                                {{ $dev->code }} — {{ $dev->bench_location ?? $dev->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+
                 <span class="text-xs text-slate-400">•</span>
                 <span class="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                     <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
-                    <span>{{ $activeDevice->bench_location ?? 'Meja Praktik 01 - Bedengan A' }}</span>
+                    <span>{{ $activeDevice->bench_location ?? 'Meja Praktik' }}</span>
                 </span>
                 <span class="text-xs text-slate-400">•</span>
                 <span class="text-xs text-slate-500 font-mono">Pembaruan: {{ $telemetry['recorded_at'] }}</span>
@@ -123,17 +135,17 @@
                 :value="$telemetry['ec']"
                 unit="µS/cm"
                 :scaleMin="0"
-                :scaleMax="3000"
-                :idealMin="1200"
-                :idealMax="2000"
+                :scaleMax="4000"
+                :idealMin="1000"
+                :idealMax="2200"
                 :status="$telemetry['ec'] > 2200 ? 'warning' : 'optimal'"
                 :statusLabel="$telemetry['ec'] > 2200 ? 'Salinitas Tinggi' : 'Optimal'"
-                sublabel="Konsentrasi Garam Pupuk"
+                sublabel="Indeks Kepekatan Pupuk"
                 icon="zap"
-                definition="Ukuran daya hantar listrik larutan tanah yang merefleksikan konsentrasi ion garam hara pupuk larut."
-                idealDesc="1.200 – 2.000 µS/cm (Dosis fertigasi ideal untuk fase generatif/vegetatif prima)."
-                lowRisk="EC < 800 µS/cm: Defisiensi larutan hara makro, tanaman kelaparan pupuk."
-                highRisk="EC > 2.500 µS/cm: Tekanan osmotik tinggi, plasmolisis akar, ujung daun terbakar."
+                definition="Daya hantar listrik larutan tanah yang berbanding lurus dengan kepekatan total garam mineral terlarut."
+                idealDesc="1000 – 2200 µS/cm (Setara 1.0 – 2.2 mS/cm untuk tanaman hortikultura masa vegetatif-generatif)."
+                lowRisk="EC < 800: Larutan tanah miskin hara, tanaman defisiensi mineral makro."
+                highRisk="EC > 2400: Tekanan osmotik tinggi, air tertarik keluar dari sel akar (terbakar pupuk)."
             />
 
             <!-- Meter 4: Nitrogen (N) -->
@@ -144,15 +156,15 @@
                 :scaleMin="0"
                 :scaleMax="200"
                 :idealMin="40"
-                :idealMax="80"
+                :idealMax="120"
                 :status="$telemetry['nitrogen'] < 30 ? 'warning' : 'optimal'"
                 :statusLabel="$telemetry['nitrogen'] < 30 ? 'Rendah' : 'Cukup'"
-                sublabel="Vegetatif & Klorofil"
+                sublabel="Pertumbuhan Vegetatif"
                 icon="sprout"
-                definition="Unsur hara makro primer esensial penyusun asam amino, protein, dan molekul klorofil hijau daun."
-                idealDesc="40 – 80 mg/kg (Mendukung pertumbuhan pucuk, batang vegetatif, dan luas permukaan daun)."
-                lowRisk="N Rendah: Klorosis pada daun tua (kuning merata), pertumbuhan kerdil terhenti."
-                highRisk="N Berlebih: Tanaman sukulen rentan rebah, mudah diserang jamur & hama pengisap."
+                definition="Unsur hara makro primer esensial penyusun asam amino, protein, dan klorofil untuk fotosintesis daun."
+                idealDesc="40 – 120 mg/kg tanah (Mendukung laju pembentukan biomassa hijau dan tajuk tanaman)."
+                lowRisk="N < 30: Klorosis (daun tua menguning seragam), batang kerdil dan kurus."
+                highRisk="N > 150: Sukulen berlebih, jaringan daun lunak rentan rebah dan rentan serangan hama serangga."
             />
 
             <!-- Meter 5: Fosfor (P) -->
@@ -162,16 +174,16 @@
                 unit="mg/kg"
                 :scaleMin="0"
                 :scaleMax="100"
-                :idealMin="20"
-                :idealMax="50"
+                :idealMin="25"
+                :idealMax="60"
                 :status="'optimal'"
-                :statusLabel="'Optimal'"
-                sublabel="Perakaran & Energi ATP"
-                icon="flask-conical"
-                definition="Komponen kunci adenosin trifosfat (ATP), pemacu perakaran awal, serta pembungaan dan pembuahan."
-                idealDesc="20 – 50 mg/kg (Merangsang pemanjangan bulu akar dan inisiasi primordia bunga)."
-                lowRisk="P Rendah: Daun tua berubah keunguan/kebiruan, sistem perakaran dangkal dan rapuh."
-                highRisk="P Berlebih: Mengganggu penyerapan seng (Zn) dan besi (Fe) pada tanah alkalin."
+                :statusLabel="'Cukup'"
+                sublabel="Energi & Perakaran"
+                icon="sparkles"
+                definition="Unsur hara makro primer untuk transfer energi molekuler (ATP/ADP), pembelahan sel, dan inisiasi perakaran."
+                idealDesc="25 – 60 mg/kg tanah (Optimal memicu perkembangan rambut akar dan bunga)."
+                lowRisk="P < 20: Sistem perakaran dangkal, daun berwarna keunguan (akumulasi antosianin)."
+                highRisk="P > 80: Mengganggu penyerapan unsur mikro seng (Zn) dan besi (Fe)."
             />
 
             <!-- Meter 6: Kalium (K) -->
@@ -180,65 +192,68 @@
                 :value="$telemetry['potassium']"
                 unit="mg/kg"
                 :scaleMin="0"
-                :scaleMax="250"
+                :scaleMax="300"
                 :idealMin="100"
-                :idealMax="180"
+                :idealMax="200"
                 :status="'optimal'"
                 :statusLabel="'Optimal'"
-                sublabel="Imunitas & Regulasi Air"
+                sublabel="Kekebalan & Kualitas Buah"
                 icon="shield"
-                definition="Kation pengatur turgor sel, pembukaan stomata, translokasi asimilat pati, dan ketahanan penyakit."
-                idealDesc="100 – 180 mg/kg (Meningkatkan bobot buah, kemanisan brix, dan ketahanan kekeringan)."
-                lowRisk="K Rendah: Tepi daun tua mengering seperti terbakar (marginal chlorosis), batang lemas."
-                highRisk="K Berlebih: Menyebabkan defisiensi magnesium (Mg) dan kalsium (Ca)."
+                definition="Aktivator enzim, osmoregulasi pembukaan stomata, dan translokasi asimilasi hasil fotosintesis ke buah."
+                idealDesc="100 – 200 mg/kg tanah (Meningkatkan daya tahan terhadap penyakit dan bobot buah)."
+                lowRisk="K < 80: Tepi daun terbakar (nekrosis marginal), daya simpan hasil panen rendah."
+                highRisk="K > 250: Menghambat absorbsi kation magnesium (Mg2+) dan kalsium (Ca2+)."
             />
 
             <!-- Meter 7: Suhu Tanah -->
             <x-sensor-card
-                parameter="Suhu Tanah Perakaran"
+                parameter="Suhu Tanah (Temp)"
                 :value="$telemetry['temperature']"
                 unit="°C"
                 :scaleMin="10"
                 :scaleMax="45"
-                :idealMin="24"
-                :idealMax="30"
+                :idealMin="22"
+                :idealMax="29"
                 :status="'optimal'"
                 :statusLabel="'Ideal'"
-                sublabel="Respirasi & Mikroba"
+                sublabel="Aktivitas Biologis Tanah"
                 icon="thermometer"
-                definition="Suhu substrat rizosfer yang mengontrol laju respirasi akar dan aktivitas mikroorganisme tanah."
-                idealDesc="24.0 – 30.0 °C (Kondisi biologis tanah paling aktif untuk serapan air)."
-                lowRisk="Suhu < 18°C: Penyerapan hara terhenti, laju metabolisme anjlok."
-                highRisk="Suhu > 35°C: Denaturasi enzim sel akar, penguapan ekstrem, cekaman panas."
+                definition="Derajat panas zona perakaran (rhizosphere) yang mempengaruhi respirasi akar dan mikrobioma dekomposer."
+                idealDesc="22 – 29°C (Laju penyerapan air dan respirasi akar paling seimbang)."
+                lowRisk="Suhu < 18°C: Penyerapan hara fosfor dan air melambat drastis."
+                highRisk="Suhu > 33°C: Respirasi perakaran berlebih, akar terdegradasi dan rentan busuk Phytophthora."
             />
 
-            <!-- Card 8: Trainer Kit Info Slot -->
-            <div class="p-5 rounded-xl bg-slate-900 text-white border border-slate-800 shadow-sm flex flex-col justify-between">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span class="text-xs font-bold text-emerald-400">HARDWARE SPESIFIKASI</span>
-                    <i data-lucide="cpu" class="w-4 h-4 text-slate-400"></i>
+            <!-- Card 8: Quick Station Hardware Specs (Trainer Kit Meja Praktik) -->
+            <div class="p-4 rounded-xl bg-slate-900 text-white border border-slate-800 flex flex-col justify-between shadow-sm">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider font-mono">Modbus Gateway</span>
+                    </div>
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 </div>
                 <div class="space-y-1.5 text-xs py-2 font-mono">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Protokol:</span>
-                        <span class="text-slate-200">Modbus RS485</span>
+                        <span class="text-slate-200">{{ $activeDevice->protocol ?? 'Modbus RS485' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Baudrate:</span>
                         <span class="text-slate-200">9600 bps</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-slate-400">Microcontroller:</span>
-                        <span class="text-emerald-400">ESP32 240MHz</span>
+                        <span class="text-slate-400">Firmware:</span>
+                        <span class="text-emerald-400">{{ $activeDevice->firmware_version ?? 'v2.4.1-PROD' }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-slate-400">Security Key:</span>
-                        <span class="text-slate-200">SHA-256 Auth</span>
+                        <span class="text-slate-400">IP Gateway:</span>
+                        <span class="text-slate-200">{{ $activeDevice->ip_address ?? '192.168.10.101' }}</span>
                     </div>
                 </div>
                 <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>Meja Praktikum #01</span>
-                    <span class="text-emerald-400 font-semibold">Aktif</span>
+                    <span>{{ $activeDevice->code ?? 'TK-01' }}</span>
+                    <span class="text-emerald-400 font-semibold">{{ ucfirst($activeDevice->status ?? 'online') }}</span>
                 </div>
             </div>
         </div>
@@ -317,7 +332,7 @@
                     @empty
                         <tr>
                             <td colspan="9" class="py-4 text-center text-slate-400 font-sans">
-                                Belum ada riwayat telemetri di tabel PostgreSQL.
+                                Belum ada data telemetri tercatat untuk trainer kit ini.
                             </td>
                         </tr>
                     @endforelse

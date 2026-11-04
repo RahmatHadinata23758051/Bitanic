@@ -1,39 +1,73 @@
 <?php
 
 use App\Http\Controllers\ActivityScheduleController;
+use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\CompetencyAssessmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IotMonitoringController;
 use App\Http\Controllers\ModulePracticumController;
 use App\Http\Controllers\PlantingMediaController;
+use App\Http\Controllers\PracticumReportController;
+use App\Http\Controllers\RawLogsDebuggerController;
+use App\Http\Controllers\SettingsAuditController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TelemetryHistoryController;
+use App\Http\Controllers\TrainerKitManagerController;
+use App\Http\Controllers\UserDirectoryController;
 use Illuminate\Support\Facades\Route;
 
-// Live IoT Monitoring Dashboard (Bento Grid & 3D Flip Card Glosarium)
+// 1. Pusat Kendali Laboratorium Vokasi IoT (Dashboard Utama)
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-// Manajemen Media Tanam (Null-Safe)
-Route::resource('media', PlantingMediaController::class);
+// 2. Monitoring Stasiun Meja Praktik 7-in-1 Modbus & Kontrol Relai
+Route::get('/iot-monitoring', [IotMonitoringController::class, 'index'])->name('iot.index');
+Route::get('/iot', [IotMonitoringController::class, 'index'])->name('iot-monitoring.index');
 
-// Rute Placeholder untuk Menu Navigasi SMK Pertanian
-Route::get('/telemetry/charts', [DashboardController::class, 'index'])->name('telemetry.charts');
-// Riwayat Log Telemetri & Anomaly Alert Hub (Tanpa jQuery)
+// 3. Analitik Agronomi & Dinamika Lahan (Korelasi pH-EC & Suhu-Lengas)
+Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+Route::redirect('/telemetry/charts', '/analytics')->name('telemetry.charts');
+
+// 4. Riwayat Log Telemetri & Anomaly Alert Hub
 Route::get('/telemetry/history', [TelemetryHistoryController::class, 'index'])->name('telemetry.history');
 Route::get('/telemetry/history/export', [TelemetryHistoryController::class, 'exportCsv'])->name('telemetry.history.export');
-// Modul Kurikulum Praktikum 12 Pertemuan SMK Pertanian & Rubrik Penilaian
+
+// 5. Kurikulum 12 Modul Praktikum Kurikulum Merdeka & Penilaian LKS
 Route::get('/modules', [ModulePracticumController::class, 'index'])->name('modules.index');
 Route::get('/modules/{id}', [ModulePracticumController::class, 'show'])->name('modules.show');
 Route::post('/modules/{id}/submit-lks', [ModulePracticumController::class, 'submitLks'])->name('modules.submit-lks');
 Route::post('/modules/reports/{id}/grade', [ModulePracticumController::class, 'grade'])->name('modules.grade-report');
-// Manajemen Jadwal Praktikum & Alokasi Meja Trainer Kit
+
+// 6. Manajemen Jadwal Praktikum & Alokasi Meja Trainer Kit
 Route::get('/schedules', [ActivityScheduleController::class, 'index'])->name('schedules.index');
 Route::post('/schedules', [ActivityScheduleController::class, 'store'])->name('schedules.store');
 Route::delete('/schedules/{id}', [ActivityScheduleController::class, 'destroy'])->name('schedules.destroy');
-Route::get('/reports', function () {
-    return view('pages.reports.index');
-})->name('reports.index');
-Route::get('/trainer-kits', function () {
-    return view('pages.kits.index');
-})->name('kits.index');
-// Paket Langganan & Midtrans Snap Checkout
+
+// 7. Hub Laporan Lembar Kerja Siswa (LKS)
+Route::get('/reports', [PracticumReportController::class, 'index'])->name('reports.index');
+
+// 8. Rapor Capaian Kompetensi Siswa SMK ATPH
+Route::get('/assessment', [CompetencyAssessmentController::class, 'index'])->name('assessment.index');
+
+// 9. Direktori Akademik Siswa & Guru Pembimbing
+Route::get('/users-data', [UserDirectoryController::class, 'index'])->name('users.index');
+
+// 10. Manajemen Armada Trainer Kit Hardware & Kalibrasi Sensor
+Route::get('/trainer-kits', [TrainerKitManagerController::class, 'index'])->name('kits.index');
+Route::post('/trainer-kits/{device}/reboot', [TrainerKitManagerController::class, 'reboot'])->name('kits.reboot');
+Route::post('/trainer-kits/{device}/calibration', [TrainerKitManagerController::class, 'updateCalibration'])->name('kits.calibration');
+
+// 11. Raw Modbus RS485 Hex Stream Debugger
+Route::get('/raw-logs', [RawLogsDebuggerController::class, 'index'])->name('rawlogs.index');
+Route::get('/rawlogs', [RawLogsDebuggerController::class, 'index'])->name('raw-logs.index');
+Route::post('/raw-logs/inject', [RawLogsDebuggerController::class, 'inject'])->name('rawlogs.inject');
+
+// 12. Pengaturan Laboratorium & Log Aktivitas (Audit Trail)
+Route::get('/settings', [SettingsAuditController::class, 'index'])->name('settings.index');
+Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool'])->name('settings.update');
+
+// Manajemen Media Tanam (Null-Safe)
+Route::resource('media', PlantingMediaController::class);
+
+// Paket Langganan & Midtrans Snap Checkout (Legacy SaaS Module)
 Route::get('/subscription', [SubscriptionCheckoutController::class, 'index'])->name('subscription.index');
 Route::post('/subscription/checkout', [SubscriptionCheckoutController::class, 'checkout'])->name('subscription.checkout');
