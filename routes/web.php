@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ModulePracticumController;
 use App\Http\Controllers\PlantingMediaController;
+use App\Http\Controllers\TelemetryHistoryController;
 use Illuminate\Support\Facades\Route;
 
 // Live IoT Monitoring Dashboard (Bento Grid & 3D Flip Card Glosarium)
@@ -13,7 +14,9 @@ Route::resource('media', PlantingMediaController::class);
 
 // Rute Placeholder untuk Menu Navigasi SMK Pertanian
 Route::get('/telemetry/charts', [DashboardController::class, 'index'])->name('telemetry.charts');
-Route::get('/telemetry/history', [DashboardController::class, 'index'])->name('telemetry.history');
+// Riwayat Log Telemetri & Anomaly Alert Hub (Tanpa jQuery)
+Route::get('/telemetry/history', [TelemetryHistoryController::class, 'index'])->name('telemetry.history');
+Route::get('/telemetry/history/export', [TelemetryHistoryController::class, 'exportCsv'])->name('telemetry.history.export');
 // Modul Kurikulum Praktikum 12 Pertemuan SMK Pertanian & Rubrik Penilaian
 Route::get('/modules', [ModulePracticumController::class, 'index'])->name('modules.index');
 Route::get('/modules/{id}', [ModulePracticumController::class, 'show'])->name('modules.show');
