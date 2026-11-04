@@ -12,8 +12,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('Seeding Bitanic database from legacy dataset...');
-        $this->command->call('bitanic:import-legacy', [
-            '--dev-passwords' => true,
-        ]);
+        $params = [];
+        if (!app()->environment('production')) {
+            $params['--dev-passwords'] = true;
+        }
+
+        $this->command->call('bitanic:import-legacy', $params);
     }
 }
