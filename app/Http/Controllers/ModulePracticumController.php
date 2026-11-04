@@ -45,7 +45,11 @@ class ModulePracticumController extends Controller
 
         // Jika Guru, ambil seluruh laporan siswa di modul ini untuk dinilai
         $allReports = ($user && in_array($user->role, ['guru', 'superuser']))
-            ? StudentReport::with(['user.profile'])->where('module_id', $module->id)->latest()->get()
+            ? StudentReport::with(['user.profile'])
+                ->where('module_id', $module->id)
+                ->when($user->role !== 'superuser', fn ($query) => $query->whereHas('user', fn ($studentQuery) => $studentQuery->where('school_id', $user->school_id)))
+                ->latest()
+                ->get()
             : collect();
 
         return view('pages.modules.show', [
@@ -72,7 +76,7 @@ class ModulePracticumController extends Controller
         $module = ModulePracticum::findOrFail($id);
         $user = Auth::user() ?? User::where('role', 'siswa')->first() ?? User::first();
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->back()->with('error', 'Silakan login terlebih dahulu untuk mengumpulkan LKS.');
         }
 
@@ -86,7 +90,7 @@ class ModulePracticumController extends Controller
         ]);
 
         return redirect()->route('modules.show', $module->id)
-            ->with('success', 'Laporan & LKS Modul #' . $module->meeting_number . ' berhasil dikumpulkan.');
+            ->with('success', 'Laporan & LKS Modul #'.$module->meeting_number.' berhasil dikumpulkan.');
     }
 
     /**
@@ -102,7 +106,7 @@ class ModulePracticumController extends Controller
         $report = StudentReport::with('module')->findOrFail($reportId);
         $teacher = Auth::user() ?? User::where('role', 'guru')->first() ?? User::first();
 
-        if (!$teacher) {
+        if (! $teacher) {
             return redirect()->back()->with('error', 'Otorisasi guru diperlukan untuk memberikan nilai.');
         }
 

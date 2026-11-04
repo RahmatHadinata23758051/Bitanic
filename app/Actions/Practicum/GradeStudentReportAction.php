@@ -4,6 +4,8 @@ namespace App\Actions\Practicum;
 
 use App\Models\StudentReport;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class GradeStudentReportAction
@@ -11,17 +13,21 @@ class GradeStudentReportAction
     /**
      * Grade student practicum report using 4-scale rubric aspects.
      *
-     * @param StudentReport $report
-     * @param User $teacher
-     * @param array<string, int> $rubricScores Array of aspectId => score (1-4)
-     * @param string|null $feedback
-     * @return StudentReport
+     * @param  array<string, int>  $rubricScores  Array of aspectId => score (1-4)
      */
     public function execute(StudentReport $report, User $teacher, array $rubricScores, ?string $feedback = null): StudentReport
     {
         $module = $report->module;
-        if (!$module) {
+        if (! $module) {
             throw new InvalidArgumentException('Target practicum module does not exist.');
+        }
+
+        // Cross-school tenancy protection: Guru cannot grade reports from other schools
+        $student = $report->user;
+        if ($student && $teacher->role !== 'superuser' && $student->school_id && $teacher->school_id) {
+            if ((int) $student->school_id !== (int) $teacher->school_id) {
+                throw new AuthorizationException('Guru tidak diizinkan menilai laporan siswa dari sekolah lain.');
+            }
         }
 
         $rubricMeta = $module->rubric ?? [];
@@ -38,7 +44,7 @@ class GradeStudentReportAction
             $score = max(1, min(4, $score));
 
             // Konversi score 1-4 ke persentase: 1 = 60%, 2 = 75%, 3 = 85%, 4 = 100%
-            $percentage = match($score) {
+            $percentage = match ($score) {
                 4 => 100.0,
                 3 => 85.0,
                 2 => 75.0,
@@ -50,14 +56,18 @@ class GradeStudentReportAction
 
         $finalGrade = $totalWeight > 0 ? round($weightedScoreSum, 2) : 80.0;
 
-        $report->update([
-            'rubric_scores' => $rubricScores,
-            'final_grade' => $finalGrade,
-            'teacher_feedback' => $feedback,
-            'graded_by' => $teacher->id,
-            'status' => 'graded',
-        ]);
+        return DB::transaction(function () use ($report, $teacher, $rubricScores, $finalGrade, $feedback) {
+            $locked = StudentReport::whereKey($report->id)->lockForUpdate()->firstOrFail();
 
-        return $report;
+            $locked->update([
+                'rubric_scores' => $rubricScores,
+                'final_grade' => $finalGrade,
+                'teacher_feedback' => $feedback,
+                'graded_by' => $teacher->id,
+                'status' => 'graded',
+            ]);
+
+            return $locked;
+        });
     }
 }

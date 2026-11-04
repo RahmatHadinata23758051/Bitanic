@@ -16,8 +16,12 @@ class UserDirectoryController extends Controller
         $role = $request->query('role');
         $search = trim((string) $request->query('q', ''));
 
+        $schoolId = $request->user()?->school_id;
+        $isSuperuser = $request->user()?->role === 'superuser';
+
         $query = User::with('profile')
             ->whereIn('role', ['siswa', 'guru', 'superuser'])
+            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
             ->orderBy('role')
             ->orderBy('name');
 
@@ -27,12 +31,12 @@ class UserDirectoryController extends Controller
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', '%' . $search . '%')
-                    ->orWhere('email', 'ilike', '%' . $search . '%')
+                $q->where('name', 'ilike', '%'.$search.'%')
+                    ->orWhere('email', 'ilike', '%'.$search.'%')
                     ->orWhereHas('profile', function ($profileQuery) use ($search) {
-                        $profileQuery->where('identifier_number', 'ilike', '%' . $search . '%')
-                            ->orWhere('class_grade', 'ilike', '%' . $search . '%')
-                            ->orWhere('specialization', 'ilike', '%' . $search . '%');
+                        $profileQuery->where('identifier_number', 'ilike', '%'.$search.'%')
+                            ->orWhere('class_grade', 'ilike', '%'.$search.'%')
+                            ->orWhere('specialization', 'ilike', '%'.$search.'%');
                     });
             });
         }
@@ -40,8 +44,12 @@ class UserDirectoryController extends Controller
         $users = $query->paginate(20)->withQueryString();
 
         $stats = [
-            'students' => User::where('role', 'siswa')->count(),
-            'teachers' => User::where('role', 'guru')->count(),
+            'students' => User::where('role', 'siswa')
+                ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+                ->count(),
+            'teachers' => User::where('role', 'guru')
+                ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+                ->count(),
             'admins' => User::where('role', 'superuser')->count(),
         ];
 

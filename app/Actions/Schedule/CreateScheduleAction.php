@@ -13,9 +13,8 @@ class CreateScheduleAction
     /**
      * Create a new practicum schedule ensuring zero bench allocation collisions.
      *
-     * @param array<string, mixed> $data
-     * @param User|null $creator
-     * @return ActivitySchedule
+     * @param  array<string, mixed>  $data
+     *
      * @throws ValidationException
      */
     public function execute(array $data, ?User $creator = null): ActivitySchedule
@@ -32,16 +31,27 @@ class CreateScheduleAction
         }
 
         return DB::transaction(function () use ($data, $creator, $deviceId, $date, $startTime, $endTime) {
-            // Cek tabrakan alokasi meja trainer kit pada tanggal dan jam yang sama dengan row locking
+            // Lock all shared resources before checking overlaps to serialize concurrent bookings.
             if ($deviceId) {
-                // Kunci baris perangkat untuk mencegah race condition booking bersamaan
-                Device::where('id', $deviceId)->lockForUpdate()->first();
+                $device = Device::whereKey($deviceId)->lockForUpdate()->firstOrFail();
+                if ($creator && $creator->role !== 'superuser' && $creator->school_id && (int) $device->school_id !== (int) $creator->school_id) {
+                    throw ValidationException::withMessages([
+                        'device_id' => 'Meja Trainer Kit tersebut bukan milik sekolah Anda.',
+                    ]);
+                }
+            }
 
+            if ($creator && in_array($creator->role, ['guru', 'superuser'])) {
+                User::whereKey($creator->id)->lockForUpdate()->firstOrFail();
+            }
+
+            // Cek tabrakan alokasi meja trainer kit pada tanggal dan jam yang sama.
+            if ($deviceId) {
                 $hasKitConflict = ActivitySchedule::where('device_id', $deviceId)
                     ->whereDate('activity_date', $date)
                     ->where(function ($query) use ($startTime, $endTime) {
                         $query->where('start_time', '<', $endTime)
-                              ->where('end_time', '>', $startTime);
+                            ->where('end_time', '>', $startTime);
                     })
                     ->exists();
 
@@ -57,11 +67,11 @@ class CreateScheduleAction
                 $hasTeacherConflict = ActivitySchedule::whereDate('activity_date', $date)
                     ->whereHas('participants', function ($query) use ($creator) {
                         $query->where('user_id', $creator->id)
-                              ->where('role', 'guru');
+                            ->where('role', 'guru');
                     })
                     ->where(function ($query) use ($startTime, $endTime) {
                         $query->where('start_time', '<', $endTime)
-                              ->where('end_time', '>', $startTime);
+                            ->where('end_time', '>', $startTime);
                     })
                     ->exists();
 

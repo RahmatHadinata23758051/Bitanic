@@ -103,24 +103,24 @@
                     @forelse($students as $s)
                         @php
                             $profile = $s->profile;
-                            $grade = $profile->average_grade ?? 0;
-                            $pred = $profile->competency_predicative ?? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D')));
+                            $grade = $profile?->average_grade ?? 0;
+                            $pred = $profile?->competency_predicative ?? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D')));
                         @endphp
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="py-3 px-3">
                                 <div class="font-bold text-slate-900">{{ $s->name }}</div>
-                                <div class="font-mono text-[11px] text-slate-500">{{ $profile->identifier_number ?? 'NISN -' }}</div>
+                                <div class="font-mono text-[11px] text-slate-500">{{ $profile?->identifier_number ?? 'NISN -' }}</div>
                             </td>
                             <td class="py-3 px-3">
-                                <div class="font-semibold text-slate-800">{{ $profile->class_grade ?? 'XI ATPH 1' }}</div>
-                                <span class="text-[11px] text-slate-500">{{ $profile->group_name ?? 'Kelompok' }}</span>
+                                <div class="font-semibold text-slate-800">{{ $profile?->class_grade ?? 'XI ATPH 1' }}</div>
+                                <span class="text-[11px] text-slate-500">{{ $profile?->group_name ?? 'Kelompok' }}</span>
                             </td>
                             <td class="py-3 px-3 font-mono font-semibold text-slate-700">
-                                {{ $profile->assigned_kit_id ? 'TK-0' . $profile->assigned_kit_id : 'Belum Ditugaskan' }}
+                                {{ $profile?->assigned_kit_id ? 'TK-0' . $profile->assigned_kit_id : 'Belum Ditugaskan' }}
                             </td>
                             <td class="py-3 px-3 text-center font-mono font-semibold">
-                                <span class="{{ ($profile->attendance_percent ?? 95) >= 90 ? 'text-emerald-700' : 'text-amber-600' }}">
-                                    {{ $profile->attendance_percent ?? 95 }}%
+                                <span class="{{ ($profile?->attendance_percent ?? 95) >= 90 ? 'text-emerald-700' : 'text-amber-600' }}">
+                                    {{ $profile?->attendance_percent ?? 95 }}%
                                 </span>
                             </td>
                             <td class="py-3 px-3 text-center font-mono font-bold text-sm text-indigo-700">
@@ -132,7 +132,7 @@
                                 </span>
                             </td>
                             <td class="py-3 px-3 text-right">
-                                @if(!empty($profile->trainer_certified))
+                                @if(!empty($profile?->trainer_certified))
                                     <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                                         <i data-lucide="award" class="w-3.5 h-3.5"></i>
                                         <span>Certified</span>

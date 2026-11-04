@@ -17,19 +17,27 @@ class ActivityScheduleController extends Controller
     /**
      * Display practicum schedules timeline and trainer kit bench allocations.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
+        $schoolId = $request->user()?->school_id;
+        $isSuperuser = $request->user()?->role === 'superuser';
+
         $schedules = ActivitySchedule::with(['device', 'participants.user'])
+            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
             ->orderBy('activity_date', 'asc')
             ->orderBy('start_time', 'asc')
             ->get();
 
-        $devices = Device::where('is_active', true)->orderBy('code')->get();
+        $devices = Device::where('is_active', true)
+            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+            ->orderBy('code')
+            ->get();
         $modules = ModulePracticum::orderBy('meeting_number')->get();
 
         // Status kit ketersediaan hari ini
         $today = now()->toDateString();
         $bookedDevicesToday = ActivitySchedule::where('activity_date', $today)
+            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
             ->pluck('device_id')
             ->filter()
             ->unique()
@@ -49,9 +57,24 @@ class ActivityScheduleController extends Controller
      */
     public function store(Request $request, CreateScheduleAction $action): RedirectResponse
     {
+        $schoolId = $request->user()?->school_id;
+        $isSuperuser = $request->user()?->role === 'superuser';
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'device_id' => 'nullable|exists:devices,id',
+            'device_id' => [
+                'nullable',
+                'integer',
+                'exists:devices,id',
+                function ($attribute, $value, $fail) use ($schoolId, $isSuperuser) {
+                    if ($value && ! $isSuperuser && $schoolId) {
+                        $device = Device::find($value);
+                        if ($device && (int) $device->school_id !== (int) $schoolId) {
+                            $fail('Meja Trainer Kit tersebut bukan milik sekolah Anda.');
+                        }
+                    }
+                },
+            ],
             'activity_date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',
@@ -74,9 +97,15 @@ class ActivityScheduleController extends Controller
     /**
      * Remove the specified practicum schedule.
      */
-    public function destroy(int $id): RedirectResponse
+    public function destroy(Request $request, int $id): RedirectResponse
     {
         $schedule = ActivitySchedule::findOrFail($id);
+        $user = $request->user();
+
+        if ($user && $user->role !== 'superuser' && $schedule->school_id && (int) $schedule->school_id !== (int) $user->school_id) {
+            abort(404);
+        }
+
         $schedule->delete();
 
         return redirect()->route('schedules.index')

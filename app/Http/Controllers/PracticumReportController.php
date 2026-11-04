@@ -20,6 +20,8 @@ class PracticumReportController extends Controller
         $baseQuery = StudentReport::query();
         if ($request->user()->isSiswa()) {
             $baseQuery->where('user_id', $request->user()->id);
+        } elseif ($request->user()->role !== 'superuser' && $request->user()->school_id) {
+            $baseQuery->whereHas('user', fn ($u) => $u->where('school_id', $request->user()->school_id));
         }
 
         $query = (clone $baseQuery)->with(['user.profile', 'module', 'teacher'])
