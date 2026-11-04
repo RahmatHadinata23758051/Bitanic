@@ -30,7 +30,8 @@ class ImportLegacyDataCommand extends Command
     protected $signature = 'bitanic:import-legacy
                             {--path= : Path to dump_upiedge.sql}
                             {--fresh : Freshly migrate database before import}
-                            {--dev-passwords : Set all imported user passwords to "password" for local dev testing}';
+                            {--dev-passwords : Set all imported user passwords to "password" for local dev testing}
+                            {--force : Force execution in production environment}';
 
     /**
      * The console command description.
@@ -46,6 +47,18 @@ class ImportLegacyDataCommand extends Command
     {
         $this->info('Starting Bitanic Legacy Data ETL Migration...');
 
+        if (app()->environment('production')) {
+            if ($this->option('fresh')) {
+                $this->error('Operasi --fresh DILARANG KERAS pada environment production demi integritas dan keamanan data!');
+                return Command::FAILURE;
+            }
+
+            if (!$this->option('force')) {
+                $this->error('Aplikasi berjalan pada environment production. Operasi import legacy memerlukan flag --force.');
+                return Command::FAILURE;
+            }
+        }
+
         $customPath = $this->option('path');
         $filePath = $customPath
             ? (str_starts_with($customPath, '/') || str_contains($customPath, ':\\') ? $customPath : base_path($customPath))
@@ -56,7 +69,7 @@ class ImportLegacyDataCommand extends Command
             return Command::FAILURE;
         }
 
-        if ($this->option('fresh')) {
+        if ($this->option('fresh') && !app()->environment('production')) {
             $this->warn('Running php artisan migrate:fresh before import...');
             $this->call('migrate:fresh', ['--force' => true]);
         }
