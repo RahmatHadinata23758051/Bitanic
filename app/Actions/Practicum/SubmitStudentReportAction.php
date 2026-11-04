@@ -40,33 +40,107 @@ class SubmitStudentReportAction
             ]);
         }
 
-        // 2. Isolasi Perangkat: Resolusi Trainer Kit yang dialokasikan
-        $deviceId = $data['device_id'] ?? null;
+        // 2. Integritas alokasi Trainer Kit dan validasi hak akses
+        $requestedDeviceId = $data['device_id'] ?? null;
         $scheduleId = $data['activity_schedule_id'] ?? null;
+        $profile = $user->profile;
 
-        if (!$deviceId && $scheduleId) {
-            $schedule = ActivitySchedule::find($scheduleId);
-            $deviceId = $schedule?->device_id;
+        $assignedKitCode = $profile?->assigned_kit_id;
+        $profileDevice = null;
+        if ($assignedKitCode) {
+            $profileDevice = is_numeric($assignedKitCode)
+                ? Device::where('id', (int) $assignedKitCode)->orWhere('code', (string) $assignedKitCode)->first()
+                : Device::where('code', (string) $assignedKitCode)->first();
         }
 
-        if (!$deviceId) {
-            // Periksa jadwal aktif hari ini untuk siswa ini
-            $activeSchedule = ActivitySchedule::whereDate('activity_date', today())
-                ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
-                ->whereNotNull('device_id')
-                ->latest()
-                ->first();
+        // Cek apakah siswa memiliki jadwal praktikum aktif hari ini
+        $activeScheduleToday = ActivitySchedule::whereDate('activity_date', today())
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
+            ->whereNotNull('device_id')
+            ->latest()
+            ->first();
 
-            if ($activeSchedule) {
-                $deviceId = $activeSchedule->device_id;
-                $scheduleId = $scheduleId ?? $activeSchedule->id;
+        $schedule = null;
+        if ($scheduleId) {
+            $schedule = ActivitySchedule::with('participants')->find($scheduleId);
+
+            if (!$schedule) {
+                throw ValidationException::withMessages([
+                    'activity_schedule_id' => 'Jadwal praktikum tidak ditemukan atau tidak valid.',
+                ]);
+            }
+
+            if ($schedule->school_id && $user->school_id && $schedule->school_id !== $user->school_id) {
+                throw ValidationException::withMessages([
+                    'activity_schedule_id' => 'Jadwal praktikum berada di luar domain sekolah Anda.',
+                ]);
+            }
+
+            if ($user->isSiswa() && !$schedule->participants->contains('user_id', $user->id)) {
+                throw ValidationException::withMessages([
+                    'activity_schedule_id' => 'Anda tidak terdaftar sebagai peserta pada jadwal praktikum ini.',
+                ]);
             }
         }
 
-        if (!$deviceId) {
-            // Fallback ke perangkat lab aktif pertama jika ada
-            $deviceId = Device::where('is_active', true)->value('id');
+        $resolvedDevice = null;
+        if ($requestedDeviceId) {
+            $requestedDevice = is_numeric($requestedDeviceId)
+                ? Device::where('id', (int) $requestedDeviceId)->orWhere('code', (string) $requestedDeviceId)->first()
+                : Device::where('code', (string) $requestedDeviceId)->first();
+
+            if (!$requestedDevice) {
+                throw ValidationException::withMessages([
+                    'device_id' => 'Perangkat Trainer Kit tidak ditemukan.',
+                ]);
+            }
+
+            if ($requestedDevice->school_id && $user->school_id && $requestedDevice->school_id !== $user->school_id) {
+                throw ValidationException::withMessages([
+                    'device_id' => 'Trainer Kit ini berada di luar domain sekolah Anda.',
+                ]);
+            }
+
+            // Jika siswa memiliki alokasi kit spesifik di profil, tidak boleh memilih kit lain
+            if ($user->isSiswa() && $profileDevice && $profileDevice->id !== $requestedDevice->id) {
+                throw ValidationException::withMessages([
+                    'device_id' => "Trainer Kit {$requestedDevice->code} bukan alokasi meja praktik Anda ({$profileDevice->code}).",
+                ]);
+            }
+
+            // Jika siswa memiliki jadwal aktif hari ini, tidak boleh memilih kit di luar jadwalnya
+            if ($user->isSiswa() && $activeScheduleToday && (int)$activeScheduleToday->device_id !== (int)$requestedDevice->id) {
+                throw ValidationException::withMessages([
+                    'device_id' => 'Trainer Kit yang dipilih tidak sesuai dengan alokasi meja pada jadwal praktikum aktif Anda.',
+                ]);
+            }
+
+            // Jika jadwal spesifik ditentukan, perangkat harus sesuai dengan jadwal
+            if ($schedule && (int)$schedule->device_id !== (int)$requestedDevice->id) {
+                throw ValidationException::withMessages([
+                    'device_id' => 'Trainer Kit yang dipilih tidak sesuai dengan jadwal praktikum.',
+                ]);
+            }
+
+            $resolvedDevice = $requestedDevice;
+        } else {
+            // Resolusi server-side otomatis jika device_id tidak dikirim browser
+            if ($schedule) {
+                $resolvedDevice = $schedule->device;
+            } elseif ($activeScheduleToday) {
+                $resolvedDevice = $activeScheduleToday->device;
+                $scheduleId = $activeScheduleToday->id;
+            } elseif ($profileDevice) {
+                $resolvedDevice = $profileDevice;
+            } else {
+                // Fallback aman ke perangkat lab aktif pertama di sekolah siswa
+                $resolvedDevice = Device::where('is_active', true)
+                    ->when($user->school_id, fn($q) => $q->where('school_id', $user->school_id))
+                    ->first();
+            }
         }
+
+        $deviceId = $resolvedDevice?->id;
 
         // 3. Bukti Telemetri (Telemetry Evidence & Provenance)
         $latestReading = null;
