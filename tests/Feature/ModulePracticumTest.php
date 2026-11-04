@@ -126,4 +126,47 @@ class ModulePracticumTest extends TestCase
         $this->assertEquals(94.75, (float) $report->final_grade);
         $this->assertEquals('Instalasi grounding sangat rapi dan aman sesuai standar PUIL.', $report->teacher_feedback);
     }
+
+    public function test_student_cannot_grade_student_report(): void
+    {
+        $student = User::factory()->create(['role' => 'siswa']);
+        $module = ModulePracticum::where('meeting_number', 1)->firstOrFail();
+
+        $report = StudentReport::create([
+            'user_id' => $student->id,
+            'module_id' => $module->id,
+            'lks_answers' => ['lks-1-1' => 'Jawaban test'],
+            'telemetry_snapshot' => ['ph' => 6.5],
+            'status' => 'submitted',
+        ]);
+
+        $response = $this->actingAs($student)->post(route('modules.grade-report', $report->id), [
+            'rubric_scores' => ['r1' => 4],
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_guest_cannot_grade_or_submit_lks(): void
+    {
+        $module = ModulePracticum::where('meeting_number', 1)->firstOrFail();
+
+        $response = $this->post(route('modules.submit-lks', $module->id), [
+            'lks_answers' => ['q1' => 'test'],
+        ]);
+        $response->assertRedirect('/login');
+
+        $report = StudentReport::create([
+            'user_id' => User::factory()->create(['role' => 'siswa'])->id,
+            'module_id' => $module->id,
+            'lks_answers' => ['lks-1-1' => 'Jawaban test'],
+            'telemetry_snapshot' => ['ph' => 6.5],
+            'status' => 'submitted',
+        ]);
+
+        $gradeResponse = $this->post(route('modules.grade-report', $report->id), [
+            'rubric_scores' => ['r1' => 4],
+        ]);
+        $gradeResponse->assertRedirect('/login');
+    }
 }

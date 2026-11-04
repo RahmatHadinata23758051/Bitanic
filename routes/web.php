@@ -42,13 +42,21 @@ Route::get('/telemetry/history/export', [TelemetryHistoryController::class, 'exp
 // 5. Kurikulum 12 Modul Praktikum Kurikulum Merdeka & Penilaian LKS
 Route::get('/modules', [ModulePracticumController::class, 'index'])->name('modules.index');
 Route::get('/modules/{id}', [ModulePracticumController::class, 'show'])->name('modules.show');
-Route::post('/modules/{id}/submit-lks', [ModulePracticumController::class, 'submitLks'])->name('modules.submit-lks');
-Route::post('/modules/reports/{id}/grade', [ModulePracticumController::class, 'grade'])->name('modules.grade-report');
+Route::post('/modules/{id}/submit-lks', [ModulePracticumController::class, 'submitLks'])
+    ->middleware('auth')
+    ->name('modules.submit-lks');
+Route::post('/modules/reports/{id}/grade', [ModulePracticumController::class, 'grade'])
+    ->middleware(['auth', 'role:guru'])
+    ->name('modules.grade-report');
 
 // 6. Manajemen Jadwal Praktikum & Alokasi Meja Trainer Kit
 Route::get('/schedules', [ActivityScheduleController::class, 'index'])->name('schedules.index');
-Route::post('/schedules', [ActivityScheduleController::class, 'store'])->name('schedules.store');
-Route::delete('/schedules/{id}', [ActivityScheduleController::class, 'destroy'])->name('schedules.destroy');
+Route::post('/schedules', [ActivityScheduleController::class, 'store'])
+    ->middleware(['auth', 'role:guru'])
+    ->name('schedules.store');
+Route::delete('/schedules/{id}', [ActivityScheduleController::class, 'destroy'])
+    ->middleware(['auth', 'role:guru'])
+    ->name('schedules.destroy');
 
 // 7. Hub Laporan Lembar Kerja Siswa (LKS)
 Route::get('/reports', [PracticumReportController::class, 'index'])->name('reports.index');
@@ -61,17 +69,25 @@ Route::get('/users-data', [UserDirectoryController::class, 'index'])->name('user
 
 // 10. Manajemen Armada Trainer Kit Hardware & Kalibrasi Sensor
 Route::get('/trainer-kits', [TrainerKitManagerController::class, 'index'])->name('kits.index');
-Route::post('/trainer-kits/{device}/reboot', [TrainerKitManagerController::class, 'reboot'])->name('kits.reboot');
-Route::post('/trainer-kits/{device}/calibration', [TrainerKitManagerController::class, 'updateCalibration'])->name('kits.calibration');
+Route::post('/trainer-kits/{device}/reboot', [TrainerKitManagerController::class, 'reboot'])
+    ->middleware(['auth', 'role:guru'])
+    ->name('kits.reboot');
+Route::post('/trainer-kits/{device}/calibration', [TrainerKitManagerController::class, 'updateCalibration'])
+    ->middleware(['auth', 'role:guru'])
+    ->name('kits.calibration');
 
 // 11. Raw Modbus RS485 Hex Stream Debugger
 Route::get('/raw-logs', [RawLogsDebuggerController::class, 'index'])->name('rawlogs.index');
 Route::get('/rawlogs', [RawLogsDebuggerController::class, 'index'])->name('raw-logs.index');
-Route::post('/raw-logs/inject', [RawLogsDebuggerController::class, 'inject'])->name('rawlogs.inject');
+Route::post('/raw-logs/inject', [RawLogsDebuggerController::class, 'inject'])
+    ->middleware(['auth', 'role:superuser'])
+    ->name('rawlogs.inject');
 
 // 12. Pengaturan Laboratorium & Log Aktivitas (Audit Trail)
 Route::get('/settings', [SettingsAuditController::class, 'index'])->name('settings.index');
-Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool'])->name('settings.update');
+Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool'])
+    ->middleware(['auth', 'role:superuser'])
+    ->name('settings.update');
 
 // Manajemen Media Tanam (Null-Safe)
 Route::resource('media', PlantingMediaController::class);

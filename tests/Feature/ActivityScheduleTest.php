@@ -140,8 +140,44 @@ class ActivityScheduleTest extends TestCase
         ]);
     }
 
-    public function test_schedule_can_be_deleted(): void
+    public function test_guest_cannot_delete_schedule(): void
     {
+        $schedule = ActivitySchedule::create([
+            'title' => 'Sesi Tidak Boleh Dihapus Guest',
+            'activity_date' => now()->toDateString(),
+            'start_time' => '13:00',
+            'end_time' => '15:00',
+        ]);
+
+        $response = $this->delete(route('schedules.destroy', $schedule->id));
+
+        $response->assertRedirect('/login');
+        $this->assertDatabaseHas('activity_schedules', [
+            'id' => $schedule->id,
+        ]);
+    }
+
+    public function test_student_cannot_delete_schedule(): void
+    {
+        $student = User::factory()->create(['role' => 'siswa']);
+        $schedule = ActivitySchedule::create([
+            'title' => 'Sesi Tidak Boleh Dihapus Siswa',
+            'activity_date' => now()->toDateString(),
+            'start_time' => '13:00',
+            'end_time' => '15:00',
+        ]);
+
+        $response = $this->actingAs($student)->delete(route('schedules.destroy', $schedule->id));
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('activity_schedules', [
+            'id' => $schedule->id,
+        ]);
+    }
+
+    public function test_authorized_teacher_can_delete_schedule(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
         $schedule = ActivitySchedule::create([
             'title' => 'Sesi Akan Dihapus',
             'activity_date' => now()->toDateString(),
@@ -149,7 +185,7 @@ class ActivityScheduleTest extends TestCase
             'end_time' => '15:00',
         ]);
 
-        $response = $this->delete(route('schedules.destroy', $schedule->id));
+        $response = $this->actingAs($teacher)->delete(route('schedules.destroy', $schedule->id));
 
         $response->assertRedirect(route('schedules.index'));
         $this->assertDatabaseMissing('activity_schedules', [

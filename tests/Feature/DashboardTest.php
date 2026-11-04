@@ -161,9 +161,21 @@ class DashboardTest extends TestCase
         $this->get('/analytics')->assertOk()->assertSee('Analitik Agronomi');
     }
 
-    public function test_relay_toggle_endpoint_updates_state(): void
+    public function test_relay_toggle_endpoint_rejects_unauthenticated_requests(): void
     {
         $response = $this->postJson('/api/v1/devices/relay/toggle', [
+            'relay_key' => 'irrigationPump',
+            'state' => true,
+        ]);
+
+        $response->assertStatus(401);
+    }
+
+    public function test_relay_toggle_endpoint_updates_state_for_authorized_teacher(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+
+        $response = $this->actingAs($teacher)->postJson('/api/v1/devices/relay/toggle', [
             'relay_key' => 'irrigationPump',
             'state' => true,
         ]);
@@ -171,6 +183,8 @@ class DashboardTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'success' => true,
+            'is_simulation' => true,
+            'hardware_ack' => false,
             'relay_key' => 'irrigationPump',
             'state' => true,
         ]);

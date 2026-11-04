@@ -13,8 +13,9 @@ Route::middleware('device.key')->group(function () {
     Route::post('/rsc-data', [TelemetryIngestController::class, 'store']);
 });
 
-// Endpoint Kontrol Relai Aktuator Hardware Trainer Kit
-Route::post('/v1/devices/relay/toggle', [IotMonitoringController::class, 'toggleRelay']);
+// Endpoint Kontrol Relai Aktuator: requires a logged-in guru/superuser, and remains simulation-only
+// until an ESP32 downlink and positive hardware ACK are verified.
+Route::middleware(['web', 'auth', 'role:guru'])->post('/v1/devices/relay/toggle', [IotMonitoringController::class, 'toggleRelay']);
 
 // Endpoint Rekomendasi AI Gemini Asinkronus (Job Queue)
 Route::post('/v1/recommendations/request', [CropRecommendationController::class, 'requestRecommendation']);

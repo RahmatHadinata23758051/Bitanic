@@ -148,9 +148,11 @@ class IotMonitoringController extends Controller
 
         return response()->json([
             'success' => true,
+            'is_simulation' => true,
+            'hardware_ack' => false,
             'relay_key' => $validated['relay_key'],
             'state' => $validated['state'],
-            'message' => 'Status aktuator ' . $validated['relay_key'] . ' berhasil diperbarui ke ' . ($validated['state'] ? 'ON' : 'OFF'),
+            'message' => 'Status aktuator ' . $validated['relay_key'] . ' diperbarui di basis data (Simulasi — Belum terhubung ACK fisik ESP32).',
         ]);
     }
 }
