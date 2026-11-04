@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Device;
+use App\Actions\Hardware\CreateSensorCalibrationProfileAction;
 use App\Models\DeviceApiKey;
 use App\Services\Hardware\DeviceAvailabilityResolver;
+use InvalidArgumentException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -74,8 +76,11 @@ class TrainerKitManagerController extends Controller
     /**
      * Update calibration offsets for sensors.
      */
-    public function updateCalibration(Request $request, Device $device): RedirectResponse
-    {
+    public function updateCalibration(
+        Request $request,
+        Device $device,
+        CreateSensorCalibrationProfileAction $createCalibrationProfile
+    ): RedirectResponse {
         $user = $request->user();
         if ($user && ! $user->isSuperuser()) {
             abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
@@ -85,18 +90,53 @@ class TrainerKitManagerController extends Controller
             'phOffset' => 'required|numeric|between:-5,5',
             'moistureOffset' => 'required|numeric|between:-20,20',
             'ecOffset' => 'required|numeric|between:-500,500',
+            'reason' => 'nullable|string|max:255',
         ]);
 
-        $device->update([
-            'calibration_offsets' => [
-                'ph' => (float) $validated['phOffset'],
-                'humidity' => (float) $validated['moistureOffset'],
-                'ec' => (float) $validated['ecOffset'],
-            ],
-        ]);
+        $reason = ! empty($validated['reason'])
+            ? $validated['reason']
+            : 'Penyetelan offset kalibrasi sensor meja praktikum oleh guru pengampu.';
+
+        try {
+            $createCalibrationProfile->execute(
+                device: $device,
+                sensorModel: 'RS485-SOIL-7IN1',
+                parameter: 'ph',
+                method: 'offset',
+                parameters: ['offset' => (float) $validated['phOffset']],
+                reason: $reason,
+                profileName: 'Profil Kalibrasi pH Meja '.$device->code,
+                user: $user
+            );
+
+            $createCalibrationProfile->execute(
+                device: $device,
+                sensorModel: 'RS485-SOIL-7IN1',
+                parameter: 'humidity',
+                method: 'offset',
+                parameters: ['offset' => (float) $validated['moistureOffset']],
+                reason: $reason,
+                profileName: 'Profil Kalibrasi Kelembapan Meja '.$device->code,
+                user: $user
+            );
+
+            $createCalibrationProfile->execute(
+                device: $device,
+                sensorModel: 'RS485-SOIL-7IN1',
+                parameter: 'ec',
+                method: 'offset',
+                parameters: ['offset' => (float) $validated['ecOffset']],
+                reason: $reason,
+                profileName: 'Profil Kalibrasi EC Meja '.$device->code,
+                user: $user
+            );
+        } catch (InvalidArgumentException $e) {
+            return redirect()->route('kits.index')
+                ->with('error', 'Gagal memperbarui kalibrasi: '.$e->getMessage());
+        }
 
         return redirect()->route('kits.index')
-            ->with('success', 'Offset kalibrasi sensor untuk '.$device->code.' berhasil diperbarui.');
+            ->with('success', 'Offset kalibrasi sensor untuk '.$device->code.' berhasil diperbarui (Profil software aktif; downlink hardware: BLOCKED).');
     }
 
     /**

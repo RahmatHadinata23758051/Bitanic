@@ -18,6 +18,7 @@ class IngestTelemetryAction
     public function execute(Device $device, array $rawPayload, string $provenance = 'fixture'): TelemetryReading
     {
         $samples = $rawPayload['soilrs485'] ?? $rawPayload;
+        $now = Carbon::now();
 
         $offsets = $device->calibration_offsets ?? [];
         $offsetAliases = [
@@ -29,7 +30,8 @@ class IngestTelemetryAction
             'potassium' => ['potassium', 'Potassium', 'Kalium'],
             'temperature' => ['temperature', 'Temperature'],
         ];
-        $getOffset = static function (string $sensor) use ($offsets, $offsetAliases): float {
+
+        $getLegacyOffset = static function (string $sensor) use ($offsets, $offsetAliases): float {
             foreach ($offsetAliases[$sensor] as $key) {
                 if (array_key_exists($key, $offsets)) {
                     return (float) $offsets[$key];
@@ -39,58 +41,78 @@ class IngestTelemetryAction
             return 0.0;
         };
 
-        $applyOffset = static function (array $keys, float $offset) use ($samples): ?float {
+        $extractRaw = static function (array $keys) use ($samples): ?float {
             foreach ($keys as $key) {
                 if (array_key_exists($key, $samples) && $samples[$key] !== null && $samples[$key] !== '') {
-                    return (float) $samples[$key] + $offset;
+                    return (float) $samples[$key];
                 }
             }
 
             return null;
         };
 
-        $nOffset = $getOffset('nitrogen');
-        $pOffset = $getOffset('phosphorus');
-        $kOffset = $getOffset('potassium');
-        $ecOffset = $getOffset('ec');
-        $phOffset = $getOffset('ph');
-        $tempOffset = $getOffset('temperature');
-        $humOffset = $getOffset('humidity');
+        $rawNitrogen = $extractRaw(['Nitrogen', 'nitrogen']);
+        $rawPhosphorus = $extractRaw(['Phosporus', 'Phosphorus', 'phosphorus']);
+        $rawPotassium = $extractRaw(['Kalium', 'Potassium', 'potassium']);
+        $rawEc = $extractRaw(['Ec', 'EC', 'ec']);
+        $rawPh = $extractRaw(['Ph', 'pH', 'ph']);
+        $rawTemperature = $extractRaw(['Temperature', 'temperature']);
+        $rawHumidity = $extractRaw(['Humidity', 'humidity']);
 
-        $nitrogen = $applyOffset(['Nitrogen', 'nitrogen'], $nOffset);
-        $phosphorus = $applyOffset(['Phosporus', 'Phosphorus', 'phosphorus'], $pOffset);
-        $potassium = $applyOffset(['Kalium', 'Potassium', 'potassium'], $kOffset);
-        $ec = $applyOffset(['Ec', 'EC', 'ec'], $ecOffset);
-        $ph = $applyOffset(['Ph', 'pH', 'ph'], $phOffset);
-        $temperature = $applyOffset(['Temperature', 'temperature'], $tempOffset);
-        $humidity = $applyOffset(['Humidity', 'humidity'], $humOffset);
-
-        $appliedOffsets = [
-            'nitrogen' => $nOffset,
-            'phosphorus' => $pOffset,
-            'potassium' => $kOffset,
-            'ec' => $ecOffset,
-            'ph' => $phOffset,
-            'temperature' => $tempOffset,
-            'humidity' => $humOffset,
+        $rawMetrics = [
+            'nitrogen' => $rawNitrogen,
+            'phosphorus' => $rawPhosphorus,
+            'potassium' => $rawPotassium,
+            'ec' => $rawEc,
+            'ph' => $rawPh,
+            'temperature' => $rawTemperature,
+            'humidity' => $rawHumidity,
         ];
 
-        // Evaluasi threshold
+        // Resolve active versioned calibration profile or legacy offset per parameter
+        $primaryProfile = null;
+        $appliedOffsets = [];
+        $calibratedValues = [];
+
+        foreach ($rawMetrics as $param => $rawVal) {
+            if ($rawVal === null) {
+                $calibratedValues[$param] = null;
+                $appliedOffsets[$param] = 0.0;
+                continue;
+            }
+
+            $activeProfile = $device->getActiveCalibrationProfile($param, $now);
+
+            if ($activeProfile) {
+                $calibratedValues[$param] = $activeProfile->calibrate($rawVal);
+                $appliedOffsets[$param] = round($calibratedValues[$param] - $rawVal, 2);
+
+                if (! $primaryProfile || $activeProfile->version > $primaryProfile->version) {
+                    $primaryProfile = $activeProfile;
+                }
+            } else {
+                $legacyOffset = $getLegacyOffset($param);
+                $calibratedValues[$param] = $rawVal + $legacyOffset;
+                $appliedOffsets[$param] = $legacyOffset;
+            }
+        }
+
+        // Evaluasi threshold terhadap nilai yang sudah dikalibrasi
         $thresholds = SensorThreshold::where('device_id', $device->id)
             ->orWhereNull('device_id')
             ->get()
             ->keyBy('parameter');
 
         $paramValues = [
-            'Nitrogen' => $nitrogen,
-            'Phosporus' => $phosphorus,
-            'Phosphorus' => $phosphorus,
-            'Kalium' => $potassium,
-            'Potassium' => $potassium,
-            'Ec' => $ec,
-            'Ph' => $ph,
-            'Temperature' => $temperature,
-            'Humidity' => $humidity,
+            'Nitrogen' => $calibratedValues['nitrogen'],
+            'Phosporus' => $calibratedValues['phosphorus'],
+            'Phosphorus' => $calibratedValues['phosphorus'],
+            'Kalium' => $calibratedValues['potassium'],
+            'Potassium' => $calibratedValues['potassium'],
+            'Ec' => $calibratedValues['ec'],
+            'Ph' => $calibratedValues['ph'],
+            'Temperature' => $calibratedValues['temperature'],
+            'Humidity' => $calibratedValues['humidity'],
         ];
 
         $thresholdFlags = [];
@@ -107,24 +129,26 @@ class IngestTelemetryAction
             }
         }
 
-        $now = Carbon::now();
-
         $validProvenances = config('bitanic.telemetry_provenances', ['hardware', 'simulation', 'fixture']);
         $normalizedProvenance = in_array($provenance, $validProvenances, true) ? $provenance : 'fixture';
 
-        // Simpan satu record terpadu
+        // Simpan satu record telemetri terpadu dengan lineage kalibrasi dan raw payload imutabel
         $reading = TelemetryReading::create([
             'device_id' => $device->id,
             'provenance' => $normalizedProvenance,
-            'nitrogen' => $nitrogen,
-            'phosphorus' => $phosphorus,
-            'potassium' => $potassium,
-            'ec' => $ec,
-            'ph' => $ph,
-            'temperature' => $temperature,
-            'humidity' => $humidity,
+            'nitrogen' => $calibratedValues['nitrogen'],
+            'phosphorus' => $calibratedValues['phosphorus'],
+            'potassium' => $calibratedValues['potassium'],
+            'ec' => $calibratedValues['ec'],
+            'ph' => $calibratedValues['ph'],
+            'temperature' => $calibratedValues['temperature'],
+            'humidity' => $calibratedValues['humidity'],
             'raw_payload' => $rawPayload,
+            'raw_metrics' => $rawMetrics,
             'applied_offsets' => $appliedOffsets,
+            'calibration_profile_id' => $primaryProfile?->id,
+            'calibration_version' => $primaryProfile?->version,
+            'calibration_applied_at' => $primaryProfile ? $now : null,
             'threshold_flags' => $thresholdFlags,
             'recorded_at' => $now,
         ]);
