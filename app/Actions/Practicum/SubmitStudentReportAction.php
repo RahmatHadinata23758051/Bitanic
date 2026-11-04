@@ -180,6 +180,16 @@ class SubmitStudentReportAction
         $deviceId = $resolvedDevice?->id;
 
         // 3. Bukti Telemetri (Telemetry Evidence & Provenance)
+        // When a schedule is active, evidence must fall within the session window.
+        $sessionWindowStart = null;
+        $sessionWindowEnd = null;
+        $resolvedSchedule = $schedule ?? ($activeScheduleToday ?? null);
+
+        if ($resolvedSchedule && $resolvedSchedule->activity_date && $resolvedSchedule->start_time && $resolvedSchedule->end_time) {
+            $sessionWindowStart = $resolvedSchedule->activity_date->copy()->setTimeFromTimeString($resolvedSchedule->start_time);
+            $sessionWindowEnd = $resolvedSchedule->activity_date->copy()->setTimeFromTimeString($resolvedSchedule->end_time);
+        }
+
         $latestReading = null;
         $requestedReadingId = $data['evidence_reading_id'] ?? null;
 
@@ -190,12 +200,28 @@ class SubmitStudentReportAction
                     'evidence_reading_id' => 'Bukti telemetri tidak valid atau tidak berasal dari meja Trainer Kit yang dialokasikan.',
                 ]);
             }
+
+            // Session window evidence check: reading must have been recorded during the session
+            if ($sessionWindowStart && $sessionWindowEnd && $evidenceReading->recorded_at) {
+                if ($evidenceReading->recorded_at->lt($sessionWindowStart) || $evidenceReading->recorded_at->gt($sessionWindowEnd)) {
+                    throw ValidationException::withMessages([
+                        'evidence_reading_id' => 'Bukti telemetri tidak berada dalam jendela waktu sesi praktikum yang berlaku.',
+                    ]);
+                }
+            }
+
             $latestReading = $evidenceReading;
         } elseif ($deviceId) {
-            $latestReading = TelemetryReading::with('device')
-                ->where('device_id', $deviceId)
-                ->latest('recorded_at')
-                ->first();
+            // Auto-resolve latest reading, scoped to session window if available
+            $readingQuery = TelemetryReading::with('device')
+                ->where('device_id', $deviceId);
+
+            if ($sessionWindowStart && $sessionWindowEnd) {
+                $readingQuery->where('recorded_at', '>=', $sessionWindowStart)
+                    ->where('recorded_at', '<=', $sessionWindowEnd);
+            }
+
+            $latestReading = $readingQuery->latest('recorded_at')->first();
         }
 
         if ($latestReading) {
