@@ -32,7 +32,7 @@ class CreateScheduleAction
         // Cek tabrakan alokasi meja trainer kit pada tanggal dan jam yang sama
         if ($deviceId) {
             $hasConflict = ActivitySchedule::where('device_id', $deviceId)
-                ->where('activity_date', $date)
+                ->whereDate('activity_date', $date)
                 ->where(function ($query) use ($startTime, $endTime) {
                     $query->where(function ($q) use ($startTime, $endTime) {
                         $q->where('start_time', '<', $endTime)
