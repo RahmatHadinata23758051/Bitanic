@@ -15,7 +15,7 @@ class IngestTelemetryAction
      *
      * @param  array<string, mixed>  $rawPayload
      */
-    public function execute(Device $device, array $rawPayload, string $provenance = 'hardware'): TelemetryReading
+    public function execute(Device $device, array $rawPayload, string $provenance = 'fixture'): TelemetryReading
     {
         $samples = $rawPayload['soilrs485'] ?? $rawPayload;
 
@@ -39,16 +39,14 @@ class IngestTelemetryAction
             return 0.0;
         };
 
-        $applyOffset = static function (array $keys, float $offset) use ($samples): float {
-            $rawValue = 0.0;
+        $applyOffset = static function (array $keys, float $offset) use ($samples): ?float {
             foreach ($keys as $key) {
-                if (array_key_exists($key, $samples)) {
-                    $rawValue = (float) $samples[$key];
-                    break;
+                if (array_key_exists($key, $samples) && $samples[$key] !== null && $samples[$key] !== '') {
+                    return (float) $samples[$key] + $offset;
                 }
             }
 
-            return $rawValue + $offset;
+            return null;
         };
 
         $nOffset = $getOffset('nitrogen');
@@ -97,7 +95,7 @@ class IngestTelemetryAction
 
         $thresholdFlags = [];
         foreach ($paramValues as $param => $val) {
-            if ($thresholds->has($param)) {
+            if ($val !== null && $thresholds->has($param)) {
                 $thresh = $thresholds->get($param);
                 if ($val < (float) $thresh->min_value) {
                     $thresholdFlags[$param] = 'low';
@@ -111,10 +109,13 @@ class IngestTelemetryAction
 
         $now = Carbon::now();
 
+        $validProvenances = config('bitanic.telemetry_provenances', ['hardware', 'simulation', 'fixture']);
+        $normalizedProvenance = in_array($provenance, $validProvenances, true) ? $provenance : 'fixture';
+
         // Simpan satu record terpadu
         $reading = TelemetryReading::create([
             'device_id' => $device->id,
-            'provenance' => in_array($provenance, ['hardware', 'simulation'], true) ? $provenance : 'hardware',
+            'provenance' => $normalizedProvenance,
             'nitrogen' => $nitrogen,
             'phosphorus' => $phosphorus,
             'potassium' => $potassium,
@@ -128,8 +129,10 @@ class IngestTelemetryAction
             'recorded_at' => $now,
         ]);
 
-        // Perbarui status online perangkat
-        $device->update(['last_seen_at' => $now]);
+        // Perbarui status online perangkat HANYA jika berasal dari transmisi hardware nyata
+        if ($normalizedProvenance === 'hardware') {
+            $device->update(['last_seen_at' => $now]);
+        }
 
         // Siarkan event telemetri real-time
         event(new SensorData($reading));

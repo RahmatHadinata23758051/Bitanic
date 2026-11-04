@@ -44,11 +44,42 @@ class TelemetryReading extends Model
             'applied_offsets' => 'array',
             'threshold_flags' => 'array',
             'recorded_at' => 'datetime',
+            'provenance' => 'string',
         ];
     }
 
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
+    }
+
+    public function isHardware(): bool
+    {
+        return $this->provenance === 'hardware';
+    }
+
+    public function isSimulation(): bool
+    {
+        return $this->provenance === 'simulation';
+    }
+
+    public function isFixture(): bool
+    {
+        return $this->provenance === 'fixture';
+    }
+
+    public function scopeHardware($query)
+    {
+        return $query->where('provenance', 'hardware');
+    }
+
+    public function scopeSimulation($query)
+    {
+        return $query->where('provenance', 'simulation');
+    }
+
+    public function scopeFixture($query)
+    {
+        return $query->where('provenance', 'fixture');
     }
 }

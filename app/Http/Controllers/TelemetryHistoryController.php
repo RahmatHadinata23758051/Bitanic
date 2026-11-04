@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Telemetry\ExportTelemetryCsvAction;
 use App\Models\Device;
+use App\Models\School;
 use App\Models\TelemetryReading;
 use App\Services\Agronomy\AnomalyAlertEvaluator;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,15 +19,31 @@ class TelemetryHistoryController extends Controller
      */
     public function index(Request $request, AnomalyAlertEvaluator $evaluator): View
     {
-        $devices = Device::orderBy('name')->get();
-        $query = $this->buildFilteredQuery($request);
+        $user = $request->user();
+        $isSuperuser = (bool) $user?->isSuperuser();
+        $schoolId = $user?->school_id;
 
-        // Ambil pembacaan terbaru untuk Banner Anomaly Alert Hub
-        $latestReading = TelemetryReading::with('device')->latest('recorded_at')->first();
+        if ($user && ! $isSuperuser && ! $schoolId) {
+            abort(403, 'Akses riwayat telemetri memerlukan asosiasi sekolah yang valid.');
+        }
+
+        $targetSchoolId = $isSuperuser
+            ? null
+            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+
+        $devices = Device::query()
+            ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
+            ->orderBy('name')
+            ->get();
+        $query = $this->buildFilteredQuery($request)
+            ->when($targetSchoolId, fn ($query) => $query->whereHas('device', fn ($deviceQuery) => $deviceQuery->where('school_id', $targetSchoolId)));
+
+        // Anomaly alert uses only the caller's visible school telemetry.
+        $latestReading = (clone $query)->with('device')->latest('recorded_at')->first();
         $activeAlerts = $evaluator->evaluate($latestReading);
 
         // Metrik ringkasan
-        $totalLogsCount = TelemetryReading::count();
+        $totalLogsCount = (clone $query)->count();
         $activeDevicesCount = $devices->where('is_active', true)->count();
 
         $readings = $query->paginate(25)->withQueryString();
@@ -50,7 +67,20 @@ class TelemetryHistoryController extends Controller
      */
     public function exportCsv(Request $request, ExportTelemetryCsvAction $action): StreamedResponse
     {
-        $query = $this->buildFilteredQuery($request);
+        $user = $request->user();
+        $isSuperuser = (bool) $user?->isSuperuser();
+        $schoolId = $user?->school_id;
+
+        if ($user && ! $isSuperuser && ! $schoolId) {
+            abort(403, 'Ekspor telemetri memerlukan asosiasi sekolah yang valid.');
+        }
+
+        $targetSchoolId = $isSuperuser
+            ? null
+            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+
+        $query = $this->buildFilteredQuery($request)
+            ->when($targetSchoolId, fn ($query) => $query->whereHas('device', fn ($deviceQuery) => $deviceQuery->where('school_id', $targetSchoolId)));
         $filename = 'bitanic-telemetry-' . now()->format('Ymd_His') . '.csv';
 
         return $action->execute($query, $filename);

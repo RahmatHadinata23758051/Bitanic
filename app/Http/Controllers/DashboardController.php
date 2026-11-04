@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivitySchedule;
 use App\Models\Device;
+use App\Models\School;
 use App\Models\StudentReport;
 use App\Models\TelemetryReading;
+use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,15 +17,44 @@ class DashboardController extends Controller
     /**
      * Display the vocational LMS lab overview dashboard.
      */
-    public function index(): View
+    public function index(Request $request, DeviceAvailabilityResolver $availability): View
     {
-        // 1. Hardware fleet overview
-        $devices = Device::with('latestReading')->orderBy('code')->get();
-        $onlineKitsCount = $devices->where('status', 'online')->count();
+        $user = $request->user();
+        $isSuperuser = $user?->isSuperuser();
+        $schoolId = $user?->school_id;
+
+        if ($user && ! $isSuperuser && ! $schoolId) {
+            abort(403, 'Akses Dasbor memerlukan asosiasi sekolah yang valid.');
+        }
+
+        $targetSchoolId = $isSuperuser
+            ? null
+            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+
+        // 1. Hardware fleet overview scoped to school
+        $deviceQuery = Device::with('latestReading')
+            ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->orderBy('code');
+
+        $devices = $availability->applyToCollection($deviceQuery->get());
+        $onlineKitsCount = $devices->filter(fn (Device $device) => $device->is_online)->count();
         $totalKitsCount = $devices->count();
+
+        foreach ($devices as $device) {
+            $device->telemetry_empty = ! $device->latestReading;
+            $device->telemetry_provenance_label = $device->latestReading?->provenance
+                ? match ($device->latestReading->provenance) {
+                    'hardware' => 'Hardware',
+                    'simulation' => 'Simulasi',
+                    'fixture' => 'Fixture / Data Uji',
+                    default => 'Sumber Tidak Diketahui',
+                }
+                : null;
+        }
 
         // 2. Practicum schedule for today & upcoming
         $upcomingSchedules = ActivitySchedule::with('device')
+            ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->where('activity_date', '>=', now()->toDateString())
             ->orderBy('activity_date')
             ->orderBy('start_time')
@@ -34,7 +65,9 @@ class DashboardController extends Controller
             ?? $upcomingSchedules->first();
 
         // 3. Pending student LKS reports count
-        $pendingReportsCount = StudentReport::where('status', 'submitted')->count();
+        $pendingReportsCount = StudentReport::where('status', 'submitted')
+            ->when($targetSchoolId, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('school_id', $targetSchoolId)))
+            ->count();
 
         // 4. Evaluate system-wide anomalies
         $anomalies = [];

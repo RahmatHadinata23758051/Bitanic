@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Device;
+use App\Models\School;
 use App\Models\TelemetryReading;
+use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,56 +15,60 @@ class IotMonitoringController extends Controller
     /**
      * Display the real-time vocational IoT workstation (7-in-1 Modbus & Relay Controls).
      */
-    public function index(Request $request): View
+    public function index(Request $request, DeviceAvailabilityResolver $resolver): View
     {
         $deviceId = $request->query('device_id');
+        $schoolId = $request->user()?->school_id;
+        $isSuperuser = (bool) $request->user()?->isSuperuser();
 
-        // Fetch active kit or selected kit
+        if ($request->user() && ! $isSuperuser && ! $schoolId) {
+            abort(403, 'Akses monitoring memerlukan asosiasi sekolah yang valid.');
+        }
+
+        $targetSchoolId = $isSuperuser
+            ? null
+            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+
+        $query = Device::query()
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId));
+
+        $allRawDevices = (clone $query)->orderBy('code')->get();
+        $allDevices = $resolver->applyToCollection($allRawDevices);
+
         if ($deviceId) {
-            $activeDevice = Device::find($deviceId);
+            $activeDevice = (clone $query)->where(function ($q) use ($deviceId) {
+                $q->where('id', $deviceId)->orWhere('code', $deviceId);
+            })->first();
         } else {
-            $activeDevice = Device::where('is_active', true)->first();
+            $activeDevice = (clone $query)->where('is_active', true)->first();
         }
 
-        if (!$activeDevice) {
-            $activeDevice = Device::where('is_active', true)->first() ?? Device::first() ?? (object) [
-                'id' => 1,
-                'code' => 'TK-01',
-                'name' => 'BITANIC Precision Agritech Kit #01',
-                'bench_location' => 'Meja Praktik 01 - Bedengan Tomat Ceri',
-                'connection_type' => 'modbus_rs485',
-                'is_active' => true,
-                'status' => 'online',
-                'battery_percent' => 95,
-                'rssi_signal' => -55,
-                'relays_state' => [
-                    'irrigationPump' => false,
-                    'fertigationValve' => false,
-                    'mistingFan' => true,
-                    'growLight' => true,
-                ],
-                'last_seen_at' => now(),
-            ];
+        // Fallback: first active device, or first device, or null if no devices exist
+        if (! $activeDevice) {
+            $activeDevice = (clone $query)->where('is_active', true)->first() ?? (clone $query)->first();
         }
 
-        $allDevices = Device::where('is_active', true)->get();
+        if ($activeDevice) {
+            $activeDevice = $resolver->applyToDevice($activeDevice);
+            $isDeviceOnline = (bool) $activeDevice->is_online;
+            $latest = TelemetryReading::where('device_id', $activeDevice->id)->latest('recorded_at')->first();
+            $recentReadings = TelemetryReading::where('device_id', $activeDevice->id)
+                ->latest('recorded_at')
+                ->take(8)
+                ->get();
+        } else {
+            $isDeviceOnline = false;
+            $latest = null;
+            $recentReadings = collect();
+        }
 
-        // Fetch latest actual telemetry only; missing sensors remain unavailable rather than simulated numbers.
-        $latest = $activeDevice->id
-            ? TelemetryReading::where('device_id', $activeDevice->id)->latest('recorded_at')->first()
-            : null;
-
-        // Device heartbeat health is independent from persisted metadata status.
-        $isDeviceOnline = $activeDevice->last_seen_at
-            && $activeDevice->last_seen_at->greaterThan(now()->subMinutes(15));
-        $activeDevice->status = $isDeviceOnline ? 'online' : 'offline';
-
+        $freshTimeout = $activeDevice ? $resolver->getTimeoutSeconds($activeDevice) : 900;
         $isTelemetryFresh = $latest && $latest->recorded_at
-            && $latest->recorded_at->greaterThan(now()->subMinutes(15));
+            && $latest->recorded_at->greaterThanOrEqualTo(now()->subSeconds($freshTimeout));
 
-        $isLive = (bool) ($isDeviceOnline && $isTelemetryFresh);
-
+        $isLive = (bool) ($isDeviceOnline && $isTelemetryFresh && $latest?->isHardware());
         $hasTelemetry = $latest !== null;
+
         $t = [
             'nitrogen' => $latest ? (float) $latest->nitrogen : null,
             'phosphorus' => $latest ? (float) $latest->phosphorus : null,
@@ -76,6 +82,13 @@ class IotMonitoringController extends Controller
             'is_live' => $isLive,
             'is_fresh' => $isTelemetryFresh,
             'is_online' => $isDeviceOnline,
+            'provenance' => $latest?->provenance,
+            'provenance_label' => $latest?->provenance ? match ($latest->provenance) {
+                'hardware' => 'Hardware',
+                'simulation' => 'Simulasi',
+                'fixture' => 'Fixture / Data Uji',
+                default => 'Tidak Diketahui',
+            } : null,
         ];
 
         // Dynamic anomaly alerts are evaluated only when actual telemetry exists.
@@ -126,12 +139,6 @@ class IotMonitoringController extends Controller
             if ($t['nitrogen'] !== null && $t['nitrogen'] < 40) $score -= 10;
             $healthScore = max(30, min(100, $score));
         }
-
-        // Recent readings
-        $recentReadings = TelemetryReading::where('device_id', $activeDevice->id ?? 1)
-            ->latest('recorded_at')
-            ->take(8)
-            ->get();
 
         return view('pages.iot.index', [
             'activeDevice' => $activeDevice,

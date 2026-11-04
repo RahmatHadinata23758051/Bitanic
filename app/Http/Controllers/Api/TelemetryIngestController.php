@@ -26,7 +26,18 @@ class TelemetryIngestController extends Controller
         /** @var Device $device */
         $device = $request->attributes->get('device');
 
-        // Fallback jika device_id dikirim di body dan cocok
+        // Security check: if authenticated by key, reject cross-device spoofing attempt
+        if ($device && $request->filled('device_id')) {
+            $requestedId = (string) $request->input('device_id');
+            if ($requestedId !== (string) $device->id && $requestedId !== (string) $device->code) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Device ID in payload does not match authenticated device key.',
+                ], 403);
+            }
+        }
+
+        // Fallback jika device_id dikirim di body dan cocok (hanya jika device attribute belum di-set)
         if (!$device && $request->filled('device_id')) {
             $device = Device::where('code', $request->device_id)->orWhere('id', $request->device_id)->first();
         }
@@ -38,7 +49,7 @@ class TelemetryIngestController extends Controller
             ], 422);
         }
 
-        $reading = $action->execute($device, $request->all());
+        $reading = $action->execute($device, $request->all(), provenance: 'hardware');
 
         return response()->json([
             'success' => true,
