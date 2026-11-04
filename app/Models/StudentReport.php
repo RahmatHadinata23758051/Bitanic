@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StudentReport extends Model
 {
@@ -67,5 +68,10 @@ class StudentReport extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'graded_by');
+    }
+
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(StudentReportAttempt::class, 'student_report_id')->orderBy('attempt_number');
     }
 }

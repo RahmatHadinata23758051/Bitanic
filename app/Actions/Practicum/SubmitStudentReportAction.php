@@ -6,8 +6,10 @@ use App\Models\ActivitySchedule;
 use App\Models\Device;
 use App\Models\ModulePracticum;
 use App\Models\StudentReport;
+use App\Models\StudentReportAttempt;
 use App\Models\TelemetryReading;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -15,6 +17,7 @@ class SubmitStudentReportAction
 {
     /**
      * Submit or save student practicum report with telemetry snapshot and academic integrity enforcement.
+     * BR-203: Each submission appends an immutable attempt record; prior attempts remain unchanged.
      *
      * @param  array<string, mixed>  $data
      *
@@ -38,6 +41,7 @@ class SubmitStudentReportAction
             ->first();
 
         // 1. Integritas Akademik: Jangan izinkan menimpa laporan yang sudah dinilai guru
+        //    Hanya status 'revision' (transisi dari guru) yang mengizinkan resubmisi
         if ($existingReport && $existingReport->status === 'graded') {
             throw ValidationException::withMessages([
                 'lks_answers' => 'Laporan Lembar Kerja Siswa (LKS) ini telah dinilai oleh guru dan terkunci demi integritas asesmen akademik.',
@@ -224,26 +228,72 @@ class SubmitStudentReportAction
             $evidenceReadingId = null;
         }
 
-        // 4. Hitung Percobaan (Attempt Count) & Catatan Revisi
-        $attemptCount = $existingReport ? ($existingReport->attempt_count + 1) : 1;
+        // 4. Atomic Transaction: Create/update report + append immutable attempt
         $revisionNotes = $data['revision_notes'] ?? ($existingReport?->revision_notes);
 
-        return StudentReport::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'module_id' => $module->id,
-            ],
-            [
-                'activity_schedule_id' => $scheduleId,
-                'device_id' => $deviceId,
-                'evidence_reading_id' => $evidenceReadingId,
+        return DB::transaction(function () use (
+            $user, $module, $existingReport, $scheduleId, $deviceId,
+            $evidenceReadingId, $data, $snapshot, $revisionNotes
+        ) {
+            if ($existingReport) {
+                // Lock the report row to prevent concurrent duplicate attempts
+                $report = StudentReport::whereKey($existingReport->id)->lockForUpdate()->firstOrFail();
+
+                // Re-check graded status under lock (race condition guard)
+                if ($report->status === 'graded') {
+                    throw ValidationException::withMessages([
+                        'lks_answers' => 'Laporan Lembar Kerja Siswa (LKS) ini telah dinilai oleh guru dan terkunci demi integritas asesmen akademik.',
+                    ]);
+                }
+
+                $attemptCount = $report->attempt_count + 1;
+
+                $report->update([
+                    'activity_schedule_id' => $scheduleId,
+                    'device_id' => $deviceId,
+                    'evidence_reading_id' => $evidenceReadingId,
+                    'lks_answers' => $data['lks_answers'],
+                    'observation_notes' => $data['observation_notes'] ?? null,
+                    'telemetry_snapshot' => $snapshot,
+                    'status' => 'submitted',
+                    'attempt_count' => $attemptCount,
+                    'revision_notes' => $revisionNotes,
+                ]);
+            } else {
+                $attemptCount = 1;
+
+                $report = StudentReport::create([
+                    'user_id' => $user->id,
+                    'module_id' => $module->id,
+                    'activity_schedule_id' => $scheduleId,
+                    'device_id' => $deviceId,
+                    'evidence_reading_id' => $evidenceReadingId,
+                    'lks_answers' => $data['lks_answers'],
+                    'observation_notes' => $data['observation_notes'] ?? null,
+                    'telemetry_snapshot' => $snapshot,
+                    'status' => 'submitted',
+                    'attempt_count' => $attemptCount,
+                    'revision_notes' => $revisionNotes,
+                ]);
+            }
+
+            // Append immutable attempt record
+            StudentReportAttempt::create([
+                'student_report_id' => $report->id,
+                'attempt_number' => $attemptCount,
                 'lks_answers' => $data['lks_answers'],
                 'observation_notes' => $data['observation_notes'] ?? null,
                 'telemetry_snapshot' => $snapshot,
-                'status' => 'submitted',
-                'attempt_count' => $attemptCount,
-                'revision_notes' => $revisionNotes,
-            ]
-        );
+                'evidence_reading_id' => $evidenceReadingId,
+                'device_id' => $deviceId,
+                'activity_schedule_id' => $scheduleId,
+                'submitted_at' => now(),
+            ]);
+
+            // Reload the attempts relationship
+            $report->load('attempts');
+
+            return $report;
+        });
     }
 }
