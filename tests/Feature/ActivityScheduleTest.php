@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\ActivitySchedule;
+use App\Models\Classroom;
 use App\Models\Device;
+use App\Models\ModulePracticum;
+use App\Models\School;
+use App\Models\StudentGroup;
 use App\Models\User;
 use Database\Seeders\TrainerKitSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -191,5 +195,307 @@ class ActivityScheduleTest extends TestCase
         $this->assertDatabaseMissing('activity_schedules', [
             'id' => $schedule->id,
         ]);
+    }
+
+    // -------------------------------------------------------------------------
+    // BR-500: Class, Group, Module Allocation & Collision Matrix Tests
+    // -------------------------------------------------------------------------
+
+    public function test_teacher_can_create_schedule_with_classroom_group_and_module_allocation(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $kit = Device::where('code', 'TK-01')->firstOrFail();
+        $classroom = Classroom::create([
+            'school_id' => $teacher->school_id,
+            'name' => 'XII ATPH 1',
+        ]);
+        $group = StudentGroup::create([
+            'school_id' => $teacher->school_id,
+            'classroom_id' => $classroom->id,
+            'name' => 'Kelompok 1 Tanaman Semusim',
+        ]);
+        $module = ModulePracticum::create([
+            'meeting_number' => 101,
+            'title' => 'Modul 1: Kalibrasi Sensor pH Tanah',
+        ]);
+
+        $response = $this->actingAs($teacher)->post(route('schedules.store'), [
+            'title' => 'Praktikum Lapangan Modul 1 — Kelas XII ATPH 1',
+            'classroom_id' => $classroom->id,
+            'student_group_id' => $group->id,
+            'device_id' => $kit->id,
+            'module_practicum_id' => $module->id,
+            'activity_date' => now()->addDays(2)->toDateString(),
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'agenda' => 'Pencatatan data kalibrasi larutan buffer pH 4 dan 7.',
+        ]);
+
+        $response->assertRedirect(route('schedules.index'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('activity_schedules', [
+            'title' => 'Praktikum Lapangan Modul 1 — Kelas XII ATPH 1',
+            'classroom_id' => $classroom->id,
+            'student_group_id' => $group->id,
+            'device_id' => $kit->id,
+            'module_practicum_id' => $module->id,
+        ]);
+
+        $schedule = ActivitySchedule::where('title', 'Praktikum Lapangan Modul 1 — Kelas XII ATPH 1')->firstOrFail();
+        $this->assertEquals($classroom->id, $schedule->classroom?->id);
+        $this->assertEquals($group->id, $schedule->studentGroup?->id);
+        $this->assertEquals($module->id, $schedule->modulePracticum?->id);
+    }
+
+    public function test_schedule_creation_detects_classroom_collision_and_rejects(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $kit1 = Device::where('code', 'TK-01')->firstOrFail();
+        $kit2 = Device::where('code', 'TK-02')->firstOrFail();
+        $date = now()->addDays(4)->toDateString();
+
+        $classroom = Classroom::create([
+            'school_id' => $teacher->school_id,
+            'name' => 'X ATPH 2',
+        ]);
+
+        // Existing schedule for classroom on kit1 (08:00 - 10:00)
+        ActivitySchedule::create([
+            'school_id' => $teacher->school_id,
+            'classroom_id' => $classroom->id,
+            'device_id' => $kit1->id,
+            'title' => 'Sesi Kelas Awal',
+            'activity_date' => $date,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+        ]);
+
+        // Attempting overlapping session for the SAME classroom on kit2 (09:00 - 11:00)
+        $response = $this->actingAs($teacher)->post(route('schedules.store'), [
+            'title' => 'Sesi Kelas Bertabrakan',
+            'classroom_id' => $classroom->id,
+            'device_id' => $kit2->id,
+            'activity_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+        ]);
+
+        $response->assertSessionHasErrors(['classroom_id']);
+        $this->assertDatabaseMissing('activity_schedules', [
+            'title' => 'Sesi Kelas Bertabrakan',
+        ]);
+    }
+
+    public function test_schedule_creation_detects_student_group_collision_and_rejects(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $kit1 = Device::where('code', 'TK-01')->firstOrFail();
+        $kit2 = Device::where('code', 'TK-02')->firstOrFail();
+        $date = now()->addDays(5)->toDateString();
+
+        $classroom1 = Classroom::create(['school_id' => $teacher->school_id, 'name' => 'XI ATPH 1']);
+        $group = StudentGroup::create([
+            'school_id' => $teacher->school_id,
+            'classroom_id' => $classroom1->id,
+            'name' => 'Kelompok Khusus Sayur',
+        ]);
+
+        // Existing schedule for group on kit1 (13:00 - 15:00)
+        ActivitySchedule::create([
+            'school_id' => $teacher->school_id,
+            'student_group_id' => $group->id,
+            'device_id' => $kit1->id,
+            'title' => 'Sesi Kelompok Sayur 1',
+            'activity_date' => $date,
+            'start_time' => '13:00',
+            'end_time' => '15:00',
+        ]);
+
+        // Attempting overlapping session for the SAME group on kit2 (14:00 - 16:00)
+        $response = $this->actingAs($teacher)->post(route('schedules.store'), [
+            'title' => 'Sesi Kelompok Sayur Bertabrakan',
+            'student_group_id' => $group->id,
+            'device_id' => $kit2->id,
+            'activity_date' => $date,
+            'start_time' => '14:00',
+            'end_time' => '16:00',
+        ]);
+
+        $response->assertSessionHasErrors(['student_group_id']);
+        $this->assertDatabaseMissing('activity_schedules', [
+            'title' => 'Sesi Kelompok Sayur Bertabrakan',
+        ]);
+    }
+
+    public function test_schedule_creation_rejects_student_group_not_belonging_to_selected_classroom(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $kit = Device::where('code', 'TK-01')->firstOrFail();
+
+        $classroomA = Classroom::create(['school_id' => $teacher->school_id, 'name' => 'Kelas A']);
+        $classroomB = Classroom::create(['school_id' => $teacher->school_id, 'name' => 'Kelas B']);
+
+        $groupB = StudentGroup::create([
+            'school_id' => $teacher->school_id,
+            'classroom_id' => $classroomB->id,
+            'name' => 'Kelompok Milik Kelas B',
+        ]);
+
+        $response = $this->actingAs($teacher)->post(route('schedules.store'), [
+            'title' => 'Sesi Mismatch Kelas dan Kelompok',
+            'classroom_id' => $classroomA->id,
+            'student_group_id' => $groupB->id,
+            'device_id' => $kit->id,
+            'activity_date' => now()->addDays(6)->toDateString(),
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+        ]);
+
+        $response->assertSessionHasErrors(['student_group_id']);
+        $this->assertDatabaseMissing('activity_schedules', [
+            'title' => 'Sesi Mismatch Kelas dan Kelompok',
+        ]);
+    }
+
+    public function test_schedule_creation_rejects_cross_school_classroom_or_group(): void
+    {
+        $schoolA = School::firstOrCreate(
+            ['slug' => 'smk-ppn-1-sukaraja'],
+            ['npsn' => '20200001', 'name' => 'SMK Sukaraja', 'status' => 'active']
+        );
+        $schoolB = School::create([
+            'npsn' => '20200099',
+            'name' => 'SMK B Isolated',
+            'slug' => 'smk-b-isolated',
+            'status' => 'active',
+        ]);
+
+        $teacherA = User::factory()->create(['role' => 'guru', 'school_id' => $schoolA->id]);
+        $classroomB = Classroom::create([
+            'school_id' => $schoolB->id,
+            'name' => 'Kelas Milik Sekolah B',
+        ]);
+        $kitA = Device::where('code', 'TK-01')->firstOrFail();
+
+        $response = $this->actingAs($teacherA)->post(route('schedules.store'), [
+            'title' => 'Sesi Ilegal Lintas Sekolah',
+            'classroom_id' => $classroomB->id,
+            'device_id' => $kitA->id,
+            'activity_date' => now()->addDays(7)->toDateString(),
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+        ]);
+
+        $response->assertSessionHasErrors(['classroom_id']);
+        $this->assertDatabaseMissing('activity_schedules', [
+            'title' => 'Sesi Ilegal Lintas Sekolah',
+        ]);
+    }
+
+    public function test_module_order_is_teacher_driven_without_sequential_locking(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $kit = Device::where('code', 'TK-01')->firstOrFail();
+
+        // Create Module 1 and Module 5
+        ModulePracticum::create([
+            'meeting_number' => 1,
+            'title' => 'Modul 1: Dasar Sensor',
+        ]);
+        $module5 = ModulePracticum::create([
+            'meeting_number' => 5,
+            'title' => 'Modul 5: Otomasi Fertigasi Presisi Lanjut',
+        ]);
+
+        // Teacher schedules Module 5 directly without prior modules completed
+        $response = $this->actingAs($teacher)->post(route('schedules.store'), [
+            'title' => 'Sesi Praktikum Modul 5 Fleksibel',
+            'device_id' => $kit->id,
+            'module_practicum_id' => $module5->id,
+            'activity_date' => now()->addDays(8)->toDateString(),
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+        ]);
+
+        $response->assertRedirect(route('schedules.index'));
+        $this->assertDatabaseHas('activity_schedules', [
+            'title' => 'Sesi Praktikum Modul 5 Fleksibel',
+            'module_practicum_id' => $module5->id,
+        ]);
+    }
+
+    public function test_schedules_index_renders_classroom_group_and_module_info(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $kit = Device::where('code', 'TK-01')->firstOrFail();
+        $classroom = Classroom::create([
+            'school_id' => $teacher->school_id,
+            'name' => 'XII ATPH 3',
+        ]);
+        $group = StudentGroup::create([
+            'school_id' => $teacher->school_id,
+            'classroom_id' => $classroom->id,
+            'name' => 'Kelompok Bedengan C',
+        ]);
+        $module = ModulePracticum::create([
+            'meeting_number' => 202,
+            'title' => 'Modul 202: Monitoring NPK Tanah',
+        ]);
+
+        ActivitySchedule::create([
+            'school_id' => $teacher->school_id,
+            'classroom_id' => $classroom->id,
+            'student_group_id' => $group->id,
+            'device_id' => $kit->id,
+            'module_practicum_id' => $module->id,
+            'title' => 'Sesi Khusus Bedengan C',
+            'activity_date' => now()->toDateString(),
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+        ]);
+
+        $response = $this->actingAs($teacher)->get(route('schedules.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('XII ATPH 3');
+        $response->assertSee('Kelompok Bedengan C');
+        $response->assertSee('Modul 202: Monitoring NPK Tanah');
+    }
+
+    public function test_concurrent_overlapping_bookings_are_serialized_and_rejected(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $kit = Device::where('code', 'TK-01')->firstOrFail();
+        $classroom = Classroom::create([
+            'school_id' => $teacher->school_id,
+            'name' => 'XII ATPH Concurrency Test',
+        ]);
+
+        $action = app(\App\Actions\Schedule\CreateScheduleAction::class);
+        $date = now()->addDays(10)->toDateString();
+
+        // Transaction 1 succeeds
+        $firstSchedule = $action->execute([
+            'title' => 'Sesi Pertama Lock Berhasil',
+            'classroom_id' => $classroom->id,
+            'device_id' => $kit->id,
+            'activity_date' => $date,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+        ], $teacher);
+
+        $this->assertNotNull($firstSchedule->id);
+
+        // Transaction 2 attempting same classroom and kit overlap is rejected by collision check
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $action->execute([
+            'title' => 'Sesi Kedua Tabrakan Overlap',
+            'classroom_id' => $classroom->id,
+            'device_id' => $kit->id,
+            'activity_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+        ], $teacher);
     }
 }
