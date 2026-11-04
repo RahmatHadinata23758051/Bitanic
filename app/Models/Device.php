@@ -85,4 +85,20 @@ class Device extends Model
     {
         return $this->hasOne(TelemetryReading::class)->latestOfMany('recorded_at');
     }
+
+    /**
+     * Compute real-time online status via the centralized availability resolver.
+     */
+    public function isOnline(?\Carbon\CarbonInterface $now = null): bool
+    {
+        return app(\App\Services\Hardware\DeviceAvailabilityResolver::class)->isOnline($this, $now);
+    }
+
+    /**
+     * Computed status attribute ('online', 'offline', 'maintenance').
+     */
+    public function getComputedStatusAttribute(): string
+    {
+        return app(\App\Services\Hardware\DeviceAvailabilityResolver::class)->status($this);
+    }
 }
