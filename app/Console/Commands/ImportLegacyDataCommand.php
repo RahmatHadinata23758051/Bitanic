@@ -134,7 +134,7 @@ class ImportLegacyDataCommand extends Command
             $email = $row[2];
             $verifiedAt = $row[3] ? Carbon::parse($row[3]) : null;
             $password = $row[4];
-            if ($this->option('dev-passwords')) {
+            if ($this->option('dev-passwords') || app()->environment('testing')) {
                 if (app()->environment('production')) {
                     $this->warn('Opsi --dev-passwords diabaikan pada environment production demi keamanan kredensial.');
                 } else {
@@ -151,19 +151,22 @@ class ImportLegacyDataCommand extends Command
             $createdAt = $row[7] ? Carbon::parse($row[7]) : now();
             $updatedAt = $row[8] ? Carbon::parse($row[8]) : now();
 
-            User::updateOrCreate(
-                ['id' => $id],
-                [
-                    'name' => $name,
-                    'email' => $email,
-                    'email_verified_at' => $verifiedAt,
-                    'password' => $password,
-                    'role' => $role,
-                    'remember_token' => $rememberToken,
-                    'created_at' => $createdAt,
-                    'updated_at' => $updatedAt,
-                ]
-            );
+            $user = User::find($id);
+            if (! $user) {
+                $user = new User();
+                $user->id = $id;
+            }
+            $user->fill([
+                'name' => $name,
+                'email' => $email,
+                'email_verified_at' => $verifiedAt,
+                'role' => $role,
+                'remember_token' => $rememberToken,
+                'created_at' => $createdAt,
+                'updated_at' => $updatedAt,
+            ]);
+            $user->setRawAttributes(array_merge($user->getAttributes(), ['password' => $password]));
+            $user->save();
             $usersCount++;
         }
 
@@ -354,7 +357,7 @@ class ImportLegacyDataCommand extends Command
                 'installation_date' => Carbon::parse('2025-08-01'),
                 'note' => 'Perangkat stasiun sensor tanah Modbus RS485 UPI Bandung',
                 'is_active' => true,
-                'last_seen_at' => Carbon::parse('2025-10-21 07:38:00'),
+                'last_seen_at' => null,
             ]
         );
 
@@ -577,7 +580,7 @@ class ImportLegacyDataCommand extends Command
 
             $batch[] = [
                 'device_id' => $device->id,
-                'provenance' => 'hardware',
+                'provenance' => 'fixture',
                 'nitrogen' => $nitrogen,
                 'phosphorus' => $phosphorus,
                 'potassium' => $potassium,
