@@ -105,6 +105,41 @@ class ActivityScheduleTest extends TestCase
         $response->assertSessionHasErrors(['end_time']);
     }
 
+    public function test_schedule_creation_detects_teacher_time_collision_and_rejects(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $kit1 = Device::where('code', 'TK-01')->firstOrFail();
+        $kit2 = Device::where('code', 'TK-02')->firstOrFail();
+        $date = now()->addDays(3)->toDateString();
+
+        // Sesi pertama diajar oleh guru pada kit 1 (08:00 - 10:00)
+        $schedule = ActivitySchedule::create([
+            'device_id' => $kit1->id,
+            'title' => 'Sesi Guru di Meja 1',
+            'activity_date' => $date,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+        ]);
+        $schedule->participants()->create([
+            'user_id' => $teacher->id,
+            'role' => 'guru',
+        ]);
+
+        // Coba jadwalkan sesi kedua di meja 2 pada jam bertabrakan (09:00 - 11:00) dengan guru yang sama
+        $response = $this->actingAs($teacher)->post(route('schedules.store'), [
+            'title' => 'Sesi Guru Bertabrakan di Meja 2',
+            'device_id' => $kit2->id,
+            'activity_date' => $date,
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+        ]);
+
+        $response->assertSessionHasErrors(['start_time']);
+        $this->assertDatabaseMissing('activity_schedules', [
+            'title' => 'Sesi Guru Bertabrakan di Meja 2',
+        ]);
+    }
+
     public function test_schedule_can_be_deleted(): void
     {
         $schedule = ActivitySchedule::create([

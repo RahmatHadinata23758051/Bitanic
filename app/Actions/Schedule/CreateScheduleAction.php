@@ -3,7 +3,9 @@
 namespace App\Actions\Schedule;
 
 use App\Models\ActivitySchedule;
+use App\Models\Device;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CreateScheduleAction
@@ -29,41 +31,64 @@ class CreateScheduleAction
             ]);
         }
 
-        // Cek tabrakan alokasi meja trainer kit pada tanggal dan jam yang sama
-        if ($deviceId) {
-            $hasConflict = ActivitySchedule::where('device_id', $deviceId)
-                ->whereDate('activity_date', $date)
-                ->where(function ($query) use ($startTime, $endTime) {
-                    $query->where(function ($q) use ($startTime, $endTime) {
-                        $q->where('start_time', '<', $endTime)
-                          ->where('end_time', '>', $startTime);
-                    });
-                })
-                ->exists();
+        return DB::transaction(function () use ($data, $creator, $deviceId, $date, $startTime, $endTime) {
+            // Cek tabrakan alokasi meja trainer kit pada tanggal dan jam yang sama dengan row locking
+            if ($deviceId) {
+                // Kunci baris perangkat untuk mencegah race condition booking bersamaan
+                Device::where('id', $deviceId)->lockForUpdate()->first();
 
-            if ($hasConflict) {
-                throw ValidationException::withMessages([
-                    'device_id' => 'Meja Trainer Kit tersebut telah dialokasikan untuk sesi praktikum lain pada rentang jam tersebut. Silakan pilih meja atau jam lain.',
+                $hasKitConflict = ActivitySchedule::where('device_id', $deviceId)
+                    ->whereDate('activity_date', $date)
+                    ->where(function ($query) use ($startTime, $endTime) {
+                        $query->where('start_time', '<', $endTime)
+                              ->where('end_time', '>', $startTime);
+                    })
+                    ->exists();
+
+                if ($hasKitConflict) {
+                    throw ValidationException::withMessages([
+                        'device_id' => 'Meja Trainer Kit tersebut telah dialokasikan untuk sesi praktikum lain pada rentang jam tersebut. Silakan pilih meja atau jam lain.',
+                    ]);
+                }
+            }
+
+            // Cek tabrakan jadwal guru pembimbing jika ada
+            if ($creator && in_array($creator->role, ['guru', 'superuser'])) {
+                $hasTeacherConflict = ActivitySchedule::whereDate('activity_date', $date)
+                    ->whereHas('participants', function ($query) use ($creator) {
+                        $query->where('user_id', $creator->id)
+                              ->where('role', 'guru');
+                    })
+                    ->where(function ($query) use ($startTime, $endTime) {
+                        $query->where('start_time', '<', $endTime)
+                              ->where('end_time', '>', $startTime);
+                    })
+                    ->exists();
+
+                if ($hasTeacherConflict) {
+                    throw ValidationException::withMessages([
+                        'start_time' => 'Guru pembimbing telah memiliki jadwal sesi praktikum lain pada rentang jam tersebut.',
+                    ]);
+                }
+            }
+
+            $schedule = ActivitySchedule::create([
+                'device_id' => $deviceId,
+                'title' => $data['title'],
+                'activity_date' => $date,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'agenda' => $data['agenda'] ?? null,
+            ]);
+
+            if ($creator) {
+                $schedule->participants()->create([
+                    'user_id' => $creator->id,
+                    'role' => in_array($creator->role, ['guru', 'superuser']) ? 'guru' : 'siswa',
                 ]);
             }
-        }
 
-        $schedule = ActivitySchedule::create([
-            'device_id' => $deviceId,
-            'title' => $data['title'],
-            'activity_date' => $date,
-            'start_time' => $startTime,
-            'end_time' => $endTime,
-            'agenda' => $data['agenda'] ?? null,
-        ]);
-
-        if ($creator) {
-            $schedule->participants()->create([
-                'user_id' => $creator->id,
-                'role' => in_array($creator->role, ['guru', 'superuser']) ? 'guru' : 'siswa',
-            ]);
-        }
-
-        return $schedule;
+            return $schedule;
+        });
     }
 }
