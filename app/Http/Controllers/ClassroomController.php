@@ -17,6 +17,10 @@ class ClassroomController extends Controller
     public function index(Request $request): View
     {
         $schoolId = $request->user()->school_id;
+        if (! $schoolId) {
+            abort(403, 'Akses kelas memerlukan asosiasi sekolah yang valid.');
+        }
+
         $classrooms = Classroom::with(['groups.device', 'homeroomTeacher'])
             ->where('school_id', $schoolId)
             ->orderBy('academic_year')
@@ -33,6 +37,10 @@ class ClassroomController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $schoolId = $request->user()->school_id;
+        if (! $schoolId) {
+            abort(403, 'Pembuatan kelas memerlukan asosiasi sekolah yang valid.');
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('classrooms')->where('school_id', $schoolId)],
             'department' => ['nullable', 'string', 'max:255'],
@@ -59,6 +67,7 @@ class ClassroomController extends Controller
         ]);
 
         $classroom->update($data);
+
         return redirect()->route('classes.index')->with('success', 'Kelas berhasil diperbarui.');
     }
 
@@ -70,6 +79,7 @@ class ClassroomController extends Controller
         }
 
         $classroom->delete();
+
         return redirect()->route('classes.index')->with('success', 'Kelas berhasil dihapus.');
     }
 
@@ -85,6 +95,7 @@ class ClassroomController extends Controller
         ]);
 
         StudentGroup::create($data + ['school_id' => $schoolId, 'classroom_id' => $classroom->id]);
+
         return redirect()->route('classes.index')->with('success', 'Kelompok berhasil dibuat.');
     }
 
@@ -100,6 +111,7 @@ class ClassroomController extends Controller
         ]);
 
         $group->update($data);
+
         return redirect()->route('classes.index')->with('success', 'Kelompok berhasil diperbarui.');
     }
 
@@ -111,13 +123,14 @@ class ClassroomController extends Controller
         }
 
         $group->delete();
+
         return redirect()->route('classes.index')->with('success', 'Kelompok berhasil dihapus.');
     }
 
     public function allocateStudent(Request $request, User $student): RedirectResponse
     {
-        abort_unless($student->role === 'siswa' && (int) $student->school_id === (int) $request->user()->school_id, 404);
         $schoolId = $request->user()->school_id;
+        abort_unless($schoolId && $student->role === 'siswa' && (int) $student->school_id === (int) $schoolId, 404);
 
         $data = $request->validate([
             'classroom_id' => ['required', 'integer', Rule::exists('classrooms', 'id')->where('school_id', $schoolId)],
@@ -131,7 +144,7 @@ class ClassroomController extends Controller
         if ($group && $kit && $group->device_id && (int) $group->device_id !== (int) $kit->id) {
             return back()->withErrors(['assigned_kit_id' => 'Trainer Kit tidak sesuai dengan meja default kelompok.'])->withInput();
         }
-        if (!$kit && $group?->device_id) {
+        if (! $kit && $group?->device_id) {
             $kit = Device::where('school_id', $schoolId)->whereKey($group->device_id)->where('is_active', true)->first();
         }
 
@@ -152,11 +165,13 @@ class ClassroomController extends Controller
 
     private function authorizeClassroom(Request $request, Classroom $classroom): void
     {
-        abort_unless((int) $classroom->school_id === (int) $request->user()->school_id, 404);
+        $schoolId = $request->user()->school_id;
+        abort_unless($schoolId && (int) $classroom->school_id === (int) $schoolId, 404);
     }
 
     private function authorizeGroup(Request $request, StudentGroup $group): void
     {
-        abort_unless((int) $group->school_id === (int) $request->user()->school_id, 404);
+        $schoolId = $request->user()->school_id;
+        abort_unless($schoolId && (int) $group->school_id === (int) $schoolId, 404);
     }
 }

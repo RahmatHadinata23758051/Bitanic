@@ -17,11 +17,19 @@ class PracticumReportController extends Controller
         $statusFilter = $request->query('status');
         $moduleIdFilter = $request->query('module_id');
 
+        $user = $request->user();
+        $isSuperuser = $user?->role === 'superuser';
+        $schoolId = $user?->school_id;
+
+        if (! $isSuperuser && ! $schoolId) {
+            abort(403, 'Akses laporan praktikum memerlukan asosiasi sekolah yang valid.');
+        }
+
         $baseQuery = StudentReport::query();
-        if ($request->user()->isSiswa()) {
-            $baseQuery->where('user_id', $request->user()->id);
-        } elseif ($request->user()->role !== 'superuser' && $request->user()->school_id) {
-            $baseQuery->whereHas('user', fn ($u) => $u->where('school_id', $request->user()->school_id));
+        if ($user->isSiswa()) {
+            $baseQuery->where('user_id', $user->id);
+        } elseif (! $isSuperuser) {
+            $baseQuery->whereHas('user', fn ($u) => $u->where('school_id', $schoolId));
         }
 
         $query = (clone $baseQuery)->with(['user.profile', 'module', 'teacher'])

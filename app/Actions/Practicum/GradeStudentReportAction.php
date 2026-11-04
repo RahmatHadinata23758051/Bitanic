@@ -24,8 +24,8 @@ class GradeStudentReportAction
 
         // Cross-school tenancy protection: Guru cannot grade reports from other schools
         $student = $report->user;
-        if ($student && $teacher->role !== 'superuser' && $student->school_id && $teacher->school_id) {
-            if ((int) $student->school_id !== (int) $teacher->school_id) {
+        if ($teacher->role !== 'superuser') {
+            if (! $teacher->school_id || ! $student?->school_id || (int) $student->school_id !== (int) $teacher->school_id) {
                 throw new AuthorizationException('Guru tidak diizinkan menilai laporan siswa dari sekolah lain.');
             }
         }

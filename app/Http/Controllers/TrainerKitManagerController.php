@@ -14,16 +14,28 @@ class TrainerKitManagerController extends Controller
     /**
      * Display the Trainer Kit fleet and hardware status.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $kits = Device::with(['latestReading', 'activeApiKey'])->orderBy('code')->paginate(15);
+        $schoolId = $request->user()?->school_id;
+        $isSuperuser = $request->user()?->role === 'superuser';
+
+        if ($request->user() && ! $isSuperuser && ! $schoolId) {
+            abort(403, 'Akses Trainer Kit memerlukan asosiasi sekolah yang valid.');
+        }
+
+        $kits = Device::with(['latestReading', 'activeApiKey'])
+            ->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId))
+            ->orderBy('code')
+            ->paginate(15);
 
         return view('pages.kits.index', [
             'kits' => $kits,
             'stats' => [
-                'total' => Device::count(),
-                'online' => Device::where('status', 'online')->count(),
-                'attention' => Device::whereIn('status', ['anomaly', 'offline', 'maintenance'])->count(),
+                'total' => Device::query()->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId))->count(),
+                'online' => Device::where('status', 'online')->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId))->count(),
+                'attention' => Device::whereIn('status', ['anomaly', 'offline', 'maintenance'])
+                    ->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId))
+                    ->count(),
             ],
         ]);
     }
@@ -33,6 +45,11 @@ class TrainerKitManagerController extends Controller
      */
     public function reboot(Request $request, Device $device): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && $user->role !== 'superuser') {
+            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
+        }
+
         // No command transport or physical ACK is currently implemented.
         // Record the attempted operation, but never claim the device rebooted or changed its heartbeat/status.
         AuditLog::create([
@@ -40,7 +57,7 @@ class TrainerKitManagerController extends Controller
             'actor_name' => $request->user()?->name ?? 'Unknown',
             'actor_role' => $request->user()?->role ?? 'unknown',
             'action' => 'Kirim Perintah Soft-Reboot (Simulasi)',
-            'details' => 'Permintaan reboot untuk ' . $device->code . ' tidak dikirim: transport hardware/ACK belum tersedia.',
+            'details' => 'Permintaan reboot untuk '.$device->code.' tidak dikirim: transport hardware/ACK belum tersedia.',
             'ip_address' => $request->ip(),
         ]);
 
@@ -53,6 +70,11 @@ class TrainerKitManagerController extends Controller
      */
     public function updateCalibration(Request $request, Device $device): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && $user->role !== 'superuser') {
+            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
+        }
+
         $validated = $request->validate([
             'phOffset' => 'required|numeric|between:-5,5',
             'moistureOffset' => 'required|numeric|between:-20,20',
@@ -68,7 +90,7 @@ class TrainerKitManagerController extends Controller
         ]);
 
         return redirect()->route('kits.index')
-            ->with('success', 'Offset kalibrasi sensor untuk ' . $device->code . ' berhasil diperbarui.');
+            ->with('success', 'Offset kalibrasi sensor untuk '.$device->code.' berhasil diperbarui.');
     }
 
     /**

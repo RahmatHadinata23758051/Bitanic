@@ -17,9 +17,13 @@ class CompetencyAssessmentController extends Controller
         $isSuperuser = $request->user()?->role === 'superuser';
         $classFilter = $request->query('class');
 
+        if ($request->user() && ! $isSuperuser && ! $schoolId) {
+            abort(403, 'Akses asesmen kompetensi memerlukan asosiasi sekolah yang valid.');
+        }
+
         $query = User::where('role', 'siswa')
             ->with(['profile', 'studentReports.module'])
-            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId));
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId));
 
         if ($classFilter) {
             $query->whereHas('profile', function ($q) use ($classFilter) {
@@ -30,7 +34,7 @@ class CompetencyAssessmentController extends Controller
         $students = $query->paginate(15)->withQueryString();
 
         $allStudents = User::where('role', 'siswa')
-            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
             ->with('profile')
             ->get();
 

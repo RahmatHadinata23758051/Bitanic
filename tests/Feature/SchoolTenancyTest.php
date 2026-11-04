@@ -176,5 +176,132 @@ class SchoolTenancyTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('student_reports', ['id' => $reportA->id, 'status' => 'submitted']);
+
+        $this->actingAs($teacherA)
+            ->get(route('kits.index'))
+            ->assertOk()
+            ->assertSee('TK-IDOR-A')
+            ->assertDontSee('TK-IDOR-B');
+
+        $this->actingAs($teacherA)
+            ->post(route('kits.calibration', $deviceB->id), [
+                'phOffset' => 1.0,
+                'moistureOffset' => 2.0,
+                'ecOffset' => 10.0,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($teacherA)
+            ->post(route('kits.reboot', $deviceB->id))
+            ->assertForbidden();
+    }
+
+    public function test_unassigned_teacher_fails_closed_for_school_scoped_reads_and_mutations(): void
+    {
+        $school = School::where('slug', 'smk-ppn-1-sukaraja')->firstOrFail();
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $teacher->school_id = null;
+        $teacher->saveQuietly();
+
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+        $device = Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-NULL-SCHOOL',
+            'name' => 'Kit Tenant Scope',
+            'is_active' => true,
+        ]);
+        $module = ModulePracticum::create([
+            'meeting_number' => 2,
+            'title' => 'Null School Tenancy Test',
+            'duration_minutes' => 120,
+            'badge' => 'Test',
+        ]);
+        $report = StudentReport::create([
+            'user_id' => $student->id,
+            'module_id' => $module->id,
+            'status' => 'submitted',
+            'lks_answers' => [],
+        ]);
+        $schedule = ActivitySchedule::create([
+            'school_id' => $school->id,
+            'device_id' => $device->id,
+            'title' => 'Schedule hidden from unassigned teacher',
+            'activity_date' => now()->addDay()->toDateString(),
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('users.index'))
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->get(route('reports.index'))
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->get(route('assessment.index'))
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->get(route('schedules.index'))
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->get(route('kits.index'))
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->post(route('schedules.store'), [
+                'title' => 'Null school booking attempt',
+                'device_id' => $device->id,
+                'activity_date' => now()->addDays(2)->toDateString(),
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+            ])
+            ->assertForbidden();
+        $this->assertDatabaseMissing('activity_schedules', ['title' => 'Null school booking attempt']);
+
+        $this->actingAs($teacher)
+            ->post(route('schedules.store'), [
+                'title' => 'Null school unallocated schedule attempt',
+                'activity_date' => now()->addDays(2)->toDateString(),
+                'start_time' => '11:00',
+                'end_time' => '12:00',
+            ])
+            ->assertForbidden();
+        $this->assertDatabaseMissing('activity_schedules', ['title' => 'Null school unallocated schedule attempt']);
+
+        $this->actingAs($teacher)
+            ->delete(route('schedules.destroy', $schedule->id))
+            ->assertNotFound();
+        $this->assertDatabaseHas('activity_schedules', ['id' => $schedule->id]);
+
+        $this->actingAs($teacher)
+            ->post(route('modules.grade-report', $report->id), [
+                'rubric_scores' => ['aspect-1' => 2],
+            ])
+            ->assertForbidden();
+        $this->assertDatabaseHas('student_reports', [
+            'id' => $report->id,
+            'status' => 'submitted',
+            'graded_by' => null,
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('kits.calibration', $device->id), [
+                'phOffset' => 1.0,
+                'moistureOffset' => 2.0,
+                'ecOffset' => 10.0,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->post(route('kits.reboot', $device->id))
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->get(route('classes.index'))
+            ->assertForbidden();
     }
 }

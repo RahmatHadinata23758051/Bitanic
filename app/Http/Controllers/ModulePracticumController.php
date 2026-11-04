@@ -39,6 +39,10 @@ class ModulePracticumController extends Controller
         $module = ModulePracticum::with('studentReports.user')->findOrFail($id);
         $user = Auth::user();
 
+        if ($user && $user->role !== 'superuser' && ! $user->school_id) {
+            abort(403, 'Akses modul dan laporan memerlukan asosiasi sekolah yang valid.');
+        }
+
         $currentReport = $user ? StudentReport::where('user_id', $user->id)
             ->where('module_id', $module->id)
             ->first() : null;

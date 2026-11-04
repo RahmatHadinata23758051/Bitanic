@@ -19,9 +19,13 @@ class UserDirectoryController extends Controller
         $schoolId = $request->user()?->school_id;
         $isSuperuser = $request->user()?->role === 'superuser';
 
+        if (! $isSuperuser && ! $schoolId) {
+            abort(403, 'Akses direktori pengguna memerlukan asosiasi sekolah yang valid.');
+        }
+
         $query = User::with('profile')
             ->whereIn('role', ['siswa', 'guru', 'superuser'])
-            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
             ->orderBy('role')
             ->orderBy('name');
 
@@ -45,10 +49,10 @@ class UserDirectoryController extends Controller
 
         $stats = [
             'students' => User::where('role', 'siswa')
-                ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+                ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
                 ->count(),
             'teachers' => User::where('role', 'guru')
-                ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+                ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
                 ->count(),
             'admins' => User::where('role', 'superuser')->count(),
         ];
@@ -58,6 +62,7 @@ class UserDirectoryController extends Controller
             'stats' => $stats,
             'currentRole' => $role,
             'search' => $search,
+            'schoolName' => $request->user()?->school?->name ?? 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
         ]);
     }
 }

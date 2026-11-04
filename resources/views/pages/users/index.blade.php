@@ -10,7 +10,7 @@
                     DIREKTORI AKADEMIK
                 </span>
                 <span class="text-xs text-slate-400">•</span>
-                <span class="text-xs font-semibold text-slate-600">SMK Pertanian Pembangunan Negeri 1 Sukaraja</span>
+                <span class="text-xs font-semibold text-slate-600">{{ $schoolName }}</span>
             </div>
             <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
                 Data Siswa & Guru Pembimbing

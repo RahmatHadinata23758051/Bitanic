@@ -22,14 +22,18 @@ class ActivityScheduleController extends Controller
         $schoolId = $request->user()?->school_id;
         $isSuperuser = $request->user()?->role === 'superuser';
 
+        if ($request->user() && ! $isSuperuser && ! $schoolId) {
+            abort(403, 'Akses jadwal praktikum memerlukan asosiasi sekolah yang valid.');
+        }
+
         $schedules = ActivitySchedule::with(['device', 'participants.user'])
-            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
             ->orderBy('activity_date', 'asc')
             ->orderBy('start_time', 'asc')
             ->get();
 
         $devices = Device::where('is_active', true)
-            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
             ->orderBy('code')
             ->get();
         $modules = ModulePracticum::orderBy('meeting_number')->get();
@@ -37,7 +41,7 @@ class ActivityScheduleController extends Controller
         // Status kit ketersediaan hari ini
         $today = now()->toDateString();
         $bookedDevicesToday = ActivitySchedule::where('activity_date', $today)
-            ->when(! $isSuperuser && $schoolId, fn ($q) => $q->where('school_id', $schoolId))
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
             ->pluck('device_id')
             ->filter()
             ->unique()
@@ -60,6 +64,10 @@ class ActivityScheduleController extends Controller
         $schoolId = $request->user()?->school_id;
         $isSuperuser = $request->user()?->role === 'superuser';
 
+        if ($request->user() && ! $isSuperuser && ! $schoolId) {
+            abort(403, 'Pembuatan jadwal memerlukan asosiasi sekolah yang valid.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'device_id' => [
@@ -67,7 +75,12 @@ class ActivityScheduleController extends Controller
                 'integer',
                 'exists:devices,id',
                 function ($attribute, $value, $fail) use ($schoolId, $isSuperuser) {
-                    if ($value && ! $isSuperuser && $schoolId) {
+                    if ($value && ! $isSuperuser) {
+                        if (! $schoolId) {
+                            $fail('Meja Trainer Kit tersebut bukan milik sekolah Anda.');
+
+                            return;
+                        }
                         $device = Device::find($value);
                         if ($device && (int) $device->school_id !== (int) $schoolId) {
                             $fail('Meja Trainer Kit tersebut bukan milik sekolah Anda.');
@@ -99,12 +112,13 @@ class ActivityScheduleController extends Controller
      */
     public function destroy(Request $request, int $id): RedirectResponse
     {
-        $schedule = ActivitySchedule::findOrFail($id);
         $user = $request->user();
+        $isSuperuser = $user?->role === 'superuser';
+        $schoolId = $user?->school_id;
 
-        if ($user && $user->role !== 'superuser' && $schedule->school_id && (int) $schedule->school_id !== (int) $user->school_id) {
-            abort(404);
-        }
+        $schedule = ActivitySchedule::query()
+            ->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId ?: -1))
+            ->findOrFail($id);
 
         $schedule->delete();
 

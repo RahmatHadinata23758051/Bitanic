@@ -34,7 +34,8 @@ class CreateScheduleAction
             // Lock all shared resources before checking overlaps to serialize concurrent bookings.
             if ($deviceId) {
                 $device = Device::whereKey($deviceId)->lockForUpdate()->firstOrFail();
-                if ($creator && $creator->role !== 'superuser' && $creator->school_id && (int) $device->school_id !== (int) $creator->school_id) {
+                if ($creator && $creator->role !== 'superuser'
+                    && (! $creator->school_id || (int) $device->school_id !== (int) $creator->school_id)) {
                     throw ValidationException::withMessages([
                         'device_id' => 'Meja Trainer Kit tersebut bukan milik sekolah Anda.',
                     ]);
@@ -83,6 +84,7 @@ class CreateScheduleAction
             }
 
             $schedule = ActivitySchedule::create([
+                'school_id' => $data['school_id'] ?? $creator?->school_id ?? ($deviceId ? $device->school_id : null),
                 'device_id' => $deviceId,
                 'title' => $data['title'],
                 'activity_date' => $date,
