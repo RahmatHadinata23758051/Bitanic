@@ -11,23 +11,34 @@
                     <select
                         name="device_id"
                         onchange="this.form.submit()"
-                        class="px-2.5 py-1 rounded-md text-xs font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                        class="px-2.5 py-1 rounded-md text-xs font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-300 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                        @if($devices->isEmpty()) disabled aria-describedby="device-selector-empty" @endif
                     >
-                        @foreach($devices as $dev)
+                        @forelse($devices as $dev)
                             <option value="{{ $dev->id }}" {{ ($activeDevice->id ?? null) == $dev->id ? 'selected' : '' }}>
                                 {{ $dev->code }} — {{ $dev->bench_location ?? $dev->name }}
                             </option>
-                        @endforeach
+                        @empty
+                            <option value="">Tidak ada Trainer Kit terdaftar</option>
+                        @endforelse
                     </select>
+                    @if($devices->isEmpty())
+                        <span id="device-selector-empty" class="sr-only">Tidak ada Trainer Kit untuk dimonitor.</span>
+                    @endif
                 </form>
 
                 <span class="text-xs text-slate-400">•</span>
                 <span class="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                     <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
-                    <span>{{ $activeDevice->bench_location ?? 'Meja Praktik' }}</span>
+                    <span>{{ $activeDevice ? ($activeDevice->bench_location ?? $activeDevice->name) : 'Belum Ada Meja Terpilih' }}</span>
                 </span>
                 <span class="text-xs text-slate-400">•</span>
                 <span class="text-xs text-slate-500 font-mono">Pembaruan: {{ $telemetry['recorded_at'] }}</span>
+                @if($telemetry['provenance'])
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono {{ $telemetry['provenance'] === 'hardware' ? 'bg-emerald-100 text-emerald-800' : ($telemetry['provenance'] === 'simulation' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-slate-200 text-slate-700') }}">
+                        {{ $telemetry['provenance_label'] ?? $telemetry['provenance'] }}
+                    </span>
+                @endif
             </div>
 
             <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
@@ -86,7 +97,7 @@
             </div>
             <span class="text-[11px] font-mono {{ ($telemetry['is_live'] ?? false) ? 'text-emerald-700' : 'text-slate-500' }} font-semibold flex items-center gap-1">
                 <span class="w-2 h-2 rounded-full {{ ($telemetry['is_live'] ?? false) ? 'bg-emerald-500 animate-pulse' : ($telemetry['has_telemetry'] ? 'bg-amber-400' : 'bg-slate-400') }}"></span>
-                <span>{{ ($telemetry['is_live'] ?? false) ? 'Streaming Modbus Aktif' : ($telemetry['has_telemetry'] ? 'Telemetri Terakhir (Stale / Offline)' : 'Menunggu Transmisi Sensor') }}</span>
+                <span>{{ ($telemetry['is_live'] ?? false) ? 'Streaming Modbus Aktif' : ($telemetry['has_telemetry'] ? 'Telemetri Terakhir (Stale / Offline)' : 'Belum Ada Transmisi Data') }}</span>
             </span>
         </div>
 
@@ -249,36 +260,36 @@
                         <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
                         <span class="text-xs font-bold uppercase tracking-wider font-mono">Modbus Gateway</span>
                     </div>
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="w-2 h-2 rounded-full {{ ($activeDevice?->is_online ?? false) ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500' }}"></span>
                 </div>
                 <div class="space-y-1.5 text-xs py-2 font-mono">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Protokol:</span>
-                        <span class="text-slate-200">{{ $activeDevice->protocol ?? 'Modbus RS485' }}</span>
+                        <span class="text-slate-200">{{ $activeDevice->protocol ?? '—' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Baudrate:</span>
-                        <span class="text-slate-200">9600 bps</span>
+                        <span class="text-slate-200">{{ $activeDevice ? '9600 bps' : '—' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Firmware:</span>
-                        <span class="text-emerald-400">{{ $activeDevice->firmware_version ?? 'v2.4.1-PROD' }}</span>
+                        <span class="text-emerald-400">{{ $activeDevice->firmware_version ?? '—' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">IP Gateway:</span>
-                        <span class="text-slate-200">{{ $activeDevice->ip_address ?? '192.168.10.101' }}</span>
+                        <span class="text-slate-200">{{ $activeDevice->ip_address ?? '—' }}</span>
                     </div>
                 </div>
                 <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{{ $activeDevice->code ?? 'TK-01' }}</span>
-                    <span class="text-emerald-400 font-semibold">{{ ucfirst($activeDevice->status ?? 'online') }}</span>
+                    <span>{{ $activeDevice->code ?? '—' }}</span>
+                    <span class="{{ ($activeDevice?->is_online ?? false) ? 'text-emerald-400' : 'text-slate-400' }} font-semibold">{{ ucfirst($activeDevice->status ?? 'Offline') }}</span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Actuators Relay Controls (4-Channel) -->
-    <x-relay-controls :deviceId="$activeDevice->id ?? 1" />
+    <x-relay-controls :deviceId="$activeDevice?->id" :canControl="$activeDevice !== null" />
 
     <!-- Multi-Parameter Interactive Switcher ApexChart -->
     <x-telemetry-chart />
@@ -311,39 +322,39 @@
                         <th class="py-2.5 px-3">P (mg/kg)</th>
                         <th class="py-2.5 px-3">K (mg/kg)</th>
                         <th class="py-2.5 px-3">Suhu (°C)</th>
-                        <th class="py-2.5 px-3 text-right">Status</th>
+                        <th class="py-2.5 px-3 text-right">Asal Data</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
                     @forelse($recentReadings as $reading)
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="py-2.5 px-3 text-slate-600 font-sans">
-                                {{ $reading->recorded_at ? $reading->recorded_at->format('d/m H:i:s') : '-' }}
+                                {{ $reading->recorded_at ? $reading->recorded_at->format('d/m H:i:s') : '—' }}
                             </td>
-                            <td class="py-2.5 px-3 font-semibold {{ $reading->ph < 5.5 ? 'text-rose-600' : 'text-slate-800' }}">
-                                {{ number_format((float)$reading->ph, 2) }}
+                            <td class="py-2.5 px-3 font-semibold {{ $reading->ph !== null && $reading->ph < 5.5 ? 'text-rose-600' : 'text-slate-800' }}">
+                                {{ $reading->ph !== null ? number_format((float)$reading->ph, 2) : '—' }}
                             </td>
-                            <td class="py-2.5 px-3 {{ $reading->humidity < 25 ? 'text-rose-600' : 'text-slate-800' }}">
-                                {{ number_format((float)$reading->humidity, 1) }}%
-                            </td>
-                            <td class="py-2.5 px-3 text-slate-800">
-                                {{ number_format((float)$reading->ec, 0) }}
+                            <td class="py-2.5 px-3 {{ $reading->humidity !== null && $reading->humidity < 25 ? 'text-rose-600' : 'text-slate-800' }}">
+                                {{ $reading->humidity !== null ? number_format((float)$reading->humidity, 1) . '%' : '—' }}
                             </td>
                             <td class="py-2.5 px-3 text-slate-800">
-                                {{ number_format((float)$reading->nitrogen, 1) }}
+                                {{ $reading->ec !== null ? number_format((float)$reading->ec, 0) : '—' }}
                             </td>
                             <td class="py-2.5 px-3 text-slate-800">
-                                {{ number_format((float)$reading->phosphorus, 1) }}
+                                {{ $reading->nitrogen !== null ? number_format((float)$reading->nitrogen, 1) : '—' }}
                             </td>
                             <td class="py-2.5 px-3 text-slate-800">
-                                {{ number_format((float)$reading->potassium, 1) }}
+                                {{ $reading->phosphorus !== null ? number_format((float)$reading->phosphorus, 1) : '—' }}
                             </td>
                             <td class="py-2.5 px-3 text-slate-800">
-                                {{ number_format((float)$reading->temperature, 1) }}°C
+                                {{ $reading->potassium !== null ? number_format((float)$reading->potassium, 1) : '—' }}
+                            </td>
+                            <td class="py-2.5 px-3 text-slate-800">
+                                {{ $reading->temperature !== null ? number_format((float)$reading->temperature, 1) . '°C' : '—' }}
                             </td>
                             <td class="py-2.5 px-3 text-right">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 font-sans">
-                                    Tercatat
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-sans {{ $reading->provenance === 'hardware' ? 'bg-emerald-100 text-emerald-800' : ($reading->provenance === 'simulation' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-700') }}">
+                                    {{ $reading->provenance === 'hardware' ? 'Hardware' : ($reading->provenance === 'simulation' ? 'Simulasi' : 'Fixture') }}
                                 </span>
                             </td>
                         </tr>

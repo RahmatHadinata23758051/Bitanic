@@ -189,28 +189,32 @@
                         <th class="py-3 px-3 text-right">Kelembaban</th>
                         <th class="py-3 px-3 text-right">Suhu</th>
                         <th class="py-3 px-3 text-right">N-P-K (<span class="normal-case">mg/kg</span>)</th>
+                        <th class="py-3 px-3 text-center">Asal Data</th>
                         <th class="py-3 px-3 text-center">Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($readings as $row)
                         @php
-                            $ph = (float) $row->ph;
-                            $ec = (float) $row->ec;
-                            $hum = (float) $row->humidity;
-                            $temp = (float) $row->temperature;
+                            $ph = $row->ph !== null ? (float) $row->ph : null;
+                            $ec = $row->ec !== null ? (float) $row->ec : null;
+                            $hum = $row->humidity !== null ? (float) $row->humidity : null;
+                            $temp = $row->temperature !== null ? (float) $row->temperature : null;
+                            $n = $row->nitrogen !== null ? (float) $row->nitrogen : null;
+                            $p = $row->phosphorus !== null ? (float) $row->phosphorus : null;
+                            $k = $row->potassium !== null ? (float) $row->potassium : null;
 
-                            $isPhAnomaly = $ph > 0 && ($ph < 5.5 || $ph > 7.5);
-                            $isEcAnomaly = $ec > 0 && ($ec < 800 || $ec > 2400);
-                            $isHumAnomaly = $hum > 0 && ($hum < 40.0 || $hum > 85.0);
-                            $isTempAnomaly = $temp > 33.0;
+                            $isPhAnomaly = $ph !== null && ($ph < 5.5 || $ph > 7.5);
+                            $isEcAnomaly = $ec !== null && ($ec < 800 || $ec > 2400);
+                            $isHumAnomaly = $hum !== null && ($hum < 40.0 || $hum > 85.0);
+                            $isTempAnomaly = $temp !== null && $temp > 33.0;
 
                             $hasAnomaly = $isPhAnomaly || $isEcAnomaly || $isHumAnomaly || $isTempAnomaly || !empty($row->threshold_flags);
                         @endphp
                         <tr class="hover:bg-slate-50/80 transition-colors {{ $hasAnomaly ? 'bg-amber-50/20' : '' }}">
                             <!-- Waktu -->
                             <td class="py-2.5 px-3 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                                {{ $row->recorded_at ? $row->recorded_at->format('Y-m-d H:i:s') : '-' }}
+                                {{ $row->recorded_at ? $row->recorded_at->format('Y-m-d H:i:s') : '—' }}
                             </td>
 
                             <!-- Perangkat -->
@@ -221,39 +225,62 @@
 
                             <!-- pH -->
                             <td class="py-2.5 px-3 text-right whitespace-nowrap">
-                                <span class="font-tabular text-xs font-bold {{ $isPhAnomaly ? 'text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded' : 'text-slate-800' }}">
-                                    {{ number_format($ph, 1) }}
-                                </span>
+                                @if($ph !== null)
+                                    <span class="font-tabular text-xs font-bold {{ $isPhAnomaly ? 'text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded' : 'text-slate-800' }}">
+                                        {{ number_format($ph, 1) }}
+                                    </span>
+                                @else
+                                    <span class="font-tabular text-xs text-slate-300">—</span>
+                                @endif
                             </td>
 
                             <!-- EC -->
                             <td class="py-2.5 px-3 text-right whitespace-nowrap">
-                                <span class="font-tabular text-xs font-bold {{ $isEcAnomaly ? 'text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded' : 'text-slate-800' }}">
-                                    {{ number_format($ec, 0) }}
-                                </span>
+                                @if($ec !== null)
+                                    <span class="font-tabular text-xs font-bold {{ $isEcAnomaly ? 'text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded' : 'text-slate-800' }}">
+                                        {{ number_format($ec, 0) }}
+                                    </span>
+                                @else
+                                    <span class="font-tabular text-xs text-slate-300">—</span>
+                                @endif
                             </td>
 
                             <!-- Kelembaban -->
                             <td class="py-2.5 px-3 text-right whitespace-nowrap">
-                                <span class="font-tabular text-xs font-bold {{ $isHumAnomaly ? 'text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded' : 'text-slate-800' }}">
-                                    {{ number_format($hum, 1) }}%
-                                </span>
+                                @if($hum !== null)
+                                    <span class="font-tabular text-xs font-bold {{ $isHumAnomaly ? 'text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded' : 'text-slate-800' }}">
+                                        {{ number_format($hum, 1) }}%
+                                    </span>
+                                @else
+                                    <span class="font-tabular text-xs text-slate-300">—</span>
+                                @endif
                             </td>
 
                             <!-- Suhu -->
                             <td class="py-2.5 px-3 text-right whitespace-nowrap">
-                                <span class="font-tabular text-xs font-bold {{ $isTempAnomaly ? 'text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded' : 'text-slate-800' }}">
-                                    {{ number_format($temp, 1) }}°C
-                                </span>
+                                @if($temp !== null)
+                                    <span class="font-tabular text-xs font-bold {{ $isTempAnomaly ? 'text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded' : 'text-slate-800' }}">
+                                        {{ number_format($temp, 1) }}°C
+                                    </span>
+                                @else
+                                    <span class="font-tabular text-xs text-slate-300">—</span>
+                                @endif
                             </td>
 
                             <!-- NPK -->
                             <td class="py-2.5 px-3 text-right font-tabular text-xs text-slate-700 whitespace-nowrap">
-                                <span class="text-slate-900 font-semibold">{{ number_format((float)$row->nitrogen, 0) }}</span>
+                                <span class="text-slate-900 font-semibold">{{ $n !== null ? number_format($n, 0) : '—' }}</span>
                                 <span class="text-slate-300">/</span>
-                                <span class="text-slate-900 font-semibold">{{ number_format((float)$row->phosphorus, 0) }}</span>
+                                <span class="text-slate-900 font-semibold">{{ $p !== null ? number_format($p, 0) : '—' }}</span>
                                 <span class="text-slate-300">/</span>
-                                <span class="text-slate-900 font-semibold">{{ number_format((float)$row->potassium, 0) }}</span>
+                                <span class="text-slate-900 font-semibold">{{ $k !== null ? number_format($k, 0) : '—' }}</span>
+                            </td>
+
+                            <!-- Provenance Badge -->
+                            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase {{ $row->provenance === 'hardware' ? 'bg-emerald-100 text-emerald-800' : ($row->provenance === 'simulation' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-slate-200 text-slate-700') }}">
+                                    {{ $row->provenance === 'hardware' ? 'Hardware' : ($row->provenance === 'simulation' ? 'Simulasi' : 'Fixture') }}
+                                </span>
                             </td>
 
                             <!-- Status Badge -->
@@ -271,7 +298,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="py-10 text-center text-slate-400">
+                            <td colspan="9" class="py-10 text-center text-slate-400">
                                 <i data-lucide="database" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
                                 <p class="text-xs font-semibold">Tidak ada log telemetri yang sesuai kriteria filter.</p>
                             </td>

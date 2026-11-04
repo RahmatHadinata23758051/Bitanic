@@ -3,8 +3,8 @@
     'relays' => [
         'irrigationPump' => false,
         'fertigationValve' => false,
-        'mistingFan' => true,
-        'growLight' => true,
+        'mistingFan' => false,
+        'growLight' => false,
     ],
     'canControl' => true
 ])
@@ -84,7 +84,7 @@
         <div
             @click="toggleRelay('irrigationPump')"
             :class="relays.irrigationPump ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'"
-            class="p-3.5 rounded-lg border cursor-pointer hover:border-emerald-400 transition-all flex flex-col justify-between space-y-3"
+            class="p-3.5 rounded-lg border {{ $canControl ? 'cursor-pointer hover:border-emerald-400' : 'cursor-not-allowed opacity-80' }} transition-all flex flex-col justify-between space-y-3"
         >
             <div class="flex items-center justify-between">
                 <i data-lucide="droplets" :class="relays.irrigationPump ? 'text-emerald-600' : 'text-slate-400'" class="w-4 h-4"></i>
@@ -104,7 +104,7 @@
         <div
             @click="toggleRelay('fertigationValve')"
             :class="relays.fertigationValve ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'"
-            class="p-3.5 rounded-lg border cursor-pointer hover:border-emerald-400 transition-all flex flex-col justify-between space-y-3"
+            class="p-3.5 rounded-lg border {{ $canControl ? 'cursor-pointer hover:border-emerald-400' : 'cursor-not-allowed opacity-80' }} transition-all flex flex-col justify-between space-y-3"
         >
             <div class="flex items-center justify-between">
                 <i data-lucide="flask-conical" :class="relays.fertigationValve ? 'text-emerald-600' : 'text-slate-400'" class="w-4 h-4"></i>
@@ -124,7 +124,7 @@
         <div
             @click="toggleRelay('mistingFan')"
             :class="relays.mistingFan ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'"
-            class="p-3.5 rounded-lg border cursor-pointer hover:border-emerald-400 transition-all flex flex-col justify-between space-y-3"
+            class="p-3.5 rounded-lg border {{ $canControl ? 'cursor-pointer hover:border-emerald-400' : 'cursor-not-allowed opacity-80' }} transition-all flex flex-col justify-between space-y-3"
         >
             <div class="flex items-center justify-between">
                 <i data-lucide="fan" :class="relays.mistingFan ? 'text-emerald-600' : 'text-slate-400'" class="w-4 h-4"></i>
@@ -144,7 +144,7 @@
         <div
             @click="toggleRelay('growLight')"
             :class="relays.growLight ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'"
-            class="p-3.5 rounded-lg border cursor-pointer hover:border-emerald-400 transition-all flex flex-col justify-between space-y-3"
+            class="p-3.5 rounded-lg border {{ $canControl ? 'cursor-pointer hover:border-emerald-400' : 'cursor-not-allowed opacity-80' }} transition-all flex flex-col justify-between space-y-3"
         >
             <div class="flex items-center justify-between">
                 <i data-lucide="sun" :class="relays.growLight ? 'text-emerald-600' : 'text-slate-400'" class="w-4 h-4"></i>

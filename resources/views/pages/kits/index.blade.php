@@ -48,11 +48,11 @@
 
     <!-- Fleet Status Grid of Trainer Kits -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        @foreach($kits as $kit)
+        @forelse($kits as $kit)
             @php
                 $isOnline = $kit->status === 'online';
                 $isAnomaly = $kit->status === 'anomaly';
-                $offsets = $kit->calibration_offsets ?? ['phOffset' => 0.0, 'moistureOffset' => 0.0, 'ecOffset' => 0];
+                $offsets = $kit->calibration_offsets;
                 $relays = $kit->relays_state ?? [];
             @endphp
             <div class="p-5 rounded-2xl bg-white border border-slate-200 hover:border-emerald-300 shadow-sm transition-all flex flex-col justify-between space-y-4">
@@ -71,33 +71,33 @@
                     <!-- Battery & Signal -->
                     <div class="text-right font-mono text-[11px] text-slate-500">
                         <div class="flex items-center justify-end gap-1">
-                            <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-emerald-600"></i>
-                            <span class="font-bold text-slate-800">{{ $kit->battery_percent ?? 90 }}%</span>
+                            <i data-lucide="battery-charging" class="w-3.5 h-3.5 {{ $kit->battery_percent !== null ? 'text-emerald-600' : 'text-slate-300' }}"></i>
+                            <span class="font-bold text-slate-800">{{ $kit->battery_percent !== null ? $kit->battery_percent . '%' : '—' }}</span>
                         </div>
                         <div class="flex items-center justify-end gap-1 text-[10px] text-slate-400 mt-0.5">
                             <i data-lucide="wifi" class="w-3 h-3 text-slate-400"></i>
-                            <span>{{ $kit->rssi_signal ?? -55 }} dBm</span>
+                            <span>{{ $kit->rssi_signal !== null ? $kit->rssi_signal . ' dBm' : '—' }}</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Specs Specs Details -->
+                <!-- Specs Specs Details (No Fake Hardware Metrics) -->
                 <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 font-mono text-[11px]">
                     <div class="flex justify-between">
                         <span class="text-slate-400">IP Gateway:</span>
-                        <span class="text-slate-800 font-semibold">{{ $kit->ip_address ?? '192.168.10.100' }}</span>
+                        <span class="text-slate-800 font-semibold">{{ $kit->ip_address ?? '—' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">MAC Address:</span>
-                        <span class="text-slate-600">{{ $kit->mac_address ?? '24:0A:C4:00:00:00' }}</span>
+                        <span class="text-slate-600">{{ $kit->mac_address ?? '—' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Firmware:</span>
-                        <span class="text-emerald-700 font-semibold">{{ $kit->firmware_version ?? 'v2.4.1-PROD' }}</span>
+                        <span class="text-emerald-700 font-semibold">{{ $kit->firmware_version ?? '—' }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Protokol:</span>
-                        <span class="text-slate-800">{{ $kit->protocol ?? 'Modbus RS485' }}</span>
+                        <span class="text-slate-800">{{ $kit->protocol ?? '—' }}</span>
                     </div>
                     <div class="flex justify-between items-center pt-1 border-t border-slate-200/60">
                         <span class="text-slate-400">Prefix Key:</span>
@@ -135,7 +135,11 @@
                     <div class="flex items-center justify-between text-xs">
                         <span class="text-slate-500">Offset Sensor:</span>
                         <span class="font-mono text-[11px] text-slate-700">
-                            pH: {{ $offsets['phOffset'] ?? '0.0' }} | M: {{ $offsets['moistureOffset'] ?? '0.0' }}% | EC: {{ $offsets['ecOffset'] ?? '0' }}
+                            @if(!empty($offsets))
+                                pH: {{ $offsets['ph'] ?? ($offsets['phOffset'] ?? '0.0') }} | M: {{ $offsets['humidity'] ?? ($offsets['moistureOffset'] ?? '0.0') }}% | EC: {{ $offsets['ec'] ?? ($offsets['ecOffset'] ?? '0') }}
+                            @else
+                                —
+                            @endif
                         </span>
                     </div>
 
@@ -175,7 +179,13 @@
                     </div>
                 </div>
             </div>
-        @endforeach
+        @empty
+            <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                <i data-lucide="cpu" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                <p class="text-sm font-bold text-slate-700">Belum Ada Meja Trainer Kit Terdaftar</p>
+                <p class="text-xs text-slate-500 mt-1">Stasiun meja praktikum yang terhubung akan tampil di halaman ini.</p>
+            </div>
+        @endforelse
     </div>
 
     <!-- Calibration Info Modal / Guide -->

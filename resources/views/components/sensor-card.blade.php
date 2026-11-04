@@ -1,6 +1,6 @@
 @props([
     'parameter' => 'pH Tanah',
-    'value' => 6.5,
+    'value' => null,
     'unit' => 'pH',
     'scaleMin' => 0,
     'scaleMax' => 14,

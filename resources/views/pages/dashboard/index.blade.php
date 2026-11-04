@@ -86,7 +86,7 @@
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span class="text-slate-500">Kelas</span>
                 <span class="font-semibold text-indigo-700 font-mono">
-                    {{ $todaySchedule->class_grade ?? 'XI ATPH' }}
+                    {{ $todaySchedule->class_grade ?? '—' }}
                 </span>
             </div>
         </div>
@@ -152,7 +152,7 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            @foreach($devices as $kit)
+            @forelse($devices as $kit)
                 @php
                     $latest = $kit->latestReading;
                     $isOnline = $kit->status === 'online';
@@ -163,46 +163,53 @@
                             <div class="flex items-center gap-2">
                                 <span class="font-mono text-xs font-bold text-slate-900">{{ $kit->code }}</span>
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono {{ $isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">
-                                    {{ $kit->status ?? 'online' }}
+                                    {{ $kit->status ?? 'offline' }}
                                 </span>
                             </div>
                             <p class="text-xs text-slate-600 font-medium mt-1">{{ $kit->bench_location ?? $kit->name }}</p>
                         </div>
                         <div class="text-right font-mono text-[11px] text-slate-500">
-                            <div>IP: {{ $kit->ip_address ?? '192.168.10.x' }}</div>
+                            <div>IP: {{ $kit->ip_address ?? '—' }}</div>
                             <div class="flex items-center justify-end gap-1 text-[10px] text-slate-400 mt-0.5">
-                                <i data-lucide="battery" class="w-3 h-3"></i>
-                                <span>{{ $kit->battery_percent ?? 90 }}%</span>
+                                <i data-lucide="battery" class="w-3 h-3 {{ $kit->battery_percent !== null ? 'text-slate-500' : 'text-slate-300' }}"></i>
+                                <span>{{ $kit->battery_percent !== null ? $kit->battery_percent . '%' : '—' }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Telemetry Snapshot Mini -->
+                    <!-- Telemetry Snapshot Mini (No Fake Fallback Metrics) -->
                     <div class="grid grid-cols-3 gap-2 py-2 px-3 bg-white rounded-lg border border-slate-200 text-center font-mono">
                         <div>
                             <span class="text-[10px] text-slate-400 uppercase block">pH</span>
-                            <span class="text-xs font-bold {{ ($latest->ph ?? 6.5) < 5.5 ? 'text-rose-600' : 'text-slate-800' }}">
-                                {{ $latest ? number_format((float)$latest->ph, 2) : '6.50' }}
+                            <span class="text-xs font-bold {{ $latest && (float)$latest->ph < 5.5 ? 'text-rose-600' : 'text-slate-800' }}">
+                                {{ $latest && $latest->ph !== null ? number_format((float)$latest->ph, 2) : '—' }}
                             </span>
                         </div>
                         <div>
                             <span class="text-[10px] text-slate-400 uppercase block">Lengas</span>
-                            <span class="text-xs font-bold {{ ($latest->humidity ?? 45) < 25 ? 'text-rose-600' : 'text-slate-800' }}">
-                                {{ $latest ? number_format((float)$latest->humidity, 1) : '45.0' }}%
+                            <span class="text-xs font-bold {{ $latest && (float)$latest->humidity < 25 ? 'text-rose-600' : 'text-slate-800' }}">
+                                {{ $latest && $latest->humidity !== null ? number_format((float)$latest->humidity, 1) . '%' : '—' }}
                             </span>
                         </div>
                         <div>
                             <span class="text-[10px] text-slate-400 uppercase block">EC</span>
                             <span class="text-xs font-bold text-slate-800">
-                                {{ $latest ? number_format((float)$latest->ec, 0) : '1400' }}
+                                {{ $latest && $latest->ec !== null ? number_format((float)$latest->ec, 0) : '—' }}
                             </span>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-between pt-1">
-                        <span class="text-[11px] text-slate-400 font-mono">
-                            {{ $latest?->recorded_at ? $latest->recorded_at->diffForHumans() : 'Standby' }}
-                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] text-slate-400 font-mono">
+                                {{ $latest?->recorded_at ? $latest->recorded_at->diffForHumans() : 'Belum Ada Transmisi Data' }}
+                            </span>
+                            @if($latest?->provenance)
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold font-mono uppercase {{ $latest->provenance === 'hardware' ? 'bg-emerald-50 text-emerald-700' : ($latest->provenance === 'simulation' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-600') }}">
+                                    {{ $latest->provenance === 'hardware' ? 'Hardware' : ($latest->provenance === 'simulation' ? 'Simulasi' : 'Fixture') }}
+                                </span>
+                            @endif
+                        </div>
                         <a
                             href="{{ url('/iot-monitoring?device_id=' . $kit->id) }}"
                             class="px-2.5 py-1 rounded bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold flex items-center gap-1 transition-colors"
@@ -212,7 +219,12 @@
                         </a>
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div class="col-span-full py-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    <p class="text-xs font-semibold text-slate-600">Belum Ada Meja Praktikum IoT Terdaftar</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Stasiun meja praktikum SMK akan tampil di sini setelah didaftarkan.</p>
+                </div>
+            @endforelse
         </div>
     </div>
 
