@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Device;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,16 +30,21 @@ class TrainerKitManagerController extends Controller
     /**
      * Handle simulated soft-reboot of a Trainer Kit.
      */
-    public function reboot(Device $device): RedirectResponse
+    public function reboot(Request $request, Device $device): RedirectResponse
     {
-        // Simulasi pengiriman frame perintah restart ke mikrokontroler ESP32
-        $device->update([
-            'last_seen_at' => now(),
-            'status' => 'online',
+        // No command transport or physical ACK is currently implemented.
+        // Record the attempted operation, but never claim the device rebooted or changed its heartbeat/status.
+        AuditLog::create([
+            'user_id' => $request->user()?->id,
+            'actor_name' => $request->user()?->name ?? 'Unknown',
+            'actor_role' => $request->user()?->role ?? 'unknown',
+            'action' => 'Kirim Perintah Soft-Reboot (Simulasi)',
+            'details' => 'Permintaan reboot untuk ' . $device->code . ' tidak dikirim: transport hardware/ACK belum tersedia.',
+            'ip_address' => $request->ip(),
         ]);
 
         return redirect()->route('kits.index')
-            ->with('success', 'Perintah soft-reboot berhasil dikirimkan ke modul ' . $device->code . '. Sistem online kembali.');
+            ->with('warning', 'Permintaan reboot tidak dikirim. Trainer Kit belum memiliki integrasi perintah dan ACK hardware.');
     }
 
     /**

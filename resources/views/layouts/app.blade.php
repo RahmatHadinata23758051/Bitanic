@@ -65,6 +65,18 @@
                 </div>
             @endif
 
+            @if(session('warning'))
+                <div class="mx-4 sm:mx-6 mt-4 p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between text-xs text-amber-800">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                        <span class="font-medium">{{ session('warning') }}</span>
+                    </div>
+                    <button type="button" @click="$el.parentElement.remove()" class="text-amber-600 hover:text-amber-800">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            @endif
+
             @if(session('error'))
                 <div class="mx-4 sm:mx-6 mt-4 p-4 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-between text-xs text-rose-800">
                     <div class="flex items-center gap-2">
