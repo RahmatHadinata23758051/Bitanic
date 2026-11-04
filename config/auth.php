@@ -112,4 +112,14 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default Bulk Import User Password
+    |--------------------------------------------------------------------------
+    |
+    | Default initial password assigned to batch-imported teacher/student accounts.
+    |
+    */
+    'default_import_password' => env('DEFAULT_IMPORT_PASSWORD', 'Bitanic@2026'),
+
 ];
