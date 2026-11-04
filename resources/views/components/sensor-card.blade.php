@@ -74,12 +74,21 @@
             <!-- Value Display (Tabular Monospace Anti-Layout-Shift) -->
             <div class="my-auto cursor-pointer" @click="flipped = true">
                 <div class="flex items-baseline gap-1.5">
-                    <span class="font-tabular text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                        {{ number_format((float)$value, 1) }}
-                    </span>
-                    <span class="text-xs font-bold text-slate-500 uppercase font-mono">
-                        {{ $unit }}
-                    </span>
+                    @if($value !== null)
+                        <span class="font-tabular text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                            {{ number_format((float)$value, 1) }}
+                        </span>
+                        <span class="text-xs font-bold text-slate-500 uppercase font-mono">
+                            {{ $unit }}
+                        </span>
+                    @else
+                        <span class="font-tabular text-3xl sm:text-4xl font-extrabold text-slate-300 tracking-tight">
+                            —
+                        </span>
+                        <span class="text-xs font-medium text-slate-400 font-mono">
+                            Belum Ada Data
+                        </span>
+                    @endif
                 </div>
             </div>
 

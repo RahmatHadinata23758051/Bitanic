@@ -43,12 +43,12 @@
             <div class="text-center">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Indeks Kesuburan</span>
                 <div class="flex items-baseline justify-center gap-1 mt-0.5">
-                    <span class="font-tabular font-extrabold text-3xl {{ $healthScore >= 80 ? 'text-emerald-700' : ($healthScore >= 60 ? 'text-amber-600' : 'text-rose-600') }}">
-                        {{ $healthScore }}%
+                    <span class="font-tabular font-extrabold text-3xl {{ $healthScore === null ? 'text-slate-300' : ($healthScore >= 80 ? 'text-emerald-700' : ($healthScore >= 60 ? 'text-amber-600' : 'text-rose-600')) }}">
+                        {{ $healthScore === null ? '—' : $healthScore . '%' }}
                     </span>
                 </div>
-                <span class="text-[10px] font-semibold {{ $healthScore >= 80 ? 'text-emerald-700' : ($healthScore >= 60 ? 'text-amber-600' : 'text-rose-600') }}">
-                    {{ $healthScore >= 80 ? 'Optimal Horti' : ($healthScore >= 60 ? 'Perlu Kalibrasi' : 'Anomali Kritis') }}
+                <span class="text-[10px] font-semibold {{ $healthScore === null ? 'text-slate-500' : ($healthScore >= 80 ? 'text-emerald-700' : ($healthScore >= 60 ? 'text-amber-600' : 'text-rose-600')) }}">
+                    {{ $healthScore === null ? 'Menunggu Telemetri' : ($healthScore >= 80 ? 'Optimal Horti' : ($healthScore >= 60 ? 'Perlu Kalibrasi' : 'Anomali Kritis')) }}
                 </span>
             </div>
 
@@ -84,11 +84,29 @@
                 <h3 class="text-sm font-bold text-slate-900">Parameter Sensor Tanah 7-in-1</h3>
                 <p class="text-[11px] text-slate-500">Klik kartu untuk membalik & melihat Glosarium Agronomi SMK</p>
             </div>
-            <span class="text-[11px] font-mono text-emerald-700 font-semibold flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Streaming Modbus Aktif</span>
+            <span class="text-[11px] font-mono {{ $telemetry['has_telemetry'] ? 'text-emerald-700' : 'text-slate-500' }} font-semibold flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full {{ $telemetry['has_telemetry'] ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400' }}"></span>
+                <span>{{ $telemetry['has_telemetry'] ? 'Streaming Modbus Aktif' : 'Menunggu Transmisi Sensor' }}</span>
             </span>
         </div>
+
+        @php
+            $phVal = $telemetry['ph'];
+            $phStatus = $phVal === null ? 'optimal' : ($phVal < 5.5 ? 'critical' : ($phVal <= 7.2 ? 'optimal' : 'warning'));
+            $phLabel = $phVal === null ? 'Menunggu Data' : ($phVal < 5.5 ? 'Masam Ekstrem' : ($phVal <= 7.2 ? 'Optimal' : 'Alkali/Basa'));
+
+            $humVal = $telemetry['humidity'];
+            $humStatus = $humVal === null ? 'optimal' : ($humVal < 25 ? 'critical' : ($humVal <= 65 ? 'optimal' : 'warning'));
+            $humLabel = $humVal === null ? 'Menunggu Data' : ($humVal < 25 ? 'Kering Kritis' : ($humVal <= 65 ? 'Optimal' : 'Jenuh Air'));
+
+            $ecVal = $telemetry['ec'];
+            $ecStatus = $ecVal === null ? 'optimal' : ($ecVal > 2200 ? 'warning' : 'optimal');
+            $ecLabel = $ecVal === null ? 'Menunggu Data' : ($ecVal > 2200 ? 'Salinitas Tinggi' : 'Optimal');
+
+            $nVal = $telemetry['nitrogen'];
+            $nStatus = $nVal === null ? 'optimal' : ($nVal < 30 ? 'warning' : 'optimal');
+            $nLabel = $nVal === null ? 'Menunggu Data' : ($nVal < 30 ? 'Rendah' : 'Cukup');
+        @endphp
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Meter 1: pH Tanah -->
@@ -100,8 +118,8 @@
                 :scaleMax="14"
                 :idealMin="6.0"
                 :idealMax="7.2"
-                :status="$telemetry['ph'] < 5.5 ? 'critical' : ($telemetry['ph'] <= 7.2 ? 'optimal' : 'warning')"
-                :statusLabel="$telemetry['ph'] < 5.5 ? 'Masam Ekstrem' : ($telemetry['ph'] <= 7.2 ? 'Optimal' : 'Alkali/Basa')"
+                :status="$phStatus"
+                :statusLabel="$phLabel"
                 sublabel="Aktivitas Ion [H+]"
                 icon="gauge"
                 definition="Derajat kemasaman tanah yang menentukan ketersediaan larutan ion hara bagi akar tanaman budidaya."
@@ -119,8 +137,8 @@
                 :scaleMax="100"
                 :idealMin="45"
                 :idealMax="65"
-                :status="$telemetry['humidity'] < 25 ? 'critical' : ($telemetry['humidity'] <= 65 ? 'optimal' : 'warning')"
-                :statusLabel="$telemetry['humidity'] < 25 ? 'Kering Kritis' : ($telemetry['humidity'] <= 65 ? 'Optimal' : 'Jenuh Air')"
+                :status="$humStatus"
+                :statusLabel="$humLabel"
                 sublabel="Volumetric Water (VWC)"
                 icon="droplets"
                 definition="Persentase volume air bebas dan kapiler dalam pori-pori tanah per satuan volume total tanah."
@@ -138,8 +156,8 @@
                 :scaleMax="4000"
                 :idealMin="1000"
                 :idealMax="2200"
-                :status="$telemetry['ec'] > 2200 ? 'warning' : 'optimal'"
-                :statusLabel="$telemetry['ec'] > 2200 ? 'Salinitas Tinggi' : 'Optimal'"
+                :status="$ecStatus"
+                :statusLabel="$ecLabel"
                 sublabel="Indeks Kepekatan Pupuk"
                 icon="zap"
                 definition="Daya hantar listrik larutan tanah yang berbanding lurus dengan kepekatan total garam mineral terlarut."
@@ -157,8 +175,8 @@
                 :scaleMax="200"
                 :idealMin="40"
                 :idealMax="120"
-                :status="$telemetry['nitrogen'] < 30 ? 'warning' : 'optimal'"
-                :statusLabel="$telemetry['nitrogen'] < 30 ? 'Rendah' : 'Cukup'"
+                :status="$nStatus"
+                :statusLabel="$nLabel"
                 sublabel="Pertumbuhan Vegetatif"
                 icon="sprout"
                 definition="Unsur hara makro primer esensial penyusun asam amino, protein, dan klorofil untuk fotosintesis daun."
@@ -177,7 +195,7 @@
                 :idealMin="25"
                 :idealMax="60"
                 :status="'optimal'"
-                :statusLabel="'Cukup'"
+                :statusLabel="$telemetry['phosphorus'] === null ? 'Menunggu Data' : 'Cukup'"
                 sublabel="Energi & Perakaran"
                 icon="sparkles"
                 definition="Unsur hara makro primer untuk transfer energi molekuler (ATP/ADP), pembelahan sel, dan inisiasi perakaran."
@@ -196,7 +214,7 @@
                 :idealMin="100"
                 :idealMax="200"
                 :status="'optimal'"
-                :statusLabel="'Optimal'"
+                :statusLabel="$telemetry['potassium'] === null ? 'Menunggu Data' : 'Optimal'"
                 sublabel="Kekebalan & Kualitas Buah"
                 icon="shield"
                 definition="Aktivator enzim, osmoregulasi pembukaan stomata, dan translokasi asimilasi hasil fotosintesis ke buah."
@@ -215,7 +233,7 @@
                 :idealMin="22"
                 :idealMax="29"
                 :status="'optimal'"
-                :statusLabel="'Ideal'"
+                :statusLabel="$telemetry['temperature'] === null ? 'Menunggu Data' : 'Ideal'"
                 sublabel="Aktivitas Biologis Tanah"
                 icon="thermometer"
                 definition="Derajat panas zona perakaran (rhizosphere) yang mempengaruhi respirasi akar dan mikrobioma dekomposer."

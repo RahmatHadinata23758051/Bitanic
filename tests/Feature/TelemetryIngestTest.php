@@ -93,6 +93,8 @@ class TelemetryIngestTest extends TestCase
         $this->assertEquals(5.2, $reading->ph);
         $this->assertEquals(34.5, $reading->temperature);
         $this->assertEquals(78.4, $reading->humidity);
+        $this->assertEquals('hardware', $reading->provenance);
+        $this->assertEquals(0.0, (float) $reading->applied_offsets['ph']);
 
         // Verifikasi threshold flags
         $flags = $reading->threshold_flags;
@@ -134,5 +136,45 @@ class TelemetryIngestTest extends TestCase
             ->assertJson([
                 'success' => true,
             ]);
+    }
+
+    public function test_it_applies_calibration_offsets_during_ingestion(): void
+    {
+        $this->device->update([
+            'calibration_offsets' => [
+                'ph' => 0.45,
+                'Temperature' => -1.2,
+                'ec' => 50,
+            ],
+        ]);
+
+        $payload = [
+            'device_id' => 'BTLP-TEST-STATION',
+            'soilrs485' => [
+                'Nitrogen' => 20,
+                'Phosporus' => 20,
+                'Kalium' => 20,
+                'Ec' => 1000,
+                'Ph' => 6.0,
+                'Temperature' => 25.0,
+                'Humidity' => 60.0,
+            ],
+        ];
+
+        $response = $this->withHeaders([
+            'X-Device-Key' => $this->rawKey,
+        ])->postJson('/api/v1/telemetry/ingest', $payload);
+
+        $response->assertStatus(201);
+
+        $reading = TelemetryReading::latest('id')->first();
+        // 6.0 + 0.45 = 6.45
+        $this->assertEquals(6.45, (float) $reading->ph);
+        // 25.0 - 1.2 = 23.8
+        $this->assertEquals(23.8, (float) $reading->temperature);
+        // 1000 + 50 = 1050
+        $this->assertEquals(1050, (float) $reading->ec);
+        $this->assertEquals(0.45, (float) $reading->applied_offsets['ph']);
+        $this->assertEquals(-1.2, (float) $reading->applied_offsets['temperature']);
     }
 }

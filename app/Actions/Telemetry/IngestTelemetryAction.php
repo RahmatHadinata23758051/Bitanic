@@ -19,13 +19,45 @@ class IngestTelemetryAction
     {
         $samples = $rawPayload['soilrs485'] ?? $rawPayload;
 
-        $nitrogen = (float) ($samples['Nitrogen'] ?? 0);
-        $phosphorus = (float) ($samples['Phosporus'] ?? ($samples['Phosphorus'] ?? 0));
-        $potassium = (float) ($samples['Kalium'] ?? ($samples['Potassium'] ?? 0));
-        $ec = (float) ($samples['Ec'] ?? ($samples['EC'] ?? 0));
-        $ph = (float) ($samples['Ph'] ?? ($samples['pH'] ?? 0));
-        $temperature = (float) ($samples['Temperature'] ?? 0);
-        $humidity = (float) ($samples['Humidity'] ?? 0);
+        $offsets = $device->calibration_offsets ?? [];
+
+        $applyOffset = static function (array $keys) use ($samples, $offsets): float {
+            $rawValue = 0.0;
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $samples)) {
+                    $rawValue = (float) $samples[$key];
+                    break;
+                }
+            }
+
+            $offset = 0.0;
+            foreach ($keys as $key) {
+                if (isset($offsets[$key])) {
+                    $offset = (float) $offsets[$key];
+                    break;
+                }
+            }
+
+            return $rawValue + $offset;
+        };
+
+        $nitrogen = $applyOffset(['Nitrogen', 'nitrogen']);
+        $phosphorus = $applyOffset(['Phosporus', 'Phosphorus', 'phosphorus']);
+        $potassium = $applyOffset(['Kalium', 'Potassium', 'potassium']);
+        $ec = $applyOffset(['Ec', 'EC', 'ec']);
+        $ph = $applyOffset(['Ph', 'pH', 'ph']);
+        $temperature = $applyOffset(['Temperature', 'temperature']);
+        $humidity = $applyOffset(['Humidity', 'humidity']);
+
+        $appliedOffsets = [
+            'nitrogen' => $offsets['Nitrogen'] ?? $offsets['nitrogen'] ?? 0.0,
+            'phosphorus' => $offsets['Phosporus'] ?? $offsets['Phosphorus'] ?? $offsets['phosphorus'] ?? 0.0,
+            'potassium' => $offsets['Kalium'] ?? $offsets['Potassium'] ?? $offsets['potassium'] ?? 0.0,
+            'ec' => $offsets['Ec'] ?? $offsets['EC'] ?? $offsets['ec'] ?? 0.0,
+            'ph' => $offsets['Ph'] ?? $offsets['pH'] ?? $offsets['ph'] ?? 0.0,
+            'temperature' => $offsets['Temperature'] ?? $offsets['temperature'] ?? 0.0,
+            'humidity' => $offsets['Humidity'] ?? $offsets['humidity'] ?? 0.0,
+        ];
 
         // Evaluasi threshold
         $thresholds = SensorThreshold::where('device_id', $device->id)
@@ -64,6 +96,7 @@ class IngestTelemetryAction
         // Simpan satu record terpadu
         $reading = TelemetryReading::create([
             'device_id' => $device->id,
+            'provenance' => 'hardware',
             'nitrogen' => $nitrogen,
             'phosphorus' => $phosphorus,
             'potassium' => $potassium,
@@ -72,6 +105,7 @@ class IngestTelemetryAction
             'temperature' => $temperature,
             'humidity' => $humidity,
             'raw_payload' => $rawPayload,
+            'applied_offsets' => $appliedOffsets,
             'threshold_flags' => $thresholdFlags,
             'recorded_at' => $now,
         ]);

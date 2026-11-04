@@ -80,6 +80,43 @@ class DashboardTest extends TestCase
         $response->assertSee('Glosarium');
     }
 
+    public function test_iot_monitoring_shows_explicit_empty_state_when_no_readings_exist(): void
+    {
+        Device::create([
+            'code' => 'TK-NO-DATA',
+            'name' => 'Trainer Kit Belum Aktif',
+            'connection_type' => 'modbus_rs485',
+            'status' => 'online',
+            'is_active' => true,
+        ]);
+
+        $response = $this->get('/iot-monitoring');
+
+        $response->assertOk();
+        $response->assertSee('Belum Ada Transmisi Data');
+        $response->assertSee('Menunggu Telemetri');
+        $response->assertDontSee('68.2');
+        $response->assertDontSee('26.8');
+        $response->assertDontSee('1,420');
+    }
+
+    public function test_iot_monitoring_marks_device_offline_after_fifteen_minute_heartbeat_timeout(): void
+    {
+        Device::create([
+            'code' => 'TK-STALE',
+            'name' => 'Trainer Kit Stale',
+            'connection_type' => 'modbus_rs485',
+            'status' => 'online', // stale persisted status must not override heartbeat
+            'last_seen_at' => now()->subMinutes(16),
+            'is_active' => true,
+        ]);
+
+        $response = $this->get('/iot-monitoring');
+
+        $response->assertOk();
+        $response->assertSee('Offline');
+    }
+
     public function test_analytics_route_renders_the_analytics_page(): void
     {
         $response = $this->get('/analytics');

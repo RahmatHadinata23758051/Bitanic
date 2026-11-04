@@ -16,6 +16,7 @@ class TelemetryReading extends Model
 
     protected $fillable = [
         'device_id',
+        'provenance',
         'nitrogen',
         'phosphorus',
         'potassium',
@@ -24,6 +25,7 @@ class TelemetryReading extends Model
         'temperature',
         'humidity',
         'raw_payload',
+        'applied_offsets',
         'threshold_flags',
         'recorded_at',
     ];
@@ -39,6 +41,7 @@ class TelemetryReading extends Model
             'temperature' => 'decimal:2',
             'humidity' => 'decimal:2',
             'raw_payload' => 'array',
+            'applied_offsets' => 'array',
             'threshold_flags' => 'array',
             'recorded_at' => 'datetime',
         ];

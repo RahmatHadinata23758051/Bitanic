@@ -9,7 +9,8 @@
 ])
 
 @php
-    $val = (float) $value;
+    $hasValue = $value !== null;
+    $val = $hasValue ? (float) $value : 0.0;
     $minVal = (float) $min;
     $maxVal = (float) $max;
     $range = $maxVal > $minVal ? ($maxVal - $minVal) : 1;
@@ -37,12 +38,14 @@
             title="Zona Ideal: {{ $idealMin }} - {{ $idealMax }} {{ $unit }}"
         ></div>
 
-        <!-- Indicator Dot Posisi Nilai Riil -->
-        <div
-            class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full {{ $dotColor }} border-2 shadow-sm ring-2 transition-all duration-500 z-10"
-            style="left: {{ $percent }}%;"
-            title="Nilai Saat Ini: {{ $val }} {{ $unit }}"
-        ></div>
+        @if($hasValue)
+            <!-- Indicator Dot Posisi Nilai Riil -->
+            <div
+                class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full {{ $dotColor }} border-2 shadow-sm ring-2 transition-all duration-500 z-10"
+                style="left: {{ $percent }}%;"
+                title="Nilai Saat Ini: {{ $val }} {{ $unit }}"
+            ></div>
+        @endif
     </div>
 
     <!-- Scale Min - Target - Max Labels -->
