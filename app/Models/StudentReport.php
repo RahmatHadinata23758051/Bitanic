@@ -74,4 +74,9 @@ class StudentReport extends Model
     {
         return $this->hasMany(StudentReportAttempt::class, 'student_report_id')->orderBy('attempt_number');
     }
+
+    public function gradeHistory(): HasMany
+    {
+        return $this->hasMany(GradeHistory::class, 'student_report_id')->orderByDesc('graded_at');
+    }
 }
