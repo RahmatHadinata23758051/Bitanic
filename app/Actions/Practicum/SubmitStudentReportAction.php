@@ -64,6 +64,7 @@ class SubmitStudentReportAction
             ->whereNotNull('device_id')
             ->where('start_time', '<=', $currentTime)
             ->where('end_time', '>=', $currentTime)
+            ->when($user->school_id, fn ($q) => $q->where('school_id', $user->school_id))
             ->latest()
             ->first();
 
@@ -126,24 +127,24 @@ class SubmitStudentReportAction
                 ]);
             }
 
-            // Jika siswa memiliki alokasi kit spesifik di profil, tidak boleh memilih kit lain
-            if ($user->isSiswa() && $profileDevice && $profileDevice->id !== $requestedDevice->id) {
+            // Jika jadwal spesifik ditentukan, perangkat harus sesuai dengan jadwal
+            if ($schedule && (int)$schedule->device_id !== (int)$requestedDevice->id) {
                 throw ValidationException::withMessages([
-                    'device_id' => "Trainer Kit {$requestedDevice->code} bukan alokasi meja praktik Anda ({$profileDevice->code}).",
+                    'device_id' => 'Trainer Kit yang dipilih tidak sesuai dengan jadwal praktikum.',
                 ]);
             }
 
             // Jika siswa memiliki jadwal aktif hari ini, tidak boleh memilih kit di luar jadwalnya
-            if ($user->isSiswa() && $activeScheduleToday && (int)$activeScheduleToday->device_id !== (int)$requestedDevice->id) {
+            if ($user->isSiswa() && !$schedule && $activeScheduleToday && (int)$activeScheduleToday->device_id !== (int)$requestedDevice->id) {
                 throw ValidationException::withMessages([
                     'device_id' => 'Trainer Kit yang dipilih tidak sesuai dengan alokasi meja pada jadwal praktikum aktif Anda.',
                 ]);
             }
 
-            // Jika jadwal spesifik ditentukan, perangkat harus sesuai dengan jadwal
-            if ($schedule && (int)$schedule->device_id !== (int)$requestedDevice->id) {
+            // Jika tidak ada jadwal dan siswa memiliki alokasi kit spesifik di profil, tidak boleh memilih kit lain
+            if ($user->isSiswa() && !$schedule && !$activeScheduleToday && $profileDevice && $profileDevice->id !== $requestedDevice->id) {
                 throw ValidationException::withMessages([
-                    'device_id' => 'Trainer Kit yang dipilih tidak sesuai dengan jadwal praktikum.',
+                    'device_id' => "Trainer Kit {$requestedDevice->code} bukan alokasi meja praktik Anda ({$profileDevice->code}).",
                 ]);
             }
 
@@ -157,11 +158,11 @@ class SubmitStudentReportAction
                 $scheduleId = $activeScheduleToday->id;
             } elseif ($profileDevice) {
                 $resolvedDevice = $profileDevice;
-            } elseif ($profile && is_null($profile->assigned_kit_id)) {
-                // Siswa dengan profil aktif tetapi belum dialokasikan meja
+            } elseif ($user->isSiswa()) {
+                // Siswa tanpa alokasi meja atau jadwal tidak boleh mengklaim perangkat sembarangan
                 $resolvedDevice = null;
             } else {
-                // Fallback aman ke perangkat lab aktif pertama di sekolah siswa
+                // Fallback aman untuk demonstrasi guru/admin
                 $resolvedDevice = Device::where('is_active', true)
                     ->when($user->school_id, fn($q) => $q->where('school_id', $user->school_id))
                     ->first();

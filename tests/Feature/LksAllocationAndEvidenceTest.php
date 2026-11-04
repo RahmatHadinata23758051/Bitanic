@@ -144,4 +144,22 @@ class LksAllocationAndEvidenceTest extends TestCase
         $this->assertFalse($report->telemetry_snapshot['has_telemetry']);
         $this->assertStringContainsString('belum memiliki alokasi meja', $report->telemetry_snapshot['message']);
     }
+
+    public function test_student_without_profile_or_schedule_does_not_get_a_fallback_device(): void
+    {
+        $student = User::factory()->create(['role' => 'siswa']);
+        Device::create(['code' => 'TK-FALLBACK', 'name' => 'Meja Bukan Alokasi', 'is_active' => true]);
+        $module = ModulePracticum::firstOrFail();
+
+        $response = $this->actingAs($student)->post(route('modules.submit-lks', $module->id), [
+            'lks_answers' => ['q1' => 'Laporan tanpa alokasi resmi'],
+        ]);
+
+        $response->assertRedirect(route('modules.show', $module->id));
+        $report = StudentReport::where('user_id', $student->id)->where('module_id', $module->id)->firstOrFail();
+
+        $this->assertNull($report->device_id);
+        $this->assertNull($report->evidence_reading_id);
+        $this->assertFalse($report->telemetry_snapshot['has_telemetry']);
+    }
 }
