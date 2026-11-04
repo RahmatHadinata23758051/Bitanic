@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class DeviceApiKey extends Model
 {
@@ -13,7 +14,9 @@ class DeviceApiKey extends Model
     protected $fillable = [
         'device_id',
         'key_hash',
+        'key_prefix',
         'revoked_at',
+        'last_used_at',
     ];
 
     /**
@@ -29,6 +32,7 @@ class DeviceApiKey extends Model
     {
         return [
             'revoked_at' => 'datetime',
+            'last_used_at' => 'datetime',
         ];
     }
 
@@ -65,6 +69,7 @@ class DeviceApiKey extends Model
         $apiKey = self::create([
             'device_id' => $device->id,
             'key_hash' => $keyHash,
+            'key_prefix' => substr($plainKey, 0, 12),
             'revoked_at' => null,
         ]);
 
@@ -72,5 +77,40 @@ class DeviceApiKey extends Model
             'plain_key' => $plainKey,
             'api_key' => $apiKey,
         ];
+    }
+
+    /**
+     * Safely rotate the API key for a device by revoking prior active keys and creating a new one.
+     *
+     * @param Device $device
+     * @param User|null $actor
+     * @return array{plain_key: string, api_key: DeviceApiKey}
+     */
+    public static function rotateForDevice(Device $device, ?User $actor = null): array
+    {
+        return DB::transaction(function () use ($device, $actor) {
+            // Serialize rotations per device so concurrent requests cannot leave multiple active keys.
+            Device::query()->whereKey($device->getKey())->lockForUpdate()->firstOrFail();
+
+            // Revoke all existing unrevoked keys for this device
+            self::where('device_id', $device->id)
+                ->whereNull('revoked_at')
+                ->update(['revoked_at' => now()]);
+
+            $newKeyData = self::generateForDevice($device);
+
+            if ($actor) {
+                AuditLog::create([
+                    'user_id' => $actor->id,
+                    'actor_name' => $actor->name,
+                    'actor_role' => $actor->role,
+                    'action' => 'Rotasi Kunci API Perangkat',
+                    'details' => 'Kunci API untuk perangkat ' . $device->code . ' berhasil dirotasi. Kunci lama telah direvokasi.',
+                    'ip_address' => request()->ip() ?? '127.0.0.1',
+                ]);
+            }
+
+            return $newKeyData;
+        });
     }
 }

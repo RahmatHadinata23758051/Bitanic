@@ -31,6 +31,21 @@
         </div>
     </div>
 
+    @if(session('new_api_key'))
+    <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+            <i data-lucide="key" class="w-4 h-4 text-amber-700"></i>
+            <span>Kunci API Perangkat Baru (Hanya Ditampilkan Sekali)</span>
+        </div>
+        <p class="text-xs text-amber-800">
+            Segera simpan kunci API berikut pada firmware ESP32 perangkat Anda. Kunci rahasia ini tidak dapat dipulihkan atau dilihat kembali setelah Anda meninggalkan halaman ini.
+        </p>
+        <div class="p-2.5 rounded-lg bg-white border border-amber-300 font-mono text-xs font-bold text-slate-900 select-all break-all">
+            {{ session('new_api_key') }}
+        </div>
+    </div>
+    @endif
+
     <!-- Fleet Status Grid of Trainer Kits -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         @foreach($kits as $kit)
@@ -84,6 +99,16 @@
                         <span class="text-slate-400">Protokol:</span>
                         <span class="text-slate-800">{{ $kit->protocol ?? 'Modbus RS485' }}</span>
                     </div>
+                    <div class="flex justify-between items-center pt-1 border-t border-slate-200/60">
+                        <span class="text-slate-400">Prefix Key:</span>
+                        <span class="font-mono text-slate-700 font-semibold">{{ $kit->activeApiKey?->key_prefix ? $kit->activeApiKey->key_prefix . '...' : 'Tidak aktif' }}</span>
+                    </div>
+                    @if($kit->activeApiKey?->last_used_at)
+                    <div class="flex justify-between items-center text-[10px]">
+                        <span class="text-slate-400">Terakhir Digunakan:</span>
+                        <span class="text-slate-600">{{ $kit->activeApiKey->last_used_at->diffForHumans() }}</span>
+                    </div>
+                    @endif
                 </div>
 
                 <!-- Actuator Relays Mini Status -->
@@ -122,6 +147,20 @@
                         >
                             Buka Stasiun
                         </a>
+                        @if(auth()->user()?->role === 'superuser')
+                        <form method="POST" action="{{ route('kits.api-key.rotate', $kit->id) }}" class="inline">
+                            @csrf
+                            <button
+                                type="submit"
+                                onclick="return confirm('Rotasi kunci API untuk {{ $kit->code }}? Kunci lama akan segera direvokasi.')"
+                                class="px-2 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-colors flex items-center gap-1"
+                                title="Rotasi Kunci API Hardware"
+                            >
+                                <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                                <span class="sr-only sm:not-sr-only text-[11px]">Rotasi Key</span>
+                            </button>
+                        </form>
+                        @endif
                         <form method="POST" action="{{ route('kits.reboot', $kit->id) }}" class="inline">
                             @csrf
                             <button

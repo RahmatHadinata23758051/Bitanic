@@ -32,14 +32,92 @@ class SecurityHardeningAndRebootTest extends TestCase
         $apiKey = $result['api_key'];
         $this->assertEquals(hash('sha256', $result['plain_key']), $apiKey->key_hash);
         $this->assertTrue($apiKey->isValid());
+        $this->assertSame(substr($result['plain_key'], 0, 12), $apiKey->key_prefix);
 
         // Ensure key_hash is hidden from array / json
         $this->assertArrayNotHasKey('key_hash', $apiKey->toArray());
 
+        // Rotation revokes all active keys, returns a distinct secret, and audits the actor.
+        $teacher = User::factory()->create(['role' => 'superuser']);
+        $secondKey = DeviceApiKey::generateForDevice($device);
+        $rotation = DeviceApiKey::rotateForDevice($device, $teacher);
+
+        $this->assertNotSame($secondKey['plain_key'], $rotation['plain_key']);
+        $this->assertSame(hash('sha256', $rotation['plain_key']), $rotation['api_key']->key_hash);
+        $this->assertSame(substr($rotation['plain_key'], 0, 12), $rotation['api_key']->key_prefix);
+        $this->assertNotNull($apiKey->fresh()->revoked_at);
+        $this->assertNotNull($secondKey['api_key']->fresh()->revoked_at);
+        $this->assertNull($rotation['api_key']->fresh()->revoked_at);
+        $this->assertDatabaseHas('audit_logs', [
+            'user_id' => $teacher->id,
+            'action' => 'Rotasi Kunci API Perangkat',
+        ]);
+
         // Test revoke
+        $apiKey->refresh();
         $apiKey->revoke();
         $this->assertFalse($apiKey->fresh()->isValid());
         $this->assertNotNull($apiKey->fresh()->revoked_at);
+    }
+
+    public function test_superuser_can_rotate_device_api_key_and_other_roles_cannot(): void
+    {
+        $device = Device::create([
+            'code' => 'TK-KEY-ROTATE-01',
+            'name' => 'Meja Test Rotasi',
+            'is_active' => true,
+        ]);
+        $activeKey = DeviceApiKey::generateForDevice($device);
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $superuser = User::factory()->create(['role' => 'superuser']);
+
+        $this->actingAs($teacher)
+            ->post(route('kits.api-key.rotate', $device))
+            ->assertForbidden();
+        $this->assertNull($activeKey['api_key']->fresh()->revoked_at);
+
+        $rotateResponse = $this->actingAs($superuser)
+            ->post(route('kits.api-key.rotate', $device));
+        $rotateResponse->assertRedirect(route('kits.index'))
+            ->assertSessionHas('new_api_key');
+        $newPlainKey = $rotateResponse->getSession()->get('new_api_key');
+        $successMessage = $rotateResponse->getSession()->get('success');
+        $this->assertStringNotContainsString($newPlainKey, $successMessage);
+
+        $this->get(route('kits.index'))
+            ->assertSee($newPlainKey)
+            ->assertSee(substr($newPlainKey, 0, 12))
+            ->assertSee(route('kits.api-key.rotate', $device), false)
+            ->assertDontSee($activeKey['plain_key']);
+        $this->get(route('kits.index'))->assertDontSee($newPlainKey);
+
+        $this->assertNotNull($activeKey['api_key']->fresh()->revoked_at);
+        $this->assertSame(1, DeviceApiKey::query()
+            ->where('device_id', $device->id)
+            ->whereNull('revoked_at')
+            ->count());
+    }
+
+    public function test_device_api_key_middleware_tracks_successful_usage_only(): void
+    {
+        $device = Device::create([
+            'code' => 'TK-KEY-USE-01',
+            'name' => 'Meja Test Penggunaan',
+            'is_active' => true,
+        ]);
+        $keyResult = DeviceApiKey::generateForDevice($device);
+
+        $this->travel(10)->minutes();
+        $this->withHeader('X-Device-Key', $keyResult['plain_key'])
+            ->postJson('/api/v1/telemetry/ingest', ['soilrs485' => ['Ph' => 6.5]])
+            ->assertStatus(201);
+        $this->assertSame(now()->toDateTimeString(), $keyResult['api_key']->fresh()->last_used_at->toDateTimeString());
+
+        $lastUsedAt = $keyResult['api_key']->fresh()->last_used_at;
+        $this->withHeader('X-Device-Key', 'invalid-key')
+            ->postJson('/api/v1/telemetry/ingest', ['soilrs485' => ['Ph' => 6.5]])
+            ->assertUnauthorized();
+        $this->assertEquals($lastUsedAt->toDateTimeString(), $keyResult['api_key']->fresh()->last_used_at->toDateTimeString());
     }
 
     public function test_reboot_does_not_forge_online_status_or_last_seen_at_without_ack(): void

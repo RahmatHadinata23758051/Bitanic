@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Device;
+use App\Models\DeviceApiKey;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,7 +16,7 @@ class TrainerKitManagerController extends Controller
      */
     public function index(): View
     {
-        $kits = Device::with('latestReading')->orderBy('code')->paginate(15);
+        $kits = Device::with(['latestReading', 'activeApiKey'])->orderBy('code')->paginate(15);
 
         return view('pages.kits.index', [
             'kits' => $kits,
@@ -68,5 +69,17 @@ class TrainerKitManagerController extends Controller
 
         return redirect()->route('kits.index')
             ->with('success', 'Offset kalibrasi sensor untuk ' . $device->code . ' berhasil diperbarui.');
+    }
+
+    /**
+     * Safely rotate the API key for a device.
+     */
+    public function rotateApiKey(Request $request, Device $device): RedirectResponse
+    {
+        $rotation = DeviceApiKey::rotateForDevice($device, $request->user());
+
+        return redirect()->route('kits.index')
+            ->with('success', "Kunci API untuk {$device->code} berhasil dirotasi. Salin kunci baru yang hanya ditampilkan satu kali.")
+            ->with('new_api_key', $rotation['plain_key']);
     }
 }

@@ -101,6 +101,9 @@ Route::post('/trainer-kits/{device}/reboot', [TrainerKitManagerController::class
 Route::post('/trainer-kits/{device}/calibration', [TrainerKitManagerController::class, 'updateCalibration'])
     ->middleware(['auth', 'role:guru'])
     ->name('kits.calibration');
+Route::post('/trainer-kits/{device}/api-key/rotate', [TrainerKitManagerController::class, 'rotateApiKey'])
+    ->middleware(['auth', 'role:superuser'])
+    ->name('kits.api-key.rotate');
 
 // 11. Raw Modbus RS485 Hex Stream Debugger
 Route::get('/raw-logs', [RawLogsDebuggerController::class, 'index'])->name('rawlogs.index');

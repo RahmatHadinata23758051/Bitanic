@@ -366,6 +366,7 @@ class ImportLegacyDataCommand extends Command
             ['key_hash' => $keyHash],
             [
                 'device_id' => $device->id,
+                'key_prefix' => substr($rawKey, 0, 12),
                 'revoked_at' => null,
             ]
         );

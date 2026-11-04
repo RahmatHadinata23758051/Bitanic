@@ -50,6 +50,9 @@ class AuthenticateDeviceApiKey
             ], 401);
         }
 
+        // Record last used timestamp silently
+        $apiKey->updateQuietly(['last_used_at' => now()]);
+
         // Attach authenticated device and key to request attributes
         $request->attributes->set('device', $device);
         $request->attributes->set('device_api_key', $apiKey);
