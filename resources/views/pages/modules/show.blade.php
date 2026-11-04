@@ -207,11 +207,83 @@
                     <p class="text-xs text-slate-500">Jawab pertanyaan observasi berbasis data sensor telemetri aktual</p>
                 </div>
                 @if($currentReport)
-                    <span class="px-2.5 py-1 rounded text-xs font-mono font-bold uppercase {{ $currentReport->status === 'graded' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
-                        Status: {{ $currentReport->status }} (Nilai: {{ $currentReport->final_grade ?? 'Belum Dinilai' }})
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-slate-100 text-slate-700">
+                            Percobaan ke-{{ $currentReport->attempt_count ?? 1 }}
+                        </span>
+                        <span class="px-2.5 py-1 rounded text-xs font-mono font-bold uppercase {{ $currentReport->status === 'graded' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                            Status: {{ $currentReport->status }} (Nilai: {{ $currentReport->final_grade ?? 'Belum Dinilai' }})
+                        </span>
+                    </div>
                 @endif
             </div>
+
+            @if($currentReport && $currentReport->status === 'graded')
+                <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-2">
+                    <div class="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-700"></i>
+                        <span>Laporan Terkunci — Penilaian Selesai</span>
+                    </div>
+                    <p class="text-xs text-emerald-800">
+                        Laporan ini telah dinilai oleh guru pembimbing dengan nilai akhir <strong>{{ $currentReport->final_grade }}</strong>. Formulir terkunci untuk menjaga integritas asesmen akademik.
+                    </p>
+                    @if($currentReport->teacher_feedback)
+                        <div class="pt-2 border-t border-emerald-200 text-xs text-emerald-900">
+                            <span class="font-bold">Umpan Balik Guru:</span> {{ $currentReport->teacher_feedback }}
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            @if($currentReport && !empty($currentReport->telemetry_snapshot))
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            Bukti Telemetri Snapshot (Evidence Ref #{{ $currentReport->evidence_reading_id ?? 'N/A' }})
+                        </span>
+                        <span class="text-[11px] font-mono text-slate-500">
+                            Perangkat: {{ $currentReport->telemetry_snapshot['device_code'] ?? '-' }}
+                        </span>
+                    </div>
+                    @if(isset($currentReport->telemetry_snapshot['ph']))
+                        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-1">
+                            <div class="p-2 rounded bg-white border border-slate-200 text-center">
+                                <span class="text-[10px] text-slate-500 uppercase block">pH</span>
+                                <span class="text-xs font-mono font-bold text-slate-800">{{ number_format($currentReport->telemetry_snapshot['ph'], 2) }}</span>
+                            </div>
+                            <div class="p-2 rounded bg-white border border-slate-200 text-center">
+                                <span class="text-[10px] text-slate-500 uppercase block">EC</span>
+                                <span class="text-xs font-mono font-bold text-slate-800">{{ number_format($currentReport->telemetry_snapshot['ec'], 0) }} µS</span>
+                            </div>
+                            <div class="p-2 rounded bg-white border border-slate-200 text-center">
+                                <span class="text-[10px] text-slate-500 uppercase block">Suhu</span>
+                                <span class="text-xs font-mono font-bold text-slate-800">{{ number_format($currentReport->telemetry_snapshot['temperature'], 1) }}°C</span>
+                            </div>
+                            <div class="p-2 rounded bg-white border border-slate-200 text-center">
+                                <span class="text-[10px] text-slate-500 uppercase block">Lengas</span>
+                                <span class="text-xs font-mono font-bold text-slate-800">{{ number_format($currentReport->telemetry_snapshot['humidity'], 1) }}%</span>
+                            </div>
+                            <div class="p-2 rounded bg-white border border-slate-200 text-center">
+                                <span class="text-[10px] text-slate-500 uppercase block">N</span>
+                                <span class="text-xs font-mono font-bold text-slate-800">{{ number_format($currentReport->telemetry_snapshot['nitrogen'], 1) }}</span>
+                            </div>
+                            <div class="p-2 rounded bg-white border border-slate-200 text-center">
+                                <span class="text-[10px] text-slate-500 uppercase block">P</span>
+                                <span class="text-xs font-mono font-bold text-slate-800">{{ number_format($currentReport->telemetry_snapshot['phosphorus'], 1) }}</span>
+                            </div>
+                            <div class="p-2 rounded bg-white border border-slate-200 text-center">
+                                <span class="text-[10px] text-slate-500 uppercase block">K</span>
+                                <span class="text-xs font-mono font-bold text-slate-800">{{ number_format($currentReport->telemetry_snapshot['potassium'], 1) }}</span>
+                            </div>
+                        </div>
+                    @else
+                        <p class="text-xs text-slate-500 italic">
+                            {{ $currentReport->telemetry_snapshot['message'] ?? 'Belum ada transmisi data telemetri dari Trainer Kit yang terhubung.' }}
+                        </p>
+                    @endif
+                </div>
+            @endif
 
             <form method="POST" action="{{ route('modules.submit-lks', $module->id) }}" class="space-y-5">
                 @csrf
@@ -228,7 +300,8 @@
                             name="lks_answers[{{ $q['id'] }}]"
                             rows="3"
                             required
-                            class="w-full text-xs p-3 rounded-lg border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all placeholder:text-slate-400"
+                            {{ ($currentReport && $currentReport->status === 'graded') ? 'disabled' : '' }}
+                            class="w-full text-xs p-3 rounded-lg border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all placeholder:text-slate-400 {{ ($currentReport && $currentReport->status === 'graded') ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : '' }}"
                             placeholder="Tuliskan analisis pengamatan kelompokmu di sini..."
                         >{{ old('lks_answers.'.$q['id'], $savedAns) }}</textarea>
                     </div>
@@ -239,23 +312,38 @@
                     <textarea
                         name="observation_notes"
                         rows="2"
-                        class="w-full text-xs p-3 rounded-lg border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all placeholder:text-slate-400"
+                        {{ ($currentReport && $currentReport->status === 'graded') ? 'disabled' : '' }}
+                        class="w-full text-xs p-3 rounded-lg border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all placeholder:text-slate-400 {{ ($currentReport && $currentReport->status === 'graded') ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : '' }}"
                         placeholder="Kondisi cuaca, respons tanaman, atau deviasi sensor jika ada..."
                     >{{ old('observation_notes', $currentReport->observation_notes ?? '') }}</textarea>
                 </div>
 
-                <div class="pt-2 flex items-center justify-between">
-                    <p class="text-[11px] text-slate-400">
-                        * Snapshot telemetri 7-in-1 saat submit akan otomatis disertakan ke laporan.
-                    </p>
-                    <button
-                        type="submit"
-                        class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-2"
-                    >
-                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                        <span>Kumpulkan Laporan Praktikum</span>
-                    </button>
-                </div>
+                @if($currentReport && $currentReport->status !== 'graded')
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-800">Catatan Revisi (Opsional)</label>
+                        <textarea
+                            name="revision_notes"
+                            rows="1"
+                            class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none transition-all placeholder:text-slate-400"
+                            placeholder="Tuliskan alasan perbaikan laporan jika melakukan pengumpulan ulang..."
+                        >{{ old('revision_notes', $currentReport->revision_notes ?? '') }}</textarea>
+                    </div>
+                @endif
+
+                @if(!$currentReport || $currentReport->status !== 'graded')
+                    <div class="pt-2 flex items-center justify-between">
+                        <p class="text-[11px] text-slate-400">
+                            * Snapshot telemetri 7-in-1 saat submit akan otomatis disertakan ke laporan sebagai bukti autentik.
+                        </p>
+                        <button
+                            type="submit"
+                            class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-2"
+                        >
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            <span>{{ $currentReport ? 'Kumpulkan Revisi Laporan' : 'Kumpulkan Laporan Praktikum' }}</span>
+                        </button>
+                    </div>
+                @endif
             </form>
         </div>
     </div>

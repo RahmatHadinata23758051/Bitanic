@@ -14,13 +14,17 @@ class StudentReport extends Model
         'user_id',
         'module_id',
         'activity_schedule_id',
+        'device_id',
+        'evidence_reading_id',
         'lks_answers',
         'observation_notes',
         'telemetry_snapshot',
         'status',
+        'attempt_count',
         'rubric_scores',
         'final_grade',
         'teacher_feedback',
+        'revision_notes',
         'graded_by',
     ];
 
@@ -31,6 +35,7 @@ class StudentReport extends Model
             'telemetry_snapshot' => 'array',
             'rubric_scores' => 'array',
             'final_grade' => 'decimal:2',
+            'attempt_count' => 'integer',
         ];
     }
 
@@ -47,6 +52,16 @@ class StudentReport extends Model
     public function schedule(): BelongsTo
     {
         return $this->belongsTo(ActivitySchedule::class, 'activity_schedule_id');
+    }
+
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
+    }
+
+    public function evidenceReading(): BelongsTo
+    {
+        return $this->belongsTo(TelemetryReading::class, 'evidence_reading_id');
     }
 
     public function teacher(): BelongsTo

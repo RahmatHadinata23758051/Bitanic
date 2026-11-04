@@ -63,6 +63,9 @@ class ModulePracticumController extends Controller
         $request->validate([
             'lks_answers' => 'required|array',
             'observation_notes' => 'nullable|string',
+            'device_id' => 'nullable|integer|exists:devices,id',
+            'activity_schedule_id' => 'nullable|integer|exists:activity_schedules,id',
+            'revision_notes' => 'nullable|string|max:2000',
         ]);
 
         $module = ModulePracticum::findOrFail($id);
@@ -75,6 +78,9 @@ class ModulePracticumController extends Controller
         $action->execute($user, $module, [
             'lks_answers' => $request->input('lks_answers'),
             'observation_notes' => $request->input('observation_notes'),
+            'device_id' => $request->input('device_id'),
+            'activity_schedule_id' => $request->input('activity_schedule_id'),
+            'revision_notes' => $request->input('revision_notes'),
         ]);
 
         return redirect()->route('modules.show', $module->id)
