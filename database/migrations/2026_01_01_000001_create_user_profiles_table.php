@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('user_profiles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->enum('type', ['dosen', 'mahasiswa'])->index();
-            $table->string('identifier_number')->nullable()->index(); // NIP atau NIM
-            $table->string('department')->nullable(); // Prodi / Jurusan
-            $table->string('semester', 20)->nullable(); // Khusus mahasiswa
+            $table->enum('type', ['guru', 'siswa'])->index();
+            $table->string('identifier_number')->nullable()->index(); // NIP/NUPTK atau NISN/NIS
+            $table->string('department')->nullable(); // Jurusan / Kejuruan / Mapel
+            $table->string('semester', 20)->nullable(); // Kelas / Semester (khusus siswa)
             $table->text('address')->nullable();
             $table->string('photo')->nullable();
             $table->string('gender', 20)->nullable();

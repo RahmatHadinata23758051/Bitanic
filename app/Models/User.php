@@ -77,13 +77,24 @@ class User extends Authenticatable
         return $this->role === 'superuser';
     }
 
+    public function isGuru(): bool
+    {
+        return $this->role === 'guru';
+    }
+
+    public function isSiswa(): bool
+    {
+        return $this->role === 'siswa';
+    }
+
+    // Alias untuk kompatibilitas jika dibutuhkan
     public function isDosen(): bool
     {
-        return $this->role === 'dosen';
+        return $this->isGuru();
     }
 
     public function isMahasiswa(): bool
     {
-        return $this->role === 'mahasiswa';
+        return $this->isSiswa();
     }
 }

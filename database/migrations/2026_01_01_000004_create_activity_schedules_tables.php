@@ -26,7 +26,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('activity_schedule_id')->constrained('activity_schedules')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->enum('role', ['lecturer', 'student'])->default('student');
+            $table->enum('role', ['guru', 'siswa'])->default('siswa');
             $table->timestamps();
 
             $table->unique(['activity_schedule_id', 'user_id']);
