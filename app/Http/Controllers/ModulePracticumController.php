@@ -65,6 +65,7 @@ class ModulePracticumController extends Controller
             'observation_notes' => 'nullable|string',
             'device_id' => 'nullable|integer|exists:devices,id',
             'activity_schedule_id' => 'nullable|integer|exists:activity_schedules,id',
+            'evidence_reading_id' => 'nullable|integer|exists:telemetry_readings,id',
             'revision_notes' => 'nullable|string|max:2000',
         ]);
 
@@ -80,6 +81,7 @@ class ModulePracticumController extends Controller
             'observation_notes' => $request->input('observation_notes'),
             'device_id' => $request->input('device_id'),
             'activity_schedule_id' => $request->input('activity_schedule_id'),
+            'evidence_reading_id' => $request->input('evidence_reading_id'),
             'revision_notes' => $request->input('revision_notes'),
         ]);
 

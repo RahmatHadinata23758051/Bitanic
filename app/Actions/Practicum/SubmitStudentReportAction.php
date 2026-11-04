@@ -45,6 +45,7 @@ class SubmitStudentReportAction
         $scheduleId = $data['activity_schedule_id'] ?? null;
         $profile = $user->profile;
 
+        // Resolusi Trainer Kit dari profil: alokasi langsung atau default kit kelompok
         $assignedKitCode = $profile?->assigned_kit_id;
         $profileDevice = null;
         if ($assignedKitCode) {
@@ -52,11 +53,17 @@ class SubmitStudentReportAction
                 ? Device::where('id', (int) $assignedKitCode)->orWhere('code', (string) $assignedKitCode)->first()
                 : Device::where('code', (string) $assignedKitCode)->first();
         }
+        if (!$profileDevice && $profile?->studentGroup?->device) {
+            $profileDevice = $profile->studentGroup->device;
+        }
 
-        // Cek apakah siswa memiliki jadwal praktikum aktif hari ini
+        // Cek apakah siswa memiliki jadwal praktikum aktif saat ini (pada hari dan jam sesi praktikum)
+        $currentTime = now()->format('H:i:s');
         $activeScheduleToday = ActivitySchedule::whereDate('activity_date', today())
             ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
             ->whereNotNull('device_id')
+            ->where('start_time', '<=', $currentTime)
+            ->where('end_time', '>=', $currentTime)
             ->latest()
             ->first();
 
@@ -70,7 +77,7 @@ class SubmitStudentReportAction
                 ]);
             }
 
-            if ($schedule->school_id && $user->school_id && $schedule->school_id !== $user->school_id) {
+            if ($schedule->school_id && $user->school_id && (int) $schedule->school_id !== (int) $user->school_id) {
                 throw ValidationException::withMessages([
                     'activity_schedule_id' => 'Jadwal praktikum berada di luar domain sekolah Anda.',
                 ]);
@@ -80,6 +87,17 @@ class SubmitStudentReportAction
                 throw ValidationException::withMessages([
                     'activity_schedule_id' => 'Anda tidak terdaftar sebagai peserta pada jadwal praktikum ini.',
                 ]);
+            }
+
+            if ($user->isSiswa()) {
+                $nowTime = now()->format('H:i:s');
+                $isSameDay = $schedule->activity_date?->isToday() ?? false;
+                $isWithinWindow = $nowTime >= $schedule->start_time && $nowTime <= $schedule->end_time;
+                if (!$isSameDay || !$isWithinWindow) {
+                    throw ValidationException::withMessages([
+                        'activity_schedule_id' => 'Sesi praktikum pada jadwal ini belum dimulai atau telah berakhir.',
+                    ]);
+                }
             }
         }
 
@@ -98,6 +116,13 @@ class SubmitStudentReportAction
             if ($requestedDevice->school_id && $user->school_id && $requestedDevice->school_id !== $user->school_id) {
                 throw ValidationException::withMessages([
                     'device_id' => 'Trainer Kit ini berada di luar domain sekolah Anda.',
+                ]);
+            }
+
+            // Siswa tanpa alokasi meja tidak boleh memilih meja sembarangan
+            if ($user->isSiswa() && !$profileDevice && !$activeScheduleToday && !$schedule) {
+                throw ValidationException::withMessages([
+                    'device_id' => 'Anda belum dialokasikan ke meja Trainer Kit atau jadwal praktikum oleh guru pembimbing.',
                 ]);
             }
 
@@ -132,6 +157,9 @@ class SubmitStudentReportAction
                 $scheduleId = $activeScheduleToday->id;
             } elseif ($profileDevice) {
                 $resolvedDevice = $profileDevice;
+            } elseif ($profile && is_null($profile->assigned_kit_id)) {
+                // Siswa dengan profil aktif tetapi belum dialokasikan meja
+                $resolvedDevice = null;
             } else {
                 // Fallback aman ke perangkat lab aktif pertama di sekolah siswa
                 $resolvedDevice = Device::where('is_active', true)
@@ -144,7 +172,17 @@ class SubmitStudentReportAction
 
         // 3. Bukti Telemetri (Telemetry Evidence & Provenance)
         $latestReading = null;
-        if ($deviceId) {
+        $requestedReadingId = $data['evidence_reading_id'] ?? null;
+
+        if ($requestedReadingId) {
+            $evidenceReading = TelemetryReading::with('device')->find($requestedReadingId);
+            if (!$evidenceReading || !$deviceId || (int) $evidenceReading->device_id !== (int) $deviceId) {
+                throw ValidationException::withMessages([
+                    'evidence_reading_id' => 'Bukti telemetri tidak valid atau tidak berasal dari meja Trainer Kit yang dialokasikan.',
+                ]);
+            }
+            $latestReading = $evidenceReading;
+        } elseif ($deviceId) {
             $latestReading = TelemetryReading::with('device')
                 ->where('device_id', $deviceId)
                 ->latest('recorded_at')
@@ -166,13 +204,16 @@ class SubmitStudentReportAction
                 'temperature' => (float) $latestReading->temperature,
                 'provenance' => $latestReading->provenance ?? 'hardware',
                 'recorded_at' => $latestReading->recorded_at?->toIso8601String(),
+                'evidence_verified' => true,
             ];
             $evidenceReadingId = $latestReading->id;
         } else {
             // Jujur: Jangan rekayasa angka tiruan jika data belum ditransmisikan
             $snapshot = [
                 'has_telemetry' => false,
-                'message' => 'Belum ada transmisi data telemetri dari Trainer Kit yang terhubung.',
+                'message' => !$deviceId
+                    ? 'Siswa belum memiliki alokasi meja Trainer Kit praktikum.'
+                    : 'Belum ada transmisi data telemetri dari Trainer Kit yang terhubung.',
                 'recorded_at' => now()->toIso8601String(),
             ];
             $evidenceReadingId = null;
