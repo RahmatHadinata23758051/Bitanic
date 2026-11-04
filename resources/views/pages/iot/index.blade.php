@@ -84,9 +84,9 @@
                 <h3 class="text-sm font-bold text-slate-900">Parameter Sensor Tanah 7-in-1</h3>
                 <p class="text-[11px] text-slate-500">Klik kartu untuk membalik & melihat Glosarium Agronomi SMK</p>
             </div>
-            <span class="text-[11px] font-mono {{ $telemetry['has_telemetry'] ? 'text-emerald-700' : 'text-slate-500' }} font-semibold flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full {{ $telemetry['has_telemetry'] ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400' }}"></span>
-                <span>{{ $telemetry['has_telemetry'] ? 'Streaming Modbus Aktif' : 'Menunggu Transmisi Sensor' }}</span>
+            <span class="text-[11px] font-mono {{ ($telemetry['is_live'] ?? false) ? 'text-emerald-700' : 'text-slate-500' }} font-semibold flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full {{ ($telemetry['is_live'] ?? false) ? 'bg-emerald-500 animate-pulse' : ($telemetry['has_telemetry'] ? 'bg-amber-400' : 'bg-slate-400') }}"></span>
+                <span>{{ ($telemetry['is_live'] ?? false) ? 'Streaming Modbus Aktif' : ($telemetry['has_telemetry'] ? 'Telemetri Terakhir (Stale / Offline)' : 'Menunggu Transmisi Sensor') }}</span>
             </span>
         </div>
 

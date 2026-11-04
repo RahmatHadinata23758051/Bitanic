@@ -14,9 +14,11 @@
     x-data="{
         relays: {{ json_encode($relays) }},
         loadingKey: null,
+        errorMessage: '',
         toggleRelay(key) {
-            if (!{{ $canControl ? 'true' : 'false' }}) return;
+            if (!{{ $canControl ? 'true' : 'false' }} || this.loadingKey) return;
             this.loadingKey = key;
+            this.errorMessage = '';
             const targetState = !this.relays[key];
 
             fetch('/api/v1/devices/relay/toggle', {
@@ -31,15 +33,18 @@
                     state: targetState
                 })
             })
-            .then(res => res.json())
-            .then(data => {
-                this.loadingKey = null;
-                this.relays[key] = targetState;
+            .then(async (res) => {
+                const data = await res.json();
+                if (!res.ok || !data.success || data.hardware_ack !== true) {
+                    throw new Error(data.message || 'Belum ada konfirmasi dari hardware.');
+                }
+                this.relays[key] = data.state === true;
             })
-            .catch(() => {
+            .catch((error) => {
+                this.errorMessage = error.message || 'Perintah relay gagal. Status tidak berubah.';
+            })
+            .finally(() => {
                 this.loadingKey = null;
-                // Optimistic fallback for training simulation
-                this.relays[key] = targetState;
             });
         }
     }"
@@ -58,6 +63,19 @@
         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold uppercase">
             {{ $canControl ? 'Aktif Terhubung' : 'Mode Monitor' }}
         </span>
+    </div>
+
+    <!-- Hardware Feedback / Unconfirmed Alert -->
+    <div
+        x-cloak
+        x-show="errorMessage"
+        class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2"
+    >
+        <div class="flex items-center gap-1.5">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+            <span x-text="errorMessage"></span>
+        </div>
+        <button type="button" @click="errorMessage = ''" class="text-amber-500 hover:text-amber-800 text-xs font-bold">✕</button>
     </div>
 
     <!-- Actuators Grid -->

@@ -52,6 +52,16 @@ class IotMonitoringController extends Controller
             ? TelemetryReading::where('device_id', $activeDevice->id)->latest('recorded_at')->first()
             : null;
 
+        // Device heartbeat health is independent from persisted metadata status.
+        $isDeviceOnline = $activeDevice->last_seen_at
+            && $activeDevice->last_seen_at->greaterThan(now()->subMinutes(15));
+        $activeDevice->status = $isDeviceOnline ? 'online' : 'offline';
+
+        $isTelemetryFresh = $latest && $latest->recorded_at
+            && $latest->recorded_at->greaterThan(now()->subMinutes(15));
+
+        $isLive = (bool) ($isDeviceOnline && $isTelemetryFresh);
+
         $hasTelemetry = $latest !== null;
         $t = [
             'nitrogen' => $latest ? (float) $latest->nitrogen : null,
@@ -63,16 +73,14 @@ class IotMonitoringController extends Controller
             'humidity' => $latest ? (float) $latest->humidity : null,
             'recorded_at' => $latest?->recorded_at?->diffForHumans() ?? 'Belum Ada Transmisi Data',
             'has_telemetry' => $hasTelemetry,
+            'is_live' => $isLive,
+            'is_fresh' => $isTelemetryFresh,
+            'is_online' => $isDeviceOnline,
         ];
-
-        // Device heartbeat health is independent from persisted metadata status.
-        $isDeviceOnline = $activeDevice->last_seen_at
-            && $activeDevice->last_seen_at->greaterThan(now()->subMinutes(15));
-        $activeDevice->status = $isDeviceOnline ? 'online' : 'offline';
 
         // Dynamic anomaly alerts are evaluated only when actual telemetry exists.
         $alerts = [];
-        if ($hasTelemetry) {
+        if ($isLive) {
             if ($t['ph'] !== null && $t['ph'] < 5.5) {
                 $alerts[] = [
                     'id' => 'alert-ph',
@@ -110,7 +118,7 @@ class IotMonitoringController extends Controller
 
         // Soil Health Index (null if no telemetry received)
         $healthScore = null;
-        if ($hasTelemetry) {
+        if ($isLive) {
             $score = 100;
             if ($t['ph'] !== null && ($t['ph'] < 6.0 || $t['ph'] > 7.2)) $score -= 15;
             if ($t['humidity'] !== null && ($t['humidity'] < 40 || $t['humidity'] > 70)) $score -= 15;
