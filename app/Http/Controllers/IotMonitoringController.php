@@ -155,23 +155,18 @@ class IotMonitoringController extends Controller
             'state' => 'required|boolean',
         ]);
 
-        if (!empty($validated['device_id'])) {
-            $device = Device::find($validated['device_id']);
-            if ($device) {
-                $relays = $device->relays_state ?? [];
-                $relays[$validated['relay_key']] = (bool) $validated['state'];
-                $device->relays_state = $relays;
-                $device->save();
-            }
-        }
+        $device = !empty($validated['device_id']) ? Device::find($validated['device_id']) : null;
+        $currentState = $device ? ($device->relays_state[$validated['relay_key']] ?? false) : false;
 
+        // In the current phase, hardware MQTT/Modbus transport is simulated and ESP32 physical ACK is not wired.
+        // To maintain data truthfulness, do not mutate relays_state in the database without physical hardware acknowledgement.
         return response()->json([
-            'success' => true,
+            'success' => false,
             'is_simulation' => true,
             'hardware_ack' => false,
             'relay_key' => $validated['relay_key'],
-            'state' => $validated['state'],
-            'message' => 'Status aktuator ' . $validated['relay_key'] . ' diperbarui di basis data (Simulasi — Belum terhubung ACK fisik ESP32).',
-        ]);
+            'state' => $currentState,
+            'message' => 'Gagal mengubah aktuator ' . $validated['relay_key'] . ': Belum ada konfirmasi ACK fisik dari Trainer Kit ESP32.',
+        ], 503);
     }
 }

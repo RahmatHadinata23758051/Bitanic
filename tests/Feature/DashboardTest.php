@@ -208,22 +208,30 @@ class DashboardTest extends TestCase
         $response->assertStatus(401);
     }
 
-    public function test_relay_toggle_endpoint_updates_state_for_authorized_teacher(): void
+    public function test_relay_toggle_without_hardware_ack_does_not_persist_requested_state(): void
     {
         $teacher = User::factory()->create(['role' => 'guru']);
+        $device = Device::create([
+            'code' => 'TK-RELAY-NO-ACK',
+            'name' => 'Relay tanpa ACK',
+            'is_active' => true,
+            'relays_state' => ['irrigationPump' => false],
+        ]);
 
         $response = $this->actingAs($teacher)->postJson('/api/v1/devices/relay/toggle', [
+            'device_id' => $device->id,
             'relay_key' => 'irrigationPump',
             'state' => true,
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(503);
         $response->assertJson([
-            'success' => true,
+            'success' => false,
             'is_simulation' => true,
             'hardware_ack' => false,
             'relay_key' => 'irrigationPump',
-            'state' => true,
+            'state' => false,
         ]);
+        $this->assertFalse($device->fresh()->relays_state['irrigationPump']);
     }
 }
