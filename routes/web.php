@@ -59,13 +59,17 @@ Route::delete('/schedules/{id}', [ActivityScheduleController::class, 'destroy'])
     ->name('schedules.destroy');
 
 // 7. Hub Laporan Lembar Kerja Siswa (LKS)
-Route::get('/reports', [PracticumReportController::class, 'index'])->name('reports.index');
+Route::get('/reports', [PracticumReportController::class, 'index'])
+    ->middleware('auth')
+    ->name('reports.index');
 
 // 8. Rapor Capaian Kompetensi Siswa SMK ATPH
 Route::get('/assessment', [CompetencyAssessmentController::class, 'index'])->name('assessment.index');
 
 // 9. Direktori Akademik Siswa & Guru Pembimbing
-Route::get('/users-data', [UserDirectoryController::class, 'index'])->name('users.index');
+Route::get('/users-data', [UserDirectoryController::class, 'index'])
+    ->middleware(['auth', 'role:guru'])
+    ->name('users.index');
 
 // 10. Manajemen Armada Trainer Kit Hardware & Kalibrasi Sensor
 Route::get('/trainer-kits', [TrainerKitManagerController::class, 'index'])->name('kits.index');
@@ -84,7 +88,9 @@ Route::post('/raw-logs/inject', [RawLogsDebuggerController::class, 'inject'])
     ->name('rawlogs.inject');
 
 // 12. Pengaturan Laboratorium & Log Aktivitas (Audit Trail)
-Route::get('/settings', [SettingsAuditController::class, 'index'])->name('settings.index');
+Route::get('/settings', [SettingsAuditController::class, 'index'])
+    ->middleware(['auth', 'role:superuser'])
+    ->name('settings.index');
 Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool'])
     ->middleware(['auth', 'role:superuser'])
     ->name('settings.update');

@@ -145,7 +145,7 @@ class DashboardTest extends TestCase
 
     public function test_practicum_reports_route_renders_report_hub(): void
     {
-        $response = $this->get('/reports');
+        $response = $this->actingAs(User::factory()->create(['role' => 'guru']))->get('/reports');
 
         $response->assertStatus(200);
         $response->assertSee('Hub Laporan Lembar Kerja Siswa (LKS)');

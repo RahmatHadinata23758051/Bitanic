@@ -17,7 +17,12 @@ class PracticumReportController extends Controller
         $statusFilter = $request->query('status');
         $moduleIdFilter = $request->query('module_id');
 
-        $query = StudentReport::with(['user.profile', 'module', 'teacher'])
+        $baseQuery = StudentReport::query();
+        if ($request->user()->isSiswa()) {
+            $baseQuery->where('user_id', $request->user()->id);
+        }
+
+        $query = (clone $baseQuery)->with(['user.profile', 'module', 'teacher'])
             ->latest();
 
         if ($statusFilter && in_array($statusFilter, ['submitted', 'graded', 'revision_needed'])) {
@@ -32,10 +37,10 @@ class PracticumReportController extends Controller
         $modules = ModulePracticum::orderBy('meeting_number')->get();
 
         $stats = [
-            'total' => StudentReport::count(),
-            'submitted' => StudentReport::where('status', 'submitted')->count(),
-            'graded' => StudentReport::where('status', 'graded')->count(),
-            'avg_grade' => StudentReport::whereNotNull('final_grade')->avg('final_grade') ?? 0,
+            'total' => (clone $baseQuery)->count(),
+            'submitted' => (clone $baseQuery)->where('status', 'submitted')->count(),
+            'graded' => (clone $baseQuery)->where('status', 'graded')->count(),
+            'avg_grade' => (clone $baseQuery)->whereNotNull('final_grade')->avg('final_grade') ?? 0,
         ];
 
         return view('pages.reports.index', [
