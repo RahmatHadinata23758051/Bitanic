@@ -59,6 +59,11 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
+        if ($user && $user->must_change_password) {
+            return redirect()->route('password.first_change')
+                ->with('warning', 'Demi keamanan akun vokasi Anda, silakan ubah kata sandi awal sebelum melanjutkan.');
+        }
+
         // Redirect sesuai peran pengguna vokasi
         if ($user && $user->role === 'guru') {
             return redirect()->intended(route('schedules.index'));

@@ -9,7 +9,9 @@ use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class BulkUserImportTest extends TestCase
@@ -54,7 +56,8 @@ class BulkUserImportTest extends TestCase
         $budi = User::where('email', 'budi.baru@smk.id')->firstOrFail();
         $this->assertEquals('NISN123456', $budi->profile->identifier_number);
         $this->assertEquals('TK-01', $budi->profile->assigned_kit_id);
-        $this->assertSame(config('auth.default_import_password'), $data['default_password']);
+        $this->assertArrayNotHasKey('default_password', $data);
+        $this->assertTrue($budi->must_change_password);
     }
 
     public function test_preview_rejects_duplicate_existing_and_invalid_assignment_references(): void
@@ -83,21 +86,58 @@ class BulkUserImportTest extends TestCase
         $this->assertNotEmpty($response->json('rows.3.errors'));
     }
 
-    public function test_import_uses_the_configured_initial_password(): void
+    public function test_import_generates_a_unique_initial_secret_and_sends_one_time_password_setup_link(): void
     {
-        config(['auth.default_import_password' => 'Custom-Initial-Password']);
+        Notification::fake();
+        config(['auth.default_import_password' => 'DoNotUseSharedPassword']);
         $teacher = User::factory()->create(['role' => 'guru']);
+
         $response = $this->actingAs($teacher)->postJson(route('users.import.execute'), [
-            'rows' => [[
-                'name' => 'Password Test',
-                'email' => 'password.test@smk.id',
-                'role' => 'siswa',
-            ]],
+            'rows' => [
+                [
+                    'name' => 'Password Test A',
+                    'email' => 'password.test.a@smk.id',
+                    'role' => 'siswa',
+                    'identifier_number' => 'NISN-UNIQUE-A',
+                ],
+                [
+                    'name' => 'Password Test B',
+                    'email' => 'password.test.b@smk.id',
+                    'role' => 'siswa',
+                    'identifier_number' => 'NISN-UNIQUE-B',
+                ],
+            ],
         ]);
 
-        $response->assertOk();
-        $imported = User::where('email', 'password.test@smk.id')->firstOrFail();
-        $this->assertTrue(Hash::check('Custom-Initial-Password', $imported->password));
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('imported_count', 2)
+            ->assertJsonMissingPath('credentials')
+            ->assertJsonMissingPath('default_password');
+
+        $first = User::where('email', 'password.test.a@smk.id')->firstOrFail();
+        $second = User::where('email', 'password.test.b@smk.id')->firstOrFail();
+        $this->assertTrue($first->must_change_password);
+        $this->assertTrue($second->must_change_password);
+        $this->assertFalse(Hash::check('DoNotUseSharedPassword', $first->password));
+        $this->assertFalse(Hash::check('DoNotUseSharedPassword', $second->password));
+        Notification::assertSentTo($first, ResetPassword::class);
+        Notification::assertSentTo($second, ResetPassword::class);
+    }
+
+    public function test_preview_and_classroom_import_page_never_expose_initial_password(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $preview = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+            'file' => UploadedFile::fake()->createWithContent('users.csv', "name,email,role\\nSiswa,password.preview@smk.id,siswa"),
+        ]);
+
+        $preview->assertOk()->assertJsonMissingPath('default_password');
+
+        $page = $this->get(route('classes.index'));
+        $page->assertOk()
+            ->assertDontSee('Bitanic@2026')
+            ->assertDontSee('Password standar akun baru');
     }
 
     public function test_import_rejects_inactive_or_foreign_trainer_kit_before_writes(): void

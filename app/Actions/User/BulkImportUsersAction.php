@@ -37,7 +37,6 @@ class BulkImportUsersAction
                 'total_rows' => 0,
                 'valid_count' => 0,
                 'invalid_count' => 0,
-                'default_password' => config('auth.default_import_password', 'Bitanic@2026'),
                 'rows' => [],
             ];
         }
@@ -145,7 +144,6 @@ class BulkImportUsersAction
             'total_rows' => count($parsedRows),
             'valid_count' => $validCount,
             'invalid_count' => $invalidCount,
-            'default_password' => config('auth.default_import_password', 'Bitanic@2026'),
             'rows' => $parsedRows,
         ];
     }
@@ -159,24 +157,29 @@ class BulkImportUsersAction
 
         $this->validateExecutionRows($rows, $schoolId);
         $imported = [];
+        $credentialDeliveries = [];
 
-        DB::transaction(function () use ($rows, $schoolId, $actor, &$imported) {
+        DB::transaction(function () use ($rows, $schoolId, $actor, &$imported, &$credentialDeliveries) {
             foreach ($rows as $item) {
                 $email = strtolower(trim($item['email']));
                 $role = strtolower(trim($item['role']));
                 $name = trim($item['name']);
+                $identifier = !empty($item['identifier_number']) ? trim($item['identifier_number']) : null;
 
                 // Ensure unique
                 if (User::where('email', $email)->exists()) {
                     continue;
                 }
 
+                $initialPassword = $this->generateInitialPassword($identifier);
+
                 $user = User::create([
                     'school_id' => $schoolId,
                     'name' => $name,
                     'email' => $email,
                     'role' => $role,
-                    'password' => Hash::make(config('auth.default_import_password')),
+                    'password' => Hash::make($initialPassword),
+                    'must_change_password' => true,
                 ]);
 
                 $classroomId = null;
@@ -203,7 +206,7 @@ class BulkImportUsersAction
                 UserProfile::create([
                     'user_id' => $user->id,
                     'type' => $role,
-                    'identifier_number' => !empty($item['identifier_number']) ? trim($item['identifier_number']) : null,
+                    'identifier_number' => $identifier,
                     'class_grade' => $classGrade,
                     'classroom_id' => $classroomId,
                     'group_name' => $groupName,
@@ -212,6 +215,12 @@ class BulkImportUsersAction
                 ]);
 
                 $imported[] = $user->id;
+                try {
+                    $token = app('auth.password.broker')->createToken($user);
+                    $user->sendPasswordResetNotification($token);
+                } catch (\Throwable $e) {
+                    // Ignore mail transport errors in offline/demo environments
+                }
             }
 
             if ($actor && count($imported) > 0) {
@@ -220,7 +229,7 @@ class BulkImportUsersAction
                     'actor_name' => $actor->name,
                     'actor_role' => $actor->role,
                     'action' => 'Bulk Import Pengguna',
-                    'details' => 'Berhasil mengimpor ' . count($imported) . ' akun pengguna baru.',
+                    'details' => 'Berhasil mengimpor ' . count($imported) . ' akun pengguna baru dengan kata sandi awal unik dan proteksi wajib ganti sandi.',
                     'ip_address' => request()->ip() ?? '127.0.0.1',
                 ]);
             }
@@ -230,6 +239,14 @@ class BulkImportUsersAction
             'success' => true,
             'imported_count' => count($imported),
         ];
+    }
+
+    /**
+     * Generate unique, user-friendly initial password.
+     */
+    public function generateInitialPassword(?string $identifier): string
+    {
+        return Str::random(32);
     }
 
     /**

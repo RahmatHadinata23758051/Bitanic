@@ -114,12 +114,13 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Default Bulk Import User Password
+    | Default Bulk Import User Password (Legacy Fallback)
     |--------------------------------------------------------------------------
     |
-    | Default initial password assigned to batch-imported teacher/student accounts.
+    | Bulk import generates unique individual secrets per user with required first-login
+    | password change. This key is retained for legacy compatibility only.
     |
     */
-    'default_import_password' => env('DEFAULT_IMPORT_PASSWORD', 'Bitanic@2026'),
+    'default_import_password' => env('DEFAULT_IMPORT_PASSWORD', null),
 
 ];

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityScheduleController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\FirstPasswordChangeController;
 use App\Http\Controllers\CompetencyAssessmentController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\DashboardController;
@@ -25,6 +26,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.store');
 });
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// First Login Initial Password Change Lifecycle
+Route::middleware('auth')->group(function () {
+    Route::get('/password/change-initial', [FirstPasswordChangeController::class, 'edit'])->name('password.first_change');
+    Route::post('/password/change-initial', [FirstPasswordChangeController::class, 'update'])->name('password.first_change.update');
+});
 
 // 1. Pusat Kendali Laboratorium Vokasi IoT (Dashboard Utama)
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');

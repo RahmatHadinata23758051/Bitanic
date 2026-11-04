@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'device.key' => \App\Http\Middleware\AuthenticateDeviceApiKey::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
         ]);
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsurePasswordIsChanged::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
