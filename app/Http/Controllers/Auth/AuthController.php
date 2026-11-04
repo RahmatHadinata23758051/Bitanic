@@ -65,6 +65,10 @@ class AuthController extends Controller
         }
 
         // Redirect sesuai peran pengguna vokasi
+        if ($user && $user->isSuperuser()) {
+            return redirect()->intended(route('dashboard'));
+        }
+
         if ($user && $user->role === 'guru') {
             return redirect()->intended(route('schedules.index'));
         }

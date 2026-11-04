@@ -26,13 +26,19 @@ class EnsureUserHasRole
             return redirect()->guest(route('login'))->with('error', 'Silakan login terlebih dahulu.');
         }
 
-        // Normalisasi role: jika mencari 'guru', 'superuser' juga memiliki akses
+        // Both privileged admin roles receive explicit access to superuser-only routes.
         $allowedRoles = $roles;
-        if (in_array('guru', $allowedRoles) && ! in_array('superuser', $allowedRoles)) {
-            $allowedRoles[] = 'superuser';
+        if (in_array('superuser', $allowedRoles, true)) {
+            $allowedRoles[] = 'admin';
         }
 
-        if (! in_array($user->role, $allowedRoles, true)) {
+        // Superusers and admins inherit teacher routes, but not vice versa.
+        if (in_array('guru', $allowedRoles, true)) {
+            $allowedRoles[] = 'superuser';
+            $allowedRoles[] = 'admin';
+        }
+
+        if (! in_array($user->role, array_unique($allowedRoles), true)) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Akses ditolak. Peran Anda (' . $user->role . ') tidak memiliki izin untuk tindakan ini.',

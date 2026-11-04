@@ -21,13 +21,13 @@ class AuthorizeReportRevisionAction
     public function execute(StudentReport $report, User $teacher, string $instructions): StudentReport
     {
         // 1. Role verification: Only teacher or superuser can authorize revision
-        if (! in_array($teacher->role, ['guru', 'superuser'], true)) {
+        if (! ($teacher->isGuru() || $teacher->isSuperuser())) {
             throw new AuthorizationException('Hanya guru pembimbing yang berhak mengizinkan perbaikan laporan.');
         }
 
         // 2. School tenancy isolation
         $student = $report->user;
-        if ($teacher->role !== 'superuser') {
+        if (! $teacher->isSuperuser()) {
             if (! $teacher->school_id || ! $student?->school_id || (int) $student->school_id !== (int) $teacher->school_id) {
                 throw new AuthorizationException('Guru tidak diizinkan membuka revisi laporan dari sekolah lain.');
             }

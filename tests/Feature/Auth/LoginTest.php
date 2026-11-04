@@ -72,6 +72,26 @@ class LoginTest extends TestCase
         $response->assertRedirect(route('dashboard'));
     }
 
+    public function test_role_admin_authenticates_and_can_access_dashboard_and_settings(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin.teknisi@smk.id',
+            'password' => Hash::make('password123'),
+            'role' => 'admin',
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => 'admin.teknisi@smk.id',
+            'password' => 'password123',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('dashboard'));
+
+        $this->get(route('dashboard'))->assertOk();
+        $this->get(route('settings.index'))->assertOk();
+    }
+
     public function test_users_cannot_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create([

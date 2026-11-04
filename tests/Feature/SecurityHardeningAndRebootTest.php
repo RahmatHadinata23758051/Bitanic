@@ -14,6 +14,29 @@ class SecurityHardeningAndRebootTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_role_is_allowed_for_superuser_routes_and_has_admin_redirect(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email' => 'admin-role@example.test',
+        ]);
+        $device = Device::create([
+            'code' => 'TK-ADMIN-ROT',
+            'name' => 'Meja Rotasi Admin',
+            'is_active' => true,
+        ]);
+        DeviceApiKey::generateForDevice($device);
+
+        $this->actingAs($admin)
+            ->get(route('settings.index'))
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->post(route('kits.api-key.rotate', $device))
+            ->assertRedirect(route('kits.index'))
+            ->assertSessionHas('new_api_key');
+    }
+
     public function test_device_api_key_hides_key_hash_and_supports_secure_generation(): void
     {
         $device = Device::create([

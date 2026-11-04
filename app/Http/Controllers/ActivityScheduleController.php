@@ -20,7 +20,7 @@ class ActivityScheduleController extends Controller
     public function index(Request $request): View
     {
         $schoolId = $request->user()?->school_id;
-        $isSuperuser = $request->user()?->role === 'superuser';
+        $isSuperuser = (bool) $request->user()?->isSuperuser();
 
         if ($request->user() && ! $isSuperuser && ! $schoolId) {
             abort(403, 'Akses jadwal praktikum memerlukan asosiasi sekolah yang valid.');
@@ -62,7 +62,7 @@ class ActivityScheduleController extends Controller
     public function store(Request $request, CreateScheduleAction $action): RedirectResponse
     {
         $schoolId = $request->user()?->school_id;
-        $isSuperuser = $request->user()?->role === 'superuser';
+        $isSuperuser = (bool) $request->user()?->isSuperuser();
 
         if ($request->user() && ! $isSuperuser && ! $schoolId) {
             abort(403, 'Pembuatan jadwal memerlukan asosiasi sekolah yang valid.');
@@ -113,7 +113,7 @@ class ActivityScheduleController extends Controller
     public function destroy(Request $request, int $id): RedirectResponse
     {
         $user = $request->user();
-        $isSuperuser = $user?->role === 'superuser';
+        $isSuperuser = (bool) $user?->isSuperuser();
         $schoolId = $user?->school_id;
 
         $schedule = ActivitySchedule::query()

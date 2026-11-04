@@ -18,7 +18,7 @@ class PracticumReportController extends Controller
         $moduleIdFilter = $request->query('module_id');
 
         $user = $request->user();
-        $isSuperuser = $user?->role === 'superuser';
+        $isSuperuser = (bool) $user?->isSuperuser();
         $schoolId = $user?->school_id;
 
         if (! $isSuperuser && ! $schoolId) {

@@ -13,7 +13,7 @@ class UserImportController extends Controller
     public function preview(Request $request, BulkImportUsersAction $action): JsonResponse
     {
         $user = $request->user();
-        if ($user && $user->role !== 'superuser' && ! $user->school_id) {
+        if ($user && ! $user->isSuperuser() && ! $user->school_id) {
             abort(403, 'Akses impor pengguna memerlukan asosiasi sekolah yang valid.');
         }
 
@@ -36,7 +36,7 @@ class UserImportController extends Controller
     public function execute(Request $request, BulkImportUsersAction $action): JsonResponse
     {
         $user = $request->user();
-        if ($user && $user->role !== 'superuser' && ! $user->school_id) {
+        if ($user && ! $user->isSuperuser() && ! $user->school_id) {
             abort(403, 'Akses impor pengguna memerlukan asosiasi sekolah yang valid.');
         }
 

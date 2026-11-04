@@ -98,7 +98,7 @@ class User extends Authenticatable
 
     public function isSuperuser(): bool
     {
-        return $this->role === 'superuser';
+        return in_array($this->role, ['superuser', 'admin'], true);
     }
 
     public function isGuru(): bool

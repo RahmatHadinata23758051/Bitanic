@@ -14,7 +14,7 @@ class CompetencyAssessmentController extends Controller
     public function index(Request $request): View
     {
         $schoolId = $request->user()?->school_id;
-        $isSuperuser = $request->user()?->role === 'superuser';
+        $isSuperuser = (bool) $request->user()?->isSuperuser();
         $classFilter = $request->query('class');
 
         if ($request->user() && ! $isSuperuser && ! $schoolId) {

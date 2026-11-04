@@ -27,7 +27,7 @@ class GradeStudentReportAction
         ?string $adjustmentReason = null
     ): StudentReport {
         // 1. Role verification: Only teachers and superusers can grade
-        if (! in_array($teacher->role, ['guru', 'superuser'])) {
+        if (! ($teacher->isGuru() || $teacher->isSuperuser())) {
             throw new AuthorizationException('Hanya guru atau superuser yang memiliki kewenangan menilai laporan.');
         }
 
@@ -38,7 +38,7 @@ class GradeStudentReportAction
 
         // 2. Cross-school tenancy protection: Guru cannot grade reports from other schools
         $student = $report->user;
-        if ($teacher->role !== 'superuser') {
+        if (! $teacher->isSuperuser()) {
             if (! $teacher->school_id || ! $student?->school_id || (int) $student->school_id !== (int) $teacher->school_id) {
                 throw new AuthorizationException('Guru tidak diizinkan menilai laporan siswa dari sekolah lain.');
             }

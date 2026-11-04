@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Device;
 use App\Models\DeviceApiKey;
+use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,10 +15,10 @@ class TrainerKitManagerController extends Controller
     /**
      * Display the Trainer Kit fleet and hardware status.
      */
-    public function index(Request $request): View
+    public function index(Request $request, DeviceAvailabilityResolver $resolver): View
     {
         $schoolId = $request->user()?->school_id;
-        $isSuperuser = $request->user()?->role === 'superuser';
+        $isSuperuser = (bool) $request->user()?->isSuperuser();
 
         if ($request->user() && ! $isSuperuser && ! $schoolId) {
             abort(403, 'Akses Trainer Kit memerlukan asosiasi sekolah yang valid.');
@@ -28,14 +29,19 @@ class TrainerKitManagerController extends Controller
             ->orderBy('code')
             ->paginate(15);
 
+        // Compute deterministic availability per device based on heartbeat
+        $kits->getCollection()->transform(fn ($kit) => $resolver->applyToDevice($kit));
+
+        $targetSchoolId = ! $isSuperuser ? $schoolId : null;
+        $totalCount = $resolver->countTotal($targetSchoolId);
+        $onlineCount = $resolver->countOnline($targetSchoolId);
+
         return view('pages.kits.index', [
             'kits' => $kits,
             'stats' => [
-                'total' => Device::query()->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId))->count(),
-                'online' => Device::where('status', 'online')->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId))->count(),
-                'attention' => Device::whereIn('status', ['anomaly', 'offline', 'maintenance'])
-                    ->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId))
-                    ->count(),
+                'total' => $totalCount,
+                'online' => $onlineCount,
+                'attention' => max(0, $totalCount - $onlineCount),
             ],
         ]);
     }
@@ -46,7 +52,7 @@ class TrainerKitManagerController extends Controller
     public function reboot(Request $request, Device $device): RedirectResponse
     {
         $user = $request->user();
-        if ($user && $user->role !== 'superuser') {
+        if ($user && ! $user->isSuperuser()) {
             abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
         }
 
@@ -71,7 +77,7 @@ class TrainerKitManagerController extends Controller
     public function updateCalibration(Request $request, Device $device): RedirectResponse
     {
         $user = $request->user();
-        if ($user && $user->role !== 'superuser') {
+        if ($user && ! $user->isSuperuser()) {
             abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
         }
 

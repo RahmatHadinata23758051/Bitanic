@@ -17,19 +17,19 @@ class UserDirectoryController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         $schoolId = $request->user()?->school_id;
-        $isSuperuser = $request->user()?->role === 'superuser';
+        $isSuperuser = (bool) $request->user()?->isSuperuser();
 
         if (! $isSuperuser && ! $schoolId) {
             abort(403, 'Akses direktori pengguna memerlukan asosiasi sekolah yang valid.');
         }
 
         $query = User::with('profile')
-            ->whereIn('role', ['siswa', 'guru', 'superuser'])
+            ->whereIn('role', ['siswa', 'guru', 'superuser', 'admin'])
             ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
             ->orderBy('role')
             ->orderBy('name');
 
-        if ($role && in_array($role, ['siswa', 'guru', 'superuser'])) {
+        if ($role && in_array($role, ['siswa', 'guru', 'superuser', 'admin'])) {
             $query->where('role', $role);
         }
 
@@ -54,7 +54,7 @@ class UserDirectoryController extends Controller
             'teachers' => User::where('role', 'guru')
                 ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
                 ->count(),
-            'admins' => User::where('role', 'superuser')->count(),
+            'admins' => User::whereIn('role', ['superuser', 'admin'])->count(),
         ];
 
         return view('pages.users.index', [
