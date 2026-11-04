@@ -122,7 +122,11 @@ class ImportLegacyDataCommand extends Command
             $verifiedAt = $row[3] ? Carbon::parse($row[3]) : null;
             $password = $row[4];
             if ($this->option('dev-passwords')) {
-                $password = \Illuminate\Support\Facades\Hash::make('password');
+                if (app()->environment('production')) {
+                    $this->warn('Opsi --dev-passwords diabaikan pada environment production demi keamanan kredensial.');
+                } else {
+                    $password = \Illuminate\Support\Facades\Hash::make('password');
+                }
             }
             $rawRole = $row[5] ?? 'siswa';
             $role = match ($rawRole) {
@@ -559,6 +563,7 @@ class ImportLegacyDataCommand extends Command
 
             $batch[] = [
                 'device_id' => $device->id,
+                'provenance' => 'hardware',
                 'nitrogen' => $nitrogen,
                 'phosphorus' => $phosphorus,
                 'potassium' => $potassium,

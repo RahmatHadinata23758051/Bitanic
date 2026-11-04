@@ -79,7 +79,7 @@ class SimulateSensorTelemetryCommand extends Command
                 ];
             }
 
-            $action->execute($device, $payload);
+            $action->execute($device, $payload, provenance: 'simulation');
             $bar->advance();
         }
 

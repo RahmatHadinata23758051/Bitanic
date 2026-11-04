@@ -53,7 +53,11 @@ class TrainerKitManagerController extends Controller
         ]);
 
         $device->update([
-            'calibration_offsets' => $validated,
+            'calibration_offsets' => [
+                'ph' => (float) $validated['phOffset'],
+                'humidity' => (float) $validated['moistureOffset'],
+                'ec' => (float) $validated['ecOffset'],
+            ],
         ]);
 
         return redirect()->route('kits.index')

@@ -15,13 +15,31 @@ class IngestTelemetryAction
      *
      * @param  array<string, mixed>  $rawPayload
      */
-    public function execute(Device $device, array $rawPayload): TelemetryReading
+    public function execute(Device $device, array $rawPayload, string $provenance = 'hardware'): TelemetryReading
     {
         $samples = $rawPayload['soilrs485'] ?? $rawPayload;
 
         $offsets = $device->calibration_offsets ?? [];
+        $offsetAliases = [
+            'ph' => ['phOffset', 'Ph', 'pH', 'ph'],
+            'humidity' => ['moistureOffset', 'Humidity', 'humidity'],
+            'ec' => ['ecOffset', 'Ec', 'EC', 'ec'],
+            'nitrogen' => ['nitrogen', 'Nitrogen'],
+            'phosphorus' => ['phosphorus', 'Phosphorus', 'Phosporus'],
+            'potassium' => ['potassium', 'Potassium', 'Kalium'],
+            'temperature' => ['temperature', 'Temperature'],
+        ];
+        $getOffset = static function (string $sensor) use ($offsets, $offsetAliases): float {
+            foreach ($offsetAliases[$sensor] as $key) {
+                if (array_key_exists($key, $offsets)) {
+                    return (float) $offsets[$key];
+                }
+            }
 
-        $applyOffset = static function (array $keys) use ($samples, $offsets): float {
+            return 0.0;
+        };
+
+        $applyOffset = static function (array $keys, float $offset) use ($samples): float {
             $rawValue = 0.0;
             foreach ($keys as $key) {
                 if (array_key_exists($key, $samples)) {
@@ -30,33 +48,33 @@ class IngestTelemetryAction
                 }
             }
 
-            $offset = 0.0;
-            foreach ($keys as $key) {
-                if (isset($offsets[$key])) {
-                    $offset = (float) $offsets[$key];
-                    break;
-                }
-            }
-
             return $rawValue + $offset;
         };
 
-        $nitrogen = $applyOffset(['Nitrogen', 'nitrogen']);
-        $phosphorus = $applyOffset(['Phosporus', 'Phosphorus', 'phosphorus']);
-        $potassium = $applyOffset(['Kalium', 'Potassium', 'potassium']);
-        $ec = $applyOffset(['Ec', 'EC', 'ec']);
-        $ph = $applyOffset(['Ph', 'pH', 'ph']);
-        $temperature = $applyOffset(['Temperature', 'temperature']);
-        $humidity = $applyOffset(['Humidity', 'humidity']);
+        $nOffset = $getOffset('nitrogen');
+        $pOffset = $getOffset('phosphorus');
+        $kOffset = $getOffset('potassium');
+        $ecOffset = $getOffset('ec');
+        $phOffset = $getOffset('ph');
+        $tempOffset = $getOffset('temperature');
+        $humOffset = $getOffset('humidity');
+
+        $nitrogen = $applyOffset(['Nitrogen', 'nitrogen'], $nOffset);
+        $phosphorus = $applyOffset(['Phosporus', 'Phosphorus', 'phosphorus'], $pOffset);
+        $potassium = $applyOffset(['Kalium', 'Potassium', 'potassium'], $kOffset);
+        $ec = $applyOffset(['Ec', 'EC', 'ec'], $ecOffset);
+        $ph = $applyOffset(['Ph', 'pH', 'ph'], $phOffset);
+        $temperature = $applyOffset(['Temperature', 'temperature'], $tempOffset);
+        $humidity = $applyOffset(['Humidity', 'humidity'], $humOffset);
 
         $appliedOffsets = [
-            'nitrogen' => $offsets['Nitrogen'] ?? $offsets['nitrogen'] ?? 0.0,
-            'phosphorus' => $offsets['Phosporus'] ?? $offsets['Phosphorus'] ?? $offsets['phosphorus'] ?? 0.0,
-            'potassium' => $offsets['Kalium'] ?? $offsets['Potassium'] ?? $offsets['potassium'] ?? 0.0,
-            'ec' => $offsets['Ec'] ?? $offsets['EC'] ?? $offsets['ec'] ?? 0.0,
-            'ph' => $offsets['Ph'] ?? $offsets['pH'] ?? $offsets['ph'] ?? 0.0,
-            'temperature' => $offsets['Temperature'] ?? $offsets['temperature'] ?? 0.0,
-            'humidity' => $offsets['Humidity'] ?? $offsets['humidity'] ?? 0.0,
+            'nitrogen' => $nOffset,
+            'phosphorus' => $pOffset,
+            'potassium' => $kOffset,
+            'ec' => $ecOffset,
+            'ph' => $phOffset,
+            'temperature' => $tempOffset,
+            'humidity' => $humOffset,
         ];
 
         // Evaluasi threshold
@@ -96,7 +114,7 @@ class IngestTelemetryAction
         // Simpan satu record terpadu
         $reading = TelemetryReading::create([
             'device_id' => $device->id,
-            'provenance' => 'hardware',
+            'provenance' => in_array($provenance, ['hardware', 'simulation'], true) ? $provenance : 'hardware',
             'nitrogen' => $nitrogen,
             'phosphorus' => $phosphorus,
             'potassium' => $potassium,
