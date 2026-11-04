@@ -13,7 +13,10 @@ class ActivitySchedule extends Model
 
     protected $fillable = [
         'school_id',
+        'classroom_id',
+        'student_group_id',
         'device_id',
+        'module_practicum_id',
         'title',
         'activity_date',
         'start_time',
@@ -45,6 +48,21 @@ class ActivitySchedule extends Model
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
+    }
+
+    public function classroom(): BelongsTo
+    {
+        return $this->belongsTo(Classroom::class);
+    }
+
+    public function studentGroup(): BelongsTo
+    {
+        return $this->belongsTo(StudentGroup::class);
+    }
+
+    public function modulePracticum(): BelongsTo
+    {
+        return $this->belongsTo(ModulePracticum::class);
     }
 
     public function participants(): HasMany
