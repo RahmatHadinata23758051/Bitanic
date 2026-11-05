@@ -2,11 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
 use App\Models\Device;
 use App\Models\DeviceApiKey;
 use App\Models\User;
-use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -167,7 +165,7 @@ class SecurityHardeningAndRebootTest extends TestCase
 
         // Audit log must record the command
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'Kirim Perintah Soft-Reboot (Simulasi)',
+            'action' => 'Simulasi Soft-Reboot (Transport Hardware Belum Tersedia)',
         ]);
     }
 

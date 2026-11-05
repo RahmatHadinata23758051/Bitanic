@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class DeviceApiKey extends Model
 {
@@ -52,18 +53,18 @@ class DeviceApiKey extends Model
     public function revoke(): bool
     {
         $this->revoked_at = now();
+
         return $this->save();
     }
 
     /**
      * Generate a new cryptographically secure API key for a device.
      *
-     * @param Device $device
      * @return array{plain_key: string, api_key: DeviceApiKey}
      */
     public static function generateForDevice(Device $device): array
     {
-        $plainKey = 'btk_' . bin2hex(random_bytes(24));
+        $plainKey = 'btk_'.bin2hex(random_bytes(24));
         $keyHash = hash('sha256', $plainKey);
 
         $apiKey = self::create([
@@ -82,15 +83,24 @@ class DeviceApiKey extends Model
     /**
      * Safely rotate the API key for a device by revoking prior active keys and creating a new one.
      *
-     * @param Device $device
-     * @param User|null $actor
      * @return array{plain_key: string, api_key: DeviceApiKey}
      */
     public static function rotateForDevice(Device $device, ?User $actor = null): array
     {
+        $school = $device->school ?? School::find($device->school_id);
+        if (! $school || $school->status !== 'active') {
+            throw new InvalidArgumentException('Rotasi kunci API ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
+        }
+
         return DB::transaction(function () use ($device, $actor) {
             // Serialize rotations per device so concurrent requests cannot leave multiple active keys.
             Device::query()->whereKey($device->getKey())->lockForUpdate()->firstOrFail();
+
+            $previousActiveKey = self::where('device_id', $device->id)
+                ->whereNull('revoked_at')
+                ->latest('id')
+                ->first();
+            $previousPrefix = $previousActiveKey?->key_prefix;
 
             // Revoke all existing unrevoked keys for this device
             self::where('device_id', $device->id)
@@ -101,12 +111,19 @@ class DeviceApiKey extends Model
 
             if ($actor) {
                 AuditLog::create([
+                    'school_id' => $device->school_id,
                     'user_id' => $actor->id,
                     'actor_name' => $actor->name,
                     'actor_role' => $actor->role,
                     'action' => 'Rotasi Kunci API Perangkat',
-                    'details' => 'Kunci API untuk perangkat ' . $device->code . ' berhasil dirotasi. Kunci lama telah direvokasi.',
-                    'ip_address' => request()->ip() ?? '127.0.0.1',
+                    'target_type' => Device::class,
+                    'target_id' => (string) $device->id,
+                    'diff' => [
+                        'revoked_prefix' => $previousPrefix,
+                        'new_prefix' => $newKeyData['api_key']->key_prefix,
+                    ],
+                    'details' => 'Kunci API untuk perangkat '.$device->code.' berhasil dirotasi. Kunci lama telah direvokasi.',
+                    'ip_address' => request()?->ip() ?? '127.0.0.1',
                 ]);
             }
 
