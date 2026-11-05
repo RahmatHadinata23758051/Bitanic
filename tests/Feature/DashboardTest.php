@@ -2,10 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivitySchedule;
+use App\Models\Classroom;
 use App\Models\Device;
+use App\Models\School;
+use App\Models\StudentReport;
 use App\Models\TelemetryReading;
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -233,5 +239,378 @@ class DashboardTest extends TestCase
             'state' => false,
         ]);
         $this->assertFalse($device->fresh()->relays_state['irrigationPump']);
+    }
+
+    public function test_user_without_school_is_rejected_on_dashboard_and_monitoring(): void
+    {
+        $user = User::factory()->create(['role' => 'guru', 'school_id' => 1]);
+        DB::table('users')->where('id', $user->id)->update(['school_id' => null]);
+
+        $this->actingAs($user->fresh())->get('/')->assertStatus(403);
+        $this->actingAs($user->fresh())->get('/iot-monitoring')->assertStatus(403);
+    }
+
+    public function test_user_with_inactive_school_is_rejected_on_dashboard_and_monitoring(): void
+    {
+        $inactiveSchool = School::create([
+            'npsn' => '99990099',
+            'name' => 'SMK Nonaktif Tenancy',
+            'slug' => 'smk-nonaktif-tenancy',
+            'status' => 'inactive',
+        ]);
+        $user = User::factory()->create([
+            'role' => 'guru',
+            'school_id' => $inactiveSchool->id,
+        ]);
+
+        $this->actingAs($user)->get('/')->assertStatus(403);
+        $this->actingAs($user)->get('/iot-monitoring')->assertStatus(403);
+    }
+
+    public function test_dashboard_card_1_renders_honest_empty_fleet_state_when_zero_devices(): void
+    {
+        $school = School::create([
+            'npsn' => '20200111',
+            'name' => 'SMK Tanpa Device',
+            'slug' => 'smk-tanpa-device',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+
+        $response = $this->actingAs($teacher)->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Belum Ada Meja Terdaftar');
+        $response->assertDontSee('Semua Siap Pakai');
+    }
+
+    public function test_dashboard_card_2_does_not_claim_upcoming_schedule_is_today(): void
+    {
+        $school = School::create([
+            'npsn' => '20200112',
+            'name' => 'SMK Schedule Check',
+            'slug' => 'smk-schedule-check',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id, 'name' => 'Pak Budi Handoko']);
+        $device = Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-SCHED-01',
+            'name' => 'Meja Praktikum Jadwal',
+            'is_active' => true,
+        ]);
+
+        $nextWeek = now()->addDays(7);
+        $schedule = ActivitySchedule::create([
+            'school_id' => $school->id,
+            'device_id' => $device->id,
+            'title' => 'Praktikum Minggu Depan',
+            'activity_date' => $nextWeek->toDateString(),
+            'start_time' => '09:00:00',
+            'end_time' => '11:00:00',
+        ]);
+        $schedule->participants()->create([
+            'user_id' => $teacher->id,
+            'role' => 'guru',
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Praktikum Minggu Depan');
+        $response->assertSee($nextWeek->format('d/m/Y'));
+        $response->assertDontSee('Hari Ini');
+        $response->assertSee('Pak Budi Handoko');
+    }
+
+    public function test_dashboard_card_3_renders_student_scoped_view_for_siswa(): void
+    {
+        $school = School::create([
+            'npsn' => '20200113',
+            'name' => 'SMK Siswa View',
+            'slug' => 'smk-siswa-view',
+            'status' => 'active',
+        ]);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+        $otherStudent = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+
+        $module = \App\Models\ModulePracticum::create([
+            'meeting_number' => 1,
+            'title' => 'Modul Student View',
+            'duration_minutes' => 90,
+            'badge' => 'Badge',
+        ]);
+
+        // Student has 1 submitted report
+        StudentReport::create([
+            'user_id' => $student->id,
+            'module_id' => $module->id,
+            'status' => 'submitted',
+            'lks_answers' => [],
+        ]);
+
+        // Other student has 3 submitted reports waiting for teacher
+        for ($i = 0; $i < 3; $i++) {
+            StudentReport::create([
+                'user_id' => $otherStudent->id,
+                'module_id' => $module->id,
+                'status' => 'submitted',
+                'lks_answers' => [],
+            ]);
+        }
+
+        $response = $this->actingAs($student)->get('/');
+
+        $response->assertOk();
+        $response->assertSee('LKS Praktikum Saya');
+        $response->assertDontSee('LKS Menunggu Review');
+        $response->assertSee('1</span>', false); // 1 Laporan Terkumpul for this student
+        $response->assertDontSee('4 Laporan Praktikan');
+    }
+
+    public function test_dashboard_card_4_does_not_raise_critical_anomalies_for_offline_or_stale_telemetry(): void
+    {
+        $school = School::create([
+            'npsn' => '20200114',
+            'name' => 'SMK Stale Anomaly',
+            'slug' => 'smk-stale-anomaly',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+
+        // Offline device with stale reading
+        $offlineDevice = Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-OFFLINE-STALE',
+            'name' => 'Meja Offline',
+            'is_active' => true,
+            'last_seen_at' => now()->subHours(2), // offline
+        ]);
+        TelemetryReading::create([
+            'device_id' => $offlineDevice->id,
+            'provenance' => 'hardware',
+            'ph' => 4.2, // extreme acid
+            'humidity' => 15.0, // extreme dry
+            'ec' => 3000,
+            'recorded_at' => now()->subHours(2),
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/');
+
+        $response->assertOk();
+        // Should NOT trigger active anomaly alerts since device is offline / stale
+        $response->assertSee('Kondisi Optimal');
+        $response->assertDontSee('Perlu Intervensi');
+        $response->assertDontSee('Kemasaman masam ekstrem');
+
+        // Now create an online device with fresh hardware telemetry and low pH
+        $onlineDevice = Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-ONLINE-FRESH',
+            'name' => 'Meja Online Fresh',
+            'is_active' => true,
+            'last_seen_at' => now(), // online
+        ]);
+        TelemetryReading::create([
+            'device_id' => $onlineDevice->id,
+            'provenance' => 'hardware',
+            'ph' => 4.5,
+            'humidity' => 50.0,
+            'ec' => 1200,
+            'recorded_at' => now(),
+        ]);
+
+        $responseFresh = $this->actingAs($teacher)->get('/');
+        $responseFresh->assertOk();
+        $responseFresh->assertSee('Perlu Intervensi');
+        $responseFresh->assertSee('TK-ONLINE-FRESH');
+        $responseFresh->assertSee('Kemasaman masam ekstrem');
+    }
+
+    public function test_dashboard_does_not_flag_fresh_simulation_readings_as_hardware_anomalies(): void
+    {
+        $school = School::create([
+            'npsn' => '20200121',
+            'name' => 'SMK Simulation Provenance',
+            'slug' => 'smk-simulation-provenance',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+        $device = Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-SIM-FRESH',
+            'name' => 'Meja Simulasi Fresh',
+            'is_active' => true,
+            'last_seen_at' => now(),
+        ]);
+        TelemetryReading::create([
+            'device_id' => $device->id,
+            'provenance' => 'simulation',
+            'ph' => 4.2,
+            'humidity' => 15.0,
+            'ec' => 3000,
+            'recorded_at' => now(),
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Kondisi Optimal');
+        $response->assertDontSee('Kemasaman masam ekstrem');
+    }
+
+    public function test_dashboard_counts_affected_stations_accurately_with_multiple_breaches_on_single_station(): void
+    {
+        $school = School::create([
+            'npsn' => '20200115',
+            'name' => 'SMK Multi Breach',
+            'slug' => 'smk-multi-breach',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+
+        $device = Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-MULTI-01',
+            'name' => 'Meja Multi Breach',
+            'is_active' => true,
+            'last_seen_at' => now(),
+        ]);
+
+        TelemetryReading::create([
+            'device_id' => $device->id,
+            'provenance' => 'hardware',
+            'ph' => 4.8, // breach 1
+            'humidity' => 20.0, // breach 2
+            'ec' => 1400,
+            'recorded_at' => now(),
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/');
+
+        $response->assertOk();
+        $response->assertSee('2</span> parameter melewati ambang pada data terbaru', false);
+        $this->assertMatchesRegularExpression(
+            '/font-tabular[^>]*>\s*1\s*<\/span>\s*<span[^>]*>Meja Terdampak/s',
+            $response->getContent(),
+        );
+        $response->assertDontSee('2 Stasiun Meja');
+    }
+
+    public function test_dashboard_calculates_and_displays_average_student_attendance(): void
+    {
+        $school = School::create([
+            'npsn' => '20200116',
+            'name' => 'SMK Attendance Calc',
+            'slug' => 'smk-attendance-calc',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+        $student1 = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+        $student2 = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+
+        UserProfile::create([
+            'user_id' => $student1->id,
+            'type' => 'siswa',
+            'attendance_percent' => 92.0,
+        ]);
+        UserProfile::create([
+            'user_id' => $student2->id,
+            'type' => 'siswa',
+            'attendance_percent' => 98.0,
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Kehadiran: 95.0%');
+    }
+
+    public function test_superuser_sees_school_names_on_devices_in_fleet(): void
+    {
+        $schoolA = School::create([
+            'npsn' => '20200117',
+            'name' => 'SMK Agribisnis A',
+            'slug' => 'smk-agribisnis-a',
+            'status' => 'active',
+        ]);
+        $schoolB = School::create([
+            'npsn' => '20200118',
+            'name' => 'SMK Agribisnis B',
+            'slug' => 'smk-agribisnis-b',
+            'status' => 'active',
+        ]);
+
+        $superuser = User::factory()->create(['role' => 'superuser']);
+
+        Device::create([
+            'school_id' => $schoolA->id,
+            'code' => 'TK-ROOT-A',
+            'name' => 'Kit Alpha',
+            'is_active' => true,
+        ]);
+        Device::create([
+            'school_id' => $schoolB->id,
+            'code' => 'TK-ROOT-B',
+            'name' => 'Kit Beta',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($superuser)->get('/');
+
+        $response->assertOk();
+        $response->assertSee('SMK Agribisnis A');
+        $response->assertSee('SMK Agribisnis B');
+    }
+
+    public function test_superuser_school_filter_scopes_dashboard_metrics_and_monitoring(): void
+    {
+        $schoolA = School::create([
+            'npsn' => '20200119',
+            'name' => 'SMK Filter A',
+            'slug' => 'smk-filter-a',
+            'status' => 'active',
+        ]);
+        $schoolB = School::create([
+            'npsn' => '20200120',
+            'name' => 'SMK Filter B',
+            'slug' => 'smk-filter-b',
+            'status' => 'active',
+        ]);
+        $superuser = User::factory()->create(['role' => 'superuser']);
+        $studentA = User::factory()->create(['role' => 'siswa', 'school_id' => $schoolA->id]);
+        $studentB = User::factory()->create(['role' => 'siswa', 'school_id' => $schoolB->id]);
+
+        foreach ([[$studentA, 90.0], [$studentB, 40.0]] as [$student, $attendance]) {
+            UserProfile::create([
+                'user_id' => $student->id,
+                'type' => 'siswa',
+                'attendance_percent' => $attendance,
+            ]);
+        }
+
+        Device::create([
+            'school_id' => $schoolA->id,
+            'code' => 'TK-FILTER-A',
+            'name' => 'Kit Filter A',
+            'is_active' => true,
+        ]);
+        Device::create([
+            'school_id' => $schoolB->id,
+            'code' => 'TK-FILTER-B',
+            'name' => 'Kit Filter B',
+            'is_active' => true,
+        ]);
+
+        $dashboard = $this->actingAs($superuser)->get('/?school_id=' . $schoolA->id);
+        $dashboard->assertOk();
+        $dashboard->assertSee('TK-FILTER-A');
+        $dashboard->assertDontSee('TK-FILTER-B');
+        $dashboard->assertSee('Kehadiran: 90.0%');
+
+        $monitoring = $this->get('/iot-monitoring?school_id=' . $schoolA->id);
+        $monitoring->assertOk();
+        $monitoring->assertSee('TK-FILTER-A');
+        $monitoring->assertDontSee('TK-FILTER-B');
     }
 }
