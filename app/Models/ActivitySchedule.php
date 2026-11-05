@@ -74,4 +74,27 @@ class ActivitySchedule extends Model
     {
         return $this->hasMany(Media::class);
     }
+
+    /**
+     * Resolve the lead instructor/teacher for this schedule.
+     */
+    public function getLeadTeacherAttribute(): ?User
+    {
+        if ($this->relationLoaded('participants')) {
+            $guruParticipant = $this->participants->firstWhere('role', 'guru');
+            if ($guruParticipant && $guruParticipant->relationLoaded('user') && $guruParticipant->user) {
+                return $guruParticipant->user;
+            }
+            if ($guruParticipant && $guruParticipant->user_id) {
+                return User::find($guruParticipant->user_id);
+            }
+        } else {
+            $guruParticipant = $this->participants()->where('role', 'guru')->with('user')->first();
+            if ($guruParticipant?->user) {
+                return $guruParticipant->user;
+            }
+        }
+
+        return $this->classroom?->homeroomTeacher;
+    }
 }
