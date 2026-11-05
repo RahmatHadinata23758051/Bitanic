@@ -329,4 +329,105 @@ class PostgresIntegrationAndConcurrencyTest extends TestCase
         $this->pg->table('devices')->whereIn('id', [$deviceA, $deviceB])->delete();
         $this->pg->table('schools')->whereIn('id', [$schoolA, $schoolB])->delete();
     }
+
+    public function test_postgresql_device_calibration_pessimistic_lock_and_atomic_rollback(): void
+    {
+        $schoolId = $this->pg->table('schools')->insertGetId([
+            'npsn' => 'PG'.rand(100000, 999999),
+            'name' => 'SMK Postgres Calibration Lock',
+            'slug' => 'smk-pg-calib-'.uniqid(),
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $deviceId = $this->pg->table('devices')->insertGetId([
+            'school_id' => $schoolId,
+            'code' => 'TK-PG-CAL-'.uniqid(),
+            'name' => 'Meja PG Calibration Lock',
+            'calibration_offsets' => json_encode(['ph' => 0.0, 'humidity' => 0.0, 'ec' => 0.0]),
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $initialProfilesCount = $this->pg->table('sensor_calibration_profiles')->where('device_id', $deviceId)->count();
+        $initialAuditCount = $this->pg->table('audit_logs')->where('target_id', (string) $deviceId)->count();
+
+        // Simulate atomic multi-parameter calibration with pessimistic device row lock
+        $failed = false;
+        try {
+            $this->pg->transaction(function () use ($deviceId) {
+                // 1. Acquire pessimistic lock on device row
+                $locked = $this->pg->table('devices')->where('id', $deviceId)->lockForUpdate()->first();
+                $this->assertNotNull($locked);
+
+                // 2. Insert pH profile (step 1)
+                $this->pg->table('sensor_calibration_profiles')->insert([
+                    'device_id' => $deviceId,
+                    'sensor_model' => 'RS485-SOIL-7IN1',
+                    'firmware_version' => 'ESP32-BTLP-v1.0',
+                    'profile_name' => 'Profil Kalibrasi pH Meja Test',
+                    'version' => 1,
+                    'parameter' => 'ph',
+                    'method' => 'offset',
+                    'parameters' => json_encode(['offset' => 0.5]),
+                    'unit' => 'pH',
+                    'register_address' => '0x0006',
+                    'min_range' => 3.0,
+                    'max_range' => 10.0,
+                    'effective_from' => now(),
+                    'reason' => 'Uji atomisitas kalibrasi PostgreSQL',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                // 3. Insert humidity profile (step 2)
+                $this->pg->table('sensor_calibration_profiles')->insert([
+                    'device_id' => $deviceId,
+                    'sensor_model' => 'RS485-SOIL-7IN1',
+                    'firmware_version' => 'ESP32-BTLP-v1.0',
+                    'profile_name' => 'Profil Kalibrasi Kelembapan Meja Test',
+                    'version' => 1,
+                    'parameter' => 'humidity',
+                    'method' => 'offset',
+                    'parameters' => json_encode(['offset' => -2.0]),
+                    'unit' => '%',
+                    'register_address' => '0x0002',
+                    'min_range' => 0.0,
+                    'max_range' => 100.0,
+                    'effective_from' => now(),
+                    'reason' => 'Uji atomisitas kalibrasi PostgreSQL',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                // 4. Update calibration offsets JSON on device
+                $this->pg->table('devices')->where('id', $deviceId)->update([
+                    'calibration_offsets' => json_encode(['ph' => 0.5, 'humidity' => -2.0, 'ec' => 0.0]),
+                ]);
+
+                // 5. Injected simulated failure on 3rd parameter step (EC)
+                throw new \RuntimeException('Simulated hardware timeout / ACK failure on EC parameter step');
+            });
+        } catch (\RuntimeException $e) {
+            $failed = true;
+        }
+
+        $this->assertTrue($failed, 'Transaction must throw and trigger rollback');
+
+        // Verify complete rollback on PostgreSQL: no profiles, no offset updates persisted
+        $this->assertEquals($initialProfilesCount, $this->pg->table('sensor_calibration_profiles')->where('device_id', $deviceId)->count());
+        $this->assertEquals($initialAuditCount, $this->pg->table('audit_logs')->where('target_id', (string) $deviceId)->count());
+
+        $deviceAfter = $this->pg->table('devices')->where('id', $deviceId)->first();
+        $offsetsAfter = json_decode($deviceAfter->calibration_offsets, true);
+        $this->assertEquals(0.0, $offsetsAfter['ph']);
+        $this->assertEquals(0.0, $offsetsAfter['humidity']);
+        $this->assertEquals(0.0, $offsetsAfter['ec']);
+
+        // Cleanup
+        $this->pg->table('devices')->where('id', $deviceId)->delete();
+        $this->pg->table('schools')->where('id', $schoolId)->delete();
+    }
 }
