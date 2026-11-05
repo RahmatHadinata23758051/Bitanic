@@ -101,31 +101,40 @@
 
                 <!-- Specs Specs Details (No Fake Hardware Metrics) -->
                 <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 font-mono text-[11px]">
-                    <div class="flex justify-between">
-                        <span class="text-slate-400">IP Gateway:</span>
-                        <span class="text-slate-800 font-semibold">{{ $kit->ip_address ?? '—' }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-400">MAC Address:</span>
-                        <span class="text-slate-600">{{ $kit->mac_address ?? '—' }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-400">Firmware:</span>
-                        <span class="text-emerald-700 font-semibold">{{ $kit->firmware_version ?? '—' }}</span>
-                    </div>
+                    @if(!empty($canViewSensitiveMetadata))
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">IP Gateway:</span>
+                            <span class="text-slate-800 font-semibold">{{ $kit->ip_address ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">MAC Address:</span>
+                            <span class="text-slate-600">{{ $kit->mac_address ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Firmware:</span>
+                            <span class="text-emerald-700 font-semibold">{{ $kit->firmware_version ?? '—' }}</span>
+                        </div>
+                    @endif
                     <div class="flex justify-between">
                         <span class="text-slate-400">Protokol:</span>
                         <span class="text-slate-800">{{ $kit->protocol ?? '—' }}</span>
                     </div>
-                    <div class="flex justify-between items-center pt-1 border-t border-slate-200/60">
-                        <span class="text-slate-400">Prefix Key:</span>
-                        <span class="font-mono text-slate-700 font-semibold">{{ $kit->activeApiKey?->key_prefix ? $kit->activeApiKey->key_prefix . '...' : 'Tidak aktif' }}</span>
-                    </div>
-                    @if($kit->activeApiKey?->last_used_at)
-                    <div class="flex justify-between items-center text-[10px]">
-                        <span class="text-slate-400">Terakhir Digunakan:</span>
-                        <span class="text-slate-600">{{ $kit->activeApiKey->last_used_at->diffForHumans() }}</span>
-                    </div>
+                    @if(!empty($canViewSensitiveMetadata))
+                        <div class="flex justify-between items-center pt-1 border-t border-slate-200/60">
+                            <span class="text-slate-400">Prefix Key:</span>
+                            <span class="font-mono text-slate-700 font-semibold">{{ $kit->activeApiKey?->key_prefix ? $kit->activeApiKey->key_prefix . '...' : 'Tidak aktif' }}</span>
+                        </div>
+                        @if($kit->activeApiKey?->last_used_at)
+                        <div class="flex justify-between items-center text-[10px]">
+                            <span class="text-slate-400">Terakhir Digunakan:</span>
+                            <span class="text-slate-600">{{ $kit->activeApiKey->last_used_at->diffForHumans() }}</span>
+                        </div>
+                        @endif
+                    @else
+                        <div class="flex justify-between items-center pt-1 border-t border-slate-200/60 text-[10px] text-slate-400 italic">
+                            <span>Konfigurasi Jaringan:</span>
+                            <span>Dikelola Guru / Teknisi Lab</span>
+                        </div>
                     @endif
                 </div>
 
@@ -169,7 +178,7 @@
                         >
                             Buka Stasiun
                         </a>
-                        @if(auth()->user()?->role === 'superuser')
+                        @if(!empty($canRotateApiKey))
                         <form method="POST" action="{{ route('kits.api-key.rotate', $kit->id) }}" class="inline">
                             @csrf
                             <button
@@ -183,17 +192,20 @@
                             </button>
                         </form>
                         @endif
+                        @if(!empty($canReboot))
                         <form method="POST" action="{{ route('kits.reboot', $kit->id) }}" class="inline">
                             @csrf
                             <button
                                 type="submit"
-                                onclick="return confirm('Kirim perintah reboot via Modbus ke {{ $kit->code }}?')"
+                                onclick="return confirm('Catat simulasi soft-reboot untuk {{ $kit->code }}? Tidak ada perintah fisik yang dikirim.')"
                                 class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-                                title="Reboot Kit Hardware"
+                                title="Catat Simulasi Soft-Reboot (Transport Hardware Belum Tersedia)"
                             >
                                 <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                                <span class="sr-only">Simulasi Soft-Reboot</span>
                             </button>
                         </form>
+                        @endif
                     </div>
                 </div>
             </div>

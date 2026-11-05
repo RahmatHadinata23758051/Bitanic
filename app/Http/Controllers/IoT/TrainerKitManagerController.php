@@ -11,8 +11,8 @@ use App\Models\School;
 use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use InvalidArgumentException;
 
 class TrainerKitManagerController extends Controller
 {
@@ -55,6 +55,21 @@ class TrainerKitManagerController extends Controller
         // Compute deterministic availability per device based on heartbeat
         $kits->getCollection()->transform(fn ($kit) => $resolver->applyToDevice($kit));
 
+        $canViewSensitiveMetadata = $user && ($user->isGuru() || $user->isSuperuser());
+        $canReboot = $user && ($user->isGuru() || $user->isSuperuser());
+        $canRotateApiKey = (bool) $user?->isSuperuser();
+
+        // Server-side metadata stripping for guests and students (QA-01)
+        if (! $canViewSensitiveMetadata) {
+            $kits->getCollection()->each(function ($kit) {
+                $kit->ip_address = null;
+                $kit->mac_address = null;
+                $kit->firmware_version = null;
+                $kit->unsetRelation('activeApiKey');
+                $kit->makeHidden(['ip_address', 'mac_address', 'firmware_version', 'activeApiKey']);
+            });
+        }
+
         $totalCount = $resolver->countTotal($targetSchoolId);
         $onlineCount = $resolver->countOnline($targetSchoolId);
 
@@ -63,6 +78,9 @@ class TrainerKitManagerController extends Controller
             'schools' => $schools,
             'selectedSchoolId' => $targetSchoolId,
             'isSuperuser' => $isSuperuser,
+            'canViewSensitiveMetadata' => $canViewSensitiveMetadata,
+            'canReboot' => $canReboot,
+            'canRotateApiKey' => $canRotateApiKey,
             'stats' => [
                 'total' => $totalCount,
                 'online' => $onlineCount,
@@ -77,28 +95,43 @@ class TrainerKitManagerController extends Controller
     public function reboot(Request $request, Device $device): RedirectResponse
     {
         $user = $request->user();
+
+        // Fail-closed tenant validation: device's school must exist and be active (QA-05)
+        $school = $device->school ?? School::find($device->school_id);
+        if (! $school || $school->status !== 'active') {
+            abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
+        }
+
         if ($user && ! $user->isSuperuser()) {
-            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
-            abort_unless($user->school && $user->school->status === 'active', 403);
+            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403, 'Akses ditolak: Anda tidak memiliki wewenang untuk perangkat sekolah lain.');
+            abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
         }
 
         // No command transport or physical ACK is currently implemented.
-        // Record the attempted operation, but never claim the device rebooted or changed its heartbeat/status.
+        // Record the simulated operation, but never claim the device rebooted or changed its heartbeat/status.
         AuditLog::create([
-            'user_id' => $request->user()?->id,
-            'actor_name' => $request->user()?->name ?? 'Unknown',
-            'actor_role' => $request->user()?->role ?? 'unknown',
-            'action' => 'Kirim Perintah Soft-Reboot (Simulasi)',
-            'details' => 'Permintaan reboot untuk '.$device->code.' tidak dikirim: transport hardware/ACK belum tersedia.',
-            'ip_address' => $request->ip(),
+            'school_id' => $device->school_id,
+            'user_id' => $user?->id,
+            'actor_name' => $user?->name ?? 'Unknown',
+            'actor_role' => $user?->role ?? 'unknown',
+            'action' => 'Simulasi Soft-Reboot (Transport Hardware Belum Tersedia)',
+            'target_type' => Device::class,
+            'target_id' => (string) $device->id,
+            'diff' => [
+                'operation' => 'simulated_soft_reboot',
+                'hardware_transport' => 'unavailable',
+                'device_status_mutated' => false,
+            ],
+            'details' => 'Simulasi permintaan reboot untuk '.$device->code.' dicatat: perintah fisik tidak dikirim karena transport hardware/ACK belum tersedia.',
+            'ip_address' => $request->ip() ?? '127.0.0.1',
         ]);
 
         return redirect()->route('kits.index')
-            ->with('warning', 'Permintaan reboot tidak dikirim. Trainer Kit belum memiliki integrasi perintah dan ACK hardware.');
+            ->with('warning', 'Permintaan simulasi reboot dicatat. Perintah fisik tidak dikirim karena Trainer Kit belum memiliki transport hardware dan ACK terverifikasi.');
     }
 
     /**
-     * Update calibration offsets for sensors.
+     * Update calibration offsets for sensors atomically.
      */
     public function updateCalibration(
         Request $request,
@@ -106,9 +139,16 @@ class TrainerKitManagerController extends Controller
         CreateSensorCalibrationProfileAction $createCalibrationProfile
     ): RedirectResponse {
         $user = $request->user();
+
+        // Fail-closed tenant validation: device's school must exist and be active (QA-05)
+        $school = $device->school ?? School::find($device->school_id);
+        if (! $school || $school->status !== 'active') {
+            abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
+        }
+
         if ($user && ! $user->isSuperuser()) {
-            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
-            abort_unless($user->school && $user->school->status === 'active', 403);
+            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403, 'Akses ditolak: Anda tidak memiliki wewenang untuk perangkat sekolah lain.');
+            abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
         }
 
         $validated = $request->validate([
@@ -122,46 +162,52 @@ class TrainerKitManagerController extends Controller
             ? $validated['reason']
             : 'Penyetelan offset kalibrasi sensor meja praktikum oleh guru pengampu.';
 
+        // Enforce all-or-nothing multi-parameter calibration in a single atomic transaction (QA-03)
         try {
-            $createCalibrationProfile->execute(
-                device: $device,
-                sensorModel: 'RS485-SOIL-7IN1',
-                parameter: 'ph',
-                method: 'offset',
-                parameters: ['offset' => (float) $validated['phOffset']],
-                reason: $reason,
-                profileName: 'Profil Kalibrasi pH Meja '.$device->code,
-                user: $user
-            );
+            DB::transaction(function () use ($device, $validated, $reason, $user, $createCalibrationProfile) {
+                // Pessimistic lock on device row to serialize concurrent calibration updates
+                Device::query()->whereKey($device->getKey())->lockForUpdate()->firstOrFail();
 
-            $createCalibrationProfile->execute(
-                device: $device,
-                sensorModel: 'RS485-SOIL-7IN1',
-                parameter: 'humidity',
-                method: 'offset',
-                parameters: ['offset' => (float) $validated['moistureOffset']],
-                reason: $reason,
-                profileName: 'Profil Kalibrasi Kelembapan Meja '.$device->code,
-                user: $user
-            );
+                $createCalibrationProfile->execute(
+                    device: $device,
+                    sensorModel: 'RS485-SOIL-7IN1',
+                    parameter: 'ph',
+                    method: 'offset',
+                    parameters: ['offset' => (float) $validated['phOffset']],
+                    reason: $reason,
+                    profileName: 'Profil Kalibrasi pH Meja '.$device->code,
+                    user: $user
+                );
 
-            $createCalibrationProfile->execute(
-                device: $device,
-                sensorModel: 'RS485-SOIL-7IN1',
-                parameter: 'ec',
-                method: 'offset',
-                parameters: ['offset' => (float) $validated['ecOffset']],
-                reason: $reason,
-                profileName: 'Profil Kalibrasi EC Meja '.$device->code,
-                user: $user
-            );
-        } catch (InvalidArgumentException $e) {
+                $createCalibrationProfile->execute(
+                    device: $device,
+                    sensorModel: 'RS485-SOIL-7IN1',
+                    parameter: 'humidity',
+                    method: 'offset',
+                    parameters: ['offset' => (float) $validated['moistureOffset']],
+                    reason: $reason,
+                    profileName: 'Profil Kalibrasi Kelembapan Meja '.$device->code,
+                    user: $user
+                );
+
+                $createCalibrationProfile->execute(
+                    device: $device,
+                    sensorModel: 'RS485-SOIL-7IN1',
+                    parameter: 'ec',
+                    method: 'offset',
+                    parameters: ['offset' => (float) $validated['ecOffset']],
+                    reason: $reason,
+                    profileName: 'Profil Kalibrasi EC Meja '.$device->code,
+                    user: $user
+                );
+            });
+        } catch (\Throwable $e) {
             return redirect()->route('kits.index')
-                ->with('error', 'Gagal memperbarui kalibrasi: '.$e->getMessage());
+                ->with('error', 'Gagal memperbarui kalibrasi multi-parameter: '.$e->getMessage());
         }
 
         return redirect()->route('kits.index')
-            ->with('success', 'Offset kalibrasi sensor untuk '.$device->code.' berhasil diperbarui (Profil software aktif; downlink hardware: BLOCKED).');
+            ->with('success', 'Offset kalibrasi sensor untuk '.$device->code.' berhasil diperbarui secara atomik (Profil software aktif; downlink hardware: BLOCKED).');
     }
 
     /**
@@ -170,9 +216,16 @@ class TrainerKitManagerController extends Controller
     public function rotateApiKey(Request $request, Device $device): RedirectResponse
     {
         $user = $request->user();
+
+        // Fail-closed tenant validation: device's school must exist and be active (QA-05)
+        $school = $device->school ?? School::find($device->school_id);
+        if (! $school || $school->status !== 'active') {
+            abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
+        }
+
         if ($user && ! $user->isSuperuser()) {
-            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
-            abort_unless($user->school && $user->school->status === 'active', 403);
+            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403, 'Akses ditolak: Anda tidak memiliki wewenang untuk perangkat sekolah lain.');
+            abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
         }
 
         $rotation = DeviceApiKey::rotateForDevice($device, $request->user());
