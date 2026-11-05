@@ -47,7 +47,7 @@ class UserDirectoryController extends Controller
         }
 
         if ($search !== '') {
-            $lowerSearch = '%' . strtolower($search) . '%';
+            $lowerSearch = '%'.strtolower($search).'%';
             $query->where(function ($q) use ($lowerSearch) {
                 $q->whereRaw('LOWER(name) LIKE ?', [$lowerSearch])
                     ->orWhereRaw('LOWER(email) LIKE ?', [$lowerSearch])
@@ -89,4 +89,3 @@ class UserDirectoryController extends Controller
         ]);
     }
 }
-

@@ -160,7 +160,7 @@ class UserDirectoryTest extends TestCase
         $studentA = User::factory()->create(['role' => 'siswa', 'school_id' => $schoolA->id, 'name' => 'Student School A']);
         $studentB = User::factory()->create(['role' => 'siswa', 'school_id' => $schoolB->id, 'name' => 'Student School B']);
 
-        $response = $this->actingAs($superuser)->get('/users-data?school_id=' . $schoolA->id);
+        $response = $this->actingAs($superuser)->get('/users-data?school_id='.$schoolA->id);
 
         $response->assertOk();
         $response->assertSee('Student School A');

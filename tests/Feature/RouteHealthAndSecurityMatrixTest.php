@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Device;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,8 +15,11 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
     use RefreshDatabase;
 
     private School $school;
+
     private User $student;
+
     private User $teacher;
+
     private User $superuser;
 
     protected function setUp(): void
@@ -47,7 +51,7 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
             'name' => 'Superuser Matrix',
         ]);
 
-        \App\Models\Device::create([
+        Device::create([
             'school_id' => $this->school->id,
             'code' => 'TK-MATRIX-01',
             'name' => 'Meja Matrix 01',
@@ -156,8 +160,8 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
     public function test_baseline_assets_remain_unmodified_and_intact(): void
     {
         $rootDir = dirname(base_path());
-        $dumpSql = $rootDir . DIRECTORY_SEPARATOR . 'dump_upiedge.sql';
-        $upiEdgeDir = $rootDir . DIRECTORY_SEPARATOR . 'upi-edge';
+        $dumpSql = $rootDir.DIRECTORY_SEPARATOR.'dump_upiedge.sql';
+        $upiEdgeDir = $rootDir.DIRECTORY_SEPARATOR.'upi-edge';
 
         $this->assertFileExists($dumpSql, 'dump_upiedge.sql baseline asset must exist');
         $this->assertDirectoryExists($upiEdgeDir, 'upi-edge baseline directory must exist');

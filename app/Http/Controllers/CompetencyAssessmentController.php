@@ -126,7 +126,7 @@ class CompetencyAssessmentController extends Controller
             });
         }
 
-        $filename = 'rekapitulasi-nilai-kompetensi-' . now()->format('Ymd_His') . '.csv';
+        $filename = 'rekapitulasi-nilai-kompetensi-'.now()->format('Ymd_His').'.csv';
 
         return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');
@@ -153,8 +153,8 @@ class CompetencyAssessmentController extends Controller
                         $profile?->identifier_number ?? '-',
                         $profile?->class_grade ?? '-',
                         $profile?->group_name ?? '-',
-                        $profile?->assigned_kit_id ? 'TK-0' . $profile->assigned_kit_id : 'Belum Ditugaskan',
-                        $profile?->attendance_percent !== null ? $profile->attendance_percent . '%' : '-',
+                        $profile?->assigned_kit_id ? 'TK-0'.$profile->assigned_kit_id : 'Belum Ditugaskan',
+                        $profile?->attendance_percent !== null ? $profile->attendance_percent.'%' : '-',
                         number_format((float) $grade, 1),
                         $pred,
                         $profile?->trainer_certified ? 'Tersertifikasi' : 'Proses Belajar',

@@ -113,7 +113,7 @@ class CompetencyAssessmentTenantTest extends TestCase
             'competency_predicative' => 'C',
         ]);
 
-        $response = $this->actingAs($superuser)->get('/assessment?school_id=' . $schoolA->id);
+        $response = $this->actingAs($superuser)->get('/assessment?school_id='.$schoolA->id);
 
         $response->assertOk();
         $response->assertSee('Selected Student A');
