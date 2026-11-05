@@ -130,7 +130,7 @@ Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool']
     ->name('settings.update');
 
 // Manajemen Media Tanam (Null-Safe)
-Route::resource('media', PlantingMediaController::class);
+Route::resource('media', PlantingMediaController::class)->except(['show']);
 
 // LEGACY-01: Retired SaaS module — routes disabled, historic data preserved.
 // Route::get('/subscription', [SubscriptionCheckoutController::class, 'index'])->name('subscription.index');

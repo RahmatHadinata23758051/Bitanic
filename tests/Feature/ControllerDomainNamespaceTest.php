@@ -136,6 +136,8 @@ class ControllerDomainNamespaceTest extends TestCase
             $this->assertNotNull($route, "Route [{$routeName}] must remain registered.");
             $this->assertSame($controllerClass, $route->getControllerClass(), "Route [{$routeName}] must use its Agronomy domain controller.");
         }
+
+        $this->assertNull(Route::getRoutes()->getByName('media.show'), 'Route [media.show] must not be registered when the controller has no show method.');
     }
 
     public function test_legacy_agronomy_controller_class_names_remain_compatible(): void
