@@ -3,40 +3,48 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
-use App\Models\School;
 use App\Models\SchoolSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SettingsAuditController extends Controller
 {
     /**
+     * Resolve the authenticated user's school_id or abort 403.
+     * Fail-closed: no fallback to a default school.
+     */
+    private function resolveSchoolIdOrFail(): int
+    {
+        $user = Auth::user();
+
+        if (! $user || ! $user->school_id) {
+            abort(403, 'Akses ditolak: akun Anda belum terdaftar pada sekolah manapun.');
+        }
+
+        return (int) $user->school_id;
+    }
+
+    /**
      * Display the laboratory settings and audit trail view.
      */
     public function index(): View
     {
-        $user = Auth::user();
-        $schoolId = $user?->school_id
-            ?? School::where('slug', 'smk-ppn-1-sukaraja')->value('id')
-            ?? School::value('id');
+        $schoolId = $this->resolveSchoolIdOrFail();
 
-        $setting = null;
-        if ($schoolId) {
-            $setting = SchoolSetting::where('school_id', $schoolId)->first();
-        }
+        $setting = SchoolSetting::where('school_id', $schoolId)->first();
 
         if (! $setting) {
-            $school = $schoolId ? School::find($schoolId) : null;
             $setting = (object) [
                 'school_id' => $schoolId,
-                'school_name' => $school?->name ?? 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
+                'school_name' => Auth::user()->school?->name ?? 'Belum Dikonfigurasi',
                 'academic_year' => '2026/2027',
                 'semester' => 'Ganjil',
                 'course_name' => 'Agribisnis Tanaman Pangan & Hortikultura (ATPH)',
-                'lead_teacher' => 'Ir. Ahmad Suryanto, S.P., M.Pd.',
+                'lead_teacher' => '-',
                 'sensor_thresholds' => [
                     'minMoisture' => 30.0,
                     'maxMoisture' => 75.0,
@@ -52,12 +60,10 @@ class SettingsAuditController extends Controller
             ];
         }
 
-        $auditQuery = AuditLog::with('user');
-        if ($user && $user->school_id) {
-            $auditQuery->where('school_id', $user->school_id);
-        }
-
-        $auditLogs = $auditQuery->latest('id')->paginate(15);
+        $auditLogs = AuditLog::with('user')
+            ->where('school_id', $schoolId)
+            ->latest('id')
+            ->paginate(15);
 
         return view('pages.settings.index', [
             'setting' => $setting,
@@ -70,10 +76,7 @@ class SettingsAuditController extends Controller
      */
     public function updateSchool(Request $request): RedirectResponse
     {
-        $user = Auth::user();
-        $schoolId = $user?->school_id
-            ?? School::where('slug', 'smk-ppn-1-sukaraja')->value('id')
-            ?? School::value('id');
+        $schoolId = $this->resolveSchoolIdOrFail();
 
         $validated = $request->validate([
             'school_name' => 'required|string|max:255',
@@ -96,73 +99,81 @@ class SettingsAuditController extends Controller
             'thresholds.maxNitrogen.gte' => 'Kadar Nitrogen maksimum harus lebih besar atau sama dengan minimum.',
         ]);
 
-        $setting = SchoolSetting::firstOrNew(['school_id' => $schoolId]);
-        $before = $setting->exists ? [
-            'school_name' => $setting->school_name,
-            'academic_year' => $setting->academic_year,
-            'semester' => $setting->semester,
-            'course_name' => $setting->course_name,
-            'lead_teacher' => $setting->lead_teacher,
-            'sensor_thresholds' => $setting->sensor_thresholds,
-        ] : null;
+        $user = Auth::user();
 
-        $setting->school_name = $validated['school_name'];
-        $setting->academic_year = $validated['academic_year'];
-        $setting->semester = $validated['semester'];
-        $setting->course_name = $validated['course_name'];
-        $setting->lead_teacher = $validated['lead_teacher'];
-        $setting->sensor_thresholds = $validated['thresholds'];
-        $setting->save();
+        return DB::transaction(function () use ($schoolId, $validated, $user, $request) {
+            $setting = SchoolSetting::firstOrNew(['school_id' => $schoolId]);
+            $before = $setting->exists ? [
+                'school_name' => $setting->school_name,
+                'academic_year' => $setting->academic_year,
+                'semester' => $setting->semester,
+                'course_name' => $setting->course_name,
+                'lead_teacher' => $setting->lead_teacher,
+                'sensor_thresholds' => $setting->sensor_thresholds,
+            ] : null;
 
-        $after = [
-            'school_name' => $setting->school_name,
-            'academic_year' => $setting->academic_year,
-            'semester' => $setting->semester,
-            'course_name' => $setting->course_name,
-            'lead_teacher' => $setting->lead_teacher,
-            'sensor_thresholds' => $setting->sensor_thresholds,
-        ];
+            $setting->school_name = $validated['school_name'];
+            $setting->academic_year = $validated['academic_year'];
+            $setting->semester = $validated['semester'];
+            $setting->course_name = $validated['course_name'];
+            $setting->lead_teacher = $validated['lead_teacher'];
+            $setting->sensor_thresholds = $validated['thresholds'];
+            $setting->save();
 
-        $redactSensitive = function (array $data) use (&$redactSensitive) {
-            $sensitiveKeys = ['password', 'secret', 'token', 'key', 'device_key', 'api_key', 'credential', 'auth'];
-            foreach ($data as $k => $v) {
-                if (is_array($v)) {
-                    $data[$k] = $redactSensitive($v);
-                } else {
-                    foreach ($sensitiveKeys as $sensitive) {
-                        if (stripos((string) $k, $sensitive) !== false) {
-                            $data[$k] = '[REDACTED]';
-                            break;
-                        }
+            $after = [
+                'school_name' => $setting->school_name,
+                'academic_year' => $setting->academic_year,
+                'semester' => $setting->semester,
+                'course_name' => $setting->course_name,
+                'lead_teacher' => $setting->lead_teacher,
+                'sensor_thresholds' => $setting->sensor_thresholds,
+            ];
+
+            $diff = [
+                'before' => $before ? self::redactSensitive($before) : null,
+                'after' => self::redactSensitive($after),
+            ];
+
+            $correlationId = (string) Str::uuid();
+
+            AuditLog::create([
+                'school_id' => $schoolId,
+                'user_id' => $user?->id,
+                'actor_name' => $user?->name ?? 'Admin Laboratorium',
+                'actor_role' => $user?->role ?? 'superuser',
+                'action' => 'UPDATE_SETTINGS',
+                'target_type' => 'SchoolSetting',
+                'target_id' => (string) $setting->id,
+                'diff' => $diff,
+                'correlation_id' => $correlationId,
+                'details' => 'Memperbarui profil laboratorium sekolah dan ambang batas sensor tanah.',
+                'ip_address' => $request->ip(),
+            ]);
+
+            return redirect()->route('settings.index')
+                ->with('success', 'Konfigurasi profil laboratorium dan ambang batas agronomi berhasil diperbarui.');
+        });
+    }
+
+    /**
+     * Recursively redact sensitive fields from audit diff data.
+     */
+    private static function redactSensitive(array $data): array
+    {
+        $sensitiveKeys = ['password', 'secret', 'token', 'key', 'device_key', 'api_key', 'credential', 'auth'];
+        foreach ($data as $k => $v) {
+            if (is_array($v)) {
+                $data[$k] = self::redactSensitive($v);
+            } else {
+                foreach ($sensitiveKeys as $sensitive) {
+                    if (stripos((string) $k, $sensitive) !== false) {
+                        $data[$k] = '[REDACTED]';
+                        break;
                     }
                 }
             }
+        }
 
-            return $data;
-        };
-
-        $diff = [
-            'before' => $before ? $redactSensitive($before) : null,
-            'after' => $redactSensitive($after),
-        ];
-
-        $correlationId = (string) Str::uuid();
-
-        AuditLog::create([
-            'school_id' => $schoolId,
-            'user_id' => $user?->id,
-            'actor_name' => $user?->name ?? 'Admin Laboratorium',
-            'actor_role' => $user?->role ?? 'superuser',
-            'action' => 'UPDATE_SETTINGS',
-            'target_type' => 'SchoolSetting',
-            'target_id' => (string) $setting->id,
-            'diff' => $diff,
-            'correlation_id' => $correlationId,
-            'details' => 'Memperbarui profil laboratorium sekolah dan ambang batas sensor tanah.',
-            'ip_address' => $request->ip(),
-        ]);
-
-        return redirect()->route('settings.index')
-            ->with('success', 'Konfigurasi profil laboratorium dan ambang batas agronomi berhasil diperbarui.');
+        return $data;
     }
 }
