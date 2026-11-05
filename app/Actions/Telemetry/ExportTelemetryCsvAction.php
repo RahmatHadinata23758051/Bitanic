@@ -11,9 +11,7 @@ class ExportTelemetryCsvAction
     /**
      * Stream database telemetry readings directly to CSV response.
      *
-     * @param Builder<TelemetryReading> $query
-     * @param string $filename
-     * @return StreamedResponse
+     * @param  Builder<TelemetryReading>  $query
      */
     public function execute(Builder $query, string $filename = 'telemetry-history.csv'): StreamedResponse
     {
@@ -29,13 +27,14 @@ class ExportTelemetryCsvAction
             $handle = fopen('php://output', 'w');
 
             // UTF-8 BOM for Microsoft Excel compatibility
-            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
 
-            // CSV Columns Header
+            // CSV Columns Header with Provenance
             fputcsv($handle, [
                 'Waktu Pengukuran (WIB)',
                 'Kode Perangkat',
                 'Nama Meja / Stasiun',
+                'Asal Data',
                 'pH Tanah',
                 'EC Nutrisi (uS/cm)',
                 'Kelembaban Tanah (%)',
@@ -46,23 +45,24 @@ class ExportTelemetryCsvAction
                 'Status Peringatan',
             ]);
 
-            // Chunk cursor to prevent memory spikes on large tables
-            $query->with('device')->chunk(500, function ($readings) use ($handle) {
+            // Chunk cursor to prevent memory spikes on large tables, bounded to safety limit
+            $query->with('device')->limit(50000)->chunk(500, function ($readings) use ($handle) {
                 foreach ($readings as $row) {
                     $flags = $row->threshold_flags ?? [];
                     $statusString = empty($flags) ? 'NORMAL' : implode('; ', (array) $flags);
 
                     fputcsv($handle, [
                         $row->recorded_at ? $row->recorded_at->format('Y-m-d H:i:s') : '-',
-                        $row->device->code ?? 'DEV-' . $row->device_id,
+                        $row->device->code ?? 'DEV-'.$row->device_id,
                         $row->device->name ?? 'Meja Lab',
-                        number_format((float) $row->ph, 2),
-                        number_format((float) $row->ec, 0),
-                        number_format((float) $row->humidity, 1),
-                        number_format((float) $row->temperature, 1),
-                        number_format((float) $row->nitrogen, 1),
-                        number_format((float) $row->phosphorus, 1),
-                        number_format((float) $row->potassium, 1),
+                        $row->provenance ?? 'hardware',
+                        $row->ph !== null ? number_format((float) $row->ph, 2) : '-',
+                        $row->ec !== null ? number_format((float) $row->ec, 0) : '-',
+                        $row->humidity !== null ? number_format((float) $row->humidity, 1) : '-',
+                        $row->temperature !== null ? number_format((float) $row->temperature, 1) : '-',
+                        $row->nitrogen !== null ? number_format((float) $row->nitrogen, 1) : '-',
+                        $row->phosphorus !== null ? number_format((float) $row->phosphorus, 1) : '-',
+                        $row->potassium !== null ? number_format((float) $row->potassium, 1) : '-',
                         $statusString,
                     ]);
                 }

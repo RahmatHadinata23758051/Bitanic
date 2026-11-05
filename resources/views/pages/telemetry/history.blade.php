@@ -36,6 +36,24 @@
                 <i data-lucide="download" class="w-4 h-4"></i>
                 <span>Ekspor CSV</span>
             </a>
+            @if(!empty($isSuperuser) && $schools->isNotEmpty())
+                <form method="GET" action="{{ route('telemetry.history') }}" class="flex items-center gap-2">
+                    <label for="school_id" class="text-xs font-semibold text-slate-600">Sekolah:</label>
+                    <select
+                        id="school_id"
+                        name="school_id"
+                        onchange="this.form.submit()"
+                        class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer"
+                    >
+                        <option value="">Semua Sekolah</option>
+                        @foreach($schools as $school)
+                            <option value="{{ $school->id }}" {{ (string) $selectedSchoolId === (string) $school->id ? 'selected' : '' }}>
+                                {{ $school->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+            @endif
         </div>
     </div>
 
@@ -204,12 +222,13 @@
                             $p = $row->phosphorus !== null ? (float) $row->phosphorus : null;
                             $k = $row->potassium !== null ? (float) $row->potassium : null;
 
-                            $isPhAnomaly = $ph !== null && ($ph < 5.5 || $ph > 7.5);
-                            $isEcAnomaly = $ec !== null && ($ec < 800 || $ec > 2400);
-                            $isHumAnomaly = $hum !== null && ($hum < 40.0 || $hum > 85.0);
-                            $isTempAnomaly = $temp !== null && $temp > 33.0;
-
-                            $hasAnomaly = $isPhAnomaly || $isEcAnomaly || $isHumAnomaly || $isTempAnomaly || !empty($row->threshold_flags);
+                            $readingAlerts = $alertEvaluator->evaluate($row);
+                            $alertedParameters = $readingAlerts->pluck('parameter_key')->all();
+                            $isPhAnomaly = in_array('ph', $alertedParameters, true);
+                            $isEcAnomaly = in_array('ec', $alertedParameters, true);
+                            $isHumAnomaly = in_array('humidity', $alertedParameters, true);
+                            $isTempAnomaly = in_array('temperature', $alertedParameters, true);
+                            $hasAnomaly = $readingAlerts->isNotEmpty() || !empty($row->threshold_flags);
                         @endphp
                         <tr class="hover:bg-slate-50/80 transition-colors {{ $hasAnomaly ? 'bg-amber-50/20' : '' }}">
                             <!-- Waktu -->

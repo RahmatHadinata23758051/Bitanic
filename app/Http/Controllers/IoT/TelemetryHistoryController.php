@@ -10,6 +10,7 @@ use App\Models\TelemetryReading;
 use App\Services\Agronomy\AnomalyAlertEvaluator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -24,19 +25,33 @@ class TelemetryHistoryController extends Controller
         $isSuperuser = (bool) $user?->isSuperuser();
         $schoolId = $user?->school_id;
 
-        if ($user && ! $isSuperuser && ! $schoolId) {
-            abort(403, 'Akses riwayat telemetri memerlukan asosiasi sekolah yang valid.');
+        if ($user && ! $isSuperuser) {
+            if (! $schoolId) {
+                abort(403, 'Akses riwayat telemetri memerlukan asosiasi sekolah yang valid.');
+            }
+            $school = $user->school;
+            if (! $school || $school->status !== 'active') {
+                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+            }
         }
 
-        $targetSchoolId = $isSuperuser
-            ? null
-            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        $selectedSchoolId = $request->query('school_id');
+        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
+
+        if ($isSuperuser && $selectedSchoolId) {
+            $targetSchoolId = (int) $selectedSchoolId;
+        } else {
+            $targetSchoolId = $isSuperuser
+                ? null
+                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        }
 
         $devices = Device::query()
             ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
-            ->orderBy('name')
+            ->orderBy('code')
             ->get();
-        $query = $this->buildFilteredQuery($request)
+
+        $query = $this->buildFilteredQuery($request, $devices)
             ->when($targetSchoolId, fn ($query) => $query->whereHas('device', fn ($deviceQuery) => $deviceQuery->where('school_id', $targetSchoolId)));
 
         // Anomaly alert uses only the caller's visible school telemetry.
@@ -52,6 +67,10 @@ class TelemetryHistoryController extends Controller
         return view('pages.telemetry.history', [
             'readings' => $readings,
             'devices' => $devices,
+            'schools' => $schools,
+            'selectedSchoolId' => $targetSchoolId,
+            'isSuperuser' => $isSuperuser,
+            'alertEvaluator' => $evaluator,
             'activeAlerts' => $activeAlerts,
             'latestReading' => $latestReading,
             'totalLogsCount' => $totalLogsCount,
@@ -72,15 +91,32 @@ class TelemetryHistoryController extends Controller
         $isSuperuser = (bool) $user?->isSuperuser();
         $schoolId = $user?->school_id;
 
-        if ($user && ! $isSuperuser && ! $schoolId) {
-            abort(403, 'Ekspor telemetri memerlukan asosiasi sekolah yang valid.');
+        if ($user && ! $isSuperuser) {
+            if (! $schoolId) {
+                abort(403, 'Ekspor telemetri memerlukan asosiasi sekolah yang valid.');
+            }
+            $school = $user->school;
+            if (! $school || $school->status !== 'active') {
+                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+            }
         }
 
-        $targetSchoolId = $isSuperuser
-            ? null
-            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        $selectedSchoolId = $request->query('school_id');
 
-        $query = $this->buildFilteredQuery($request)
+        if ($isSuperuser && $selectedSchoolId) {
+            $targetSchoolId = (int) $selectedSchoolId;
+        } else {
+            $targetSchoolId = $isSuperuser
+                ? null
+                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        }
+
+        $devices = Device::query()
+            ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
+            ->orderBy('code')
+            ->get();
+
+        $query = $this->buildFilteredQuery($request, $devices)
             ->when($targetSchoolId, fn ($query) => $query->whereHas('device', fn ($deviceQuery) => $deviceQuery->where('school_id', $targetSchoolId)));
         $filename = 'bitanic-telemetry-'.now()->format('Ymd_His').'.csv';
 
@@ -88,16 +124,24 @@ class TelemetryHistoryController extends Controller
     }
 
     /**
-     * Build base query with incoming HTTP filters.
+     * Build base query with incoming HTTP filters and cross-school IDOR protection.
      *
+     * @param  Collection<int, Device>  $devices
      * @return Builder<TelemetryReading>
      */
-    protected function buildFilteredQuery(Request $request): Builder
+    protected function buildFilteredQuery(Request $request, Collection $devices): Builder
     {
         $query = TelemetryReading::with('device')->orderByDesc('recorded_at');
 
         if ($request->filled('device_id')) {
-            $query->where('device_id', $request->query('device_id'));
+            $deviceId = $request->query('device_id');
+            $validDevice = $devices->first(fn ($d) => (string) $d->id === (string) $deviceId || $d->code === (string) $deviceId);
+            if ($validDevice) {
+                $query->where('device_id', $validDevice->id);
+            } else {
+                // Cross-school IDOR attempt: requested device does not belong to authorized school
+                $query->whereRaw('1 = 0');
+            }
         }
 
         if ($request->filled('start_date')) {
