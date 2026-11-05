@@ -29,10 +29,18 @@ class SubmitStudentReportAction
             throw new InvalidArgumentException('Jawaban Lembar Kerja Siswa (LKS) wajib diisi.');
         }
 
-        if ($user->role !== 'superuser' && ! $user->school_id) {
-            throw ValidationException::withMessages([
-                'lks_answers' => 'Pengumpulan laporan memerlukan asosiasi sekolah yang valid.',
-            ]);
+        if ($user->role !== 'superuser') {
+            if (! $user->school_id) {
+                throw ValidationException::withMessages([
+                    'lks_answers' => 'Pengumpulan laporan memerlukan asosiasi sekolah yang valid.',
+                ]);
+            }
+
+            if ($user->school && $user->school->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'lks_answers' => 'Sekolah Anda sedang tidak aktif.',
+                ]);
+            }
         }
 
         // Cek laporan yang telah ada untuk modul ini
@@ -201,8 +209,14 @@ class SubmitStudentReportAction
                 ]);
             }
 
-            // Session window evidence check: reading must have been recorded during the session
-            if ($sessionWindowStart && $sessionWindowEnd && $evidenceReading->recorded_at) {
+            if (! $evidenceReading->recorded_at) {
+                throw ValidationException::withMessages([
+                    'evidence_reading_id' => 'Bukti telemetri tidak memiliki timestamp yang valid.',
+                ]);
+            }
+
+            // Evidence for a scheduled session must have a timestamp inside that session.
+            if ($sessionWindowStart && $sessionWindowEnd) {
                 if ($evidenceReading->recorded_at->lt($sessionWindowStart) || $evidenceReading->recorded_at->gt($sessionWindowEnd)) {
                     throw ValidationException::withMessages([
                         'evidence_reading_id' => 'Bukti telemetri tidak berada dalam jendela waktu sesi praktikum yang berlaku.',
@@ -212,9 +226,10 @@ class SubmitStudentReportAction
 
             $latestReading = $evidenceReading;
         } elseif ($deviceId) {
-            // Auto-resolve latest reading, scoped to session window if available
+            // Auto-resolve latest reading, scoped to session window if available and never attach undated evidence.
             $readingQuery = TelemetryReading::with('device')
-                ->where('device_id', $deviceId);
+                ->where('device_id', $deviceId)
+                ->whereNotNull('recorded_at');
 
             if ($sessionWindowStart && $sessionWindowEnd) {
                 $readingQuery->where('recorded_at', '>=', $sessionWindowStart)
@@ -230,15 +245,15 @@ class SubmitStudentReportAction
                 'reading_id' => $latestReading->id,
                 'device_id' => $latestReading->device_id,
                 'device_code' => $latestReading->device?->code ?? 'TK-'.$latestReading->device_id,
-                'ph' => (float) $latestReading->ph,
-                'humidity' => (float) $latestReading->humidity,
-                'ec' => (float) $latestReading->ec,
-                'nitrogen' => (float) $latestReading->nitrogen,
-                'phosphorus' => (float) $latestReading->phosphorus,
-                'potassium' => (float) $latestReading->potassium,
-                'temperature' => (float) $latestReading->temperature,
-                'provenance' => $latestReading->provenance ?? 'hardware',
-                'recorded_at' => $latestReading->recorded_at?->toIso8601String(),
+                'ph' => $latestReading->ph !== null ? (float) $latestReading->ph : null,
+                'humidity' => $latestReading->humidity !== null ? (float) $latestReading->humidity : null,
+                'ec' => $latestReading->ec !== null ? (float) $latestReading->ec : null,
+                'nitrogen' => $latestReading->nitrogen !== null ? (float) $latestReading->nitrogen : null,
+                'phosphorus' => $latestReading->phosphorus !== null ? (float) $latestReading->phosphorus : null,
+                'potassium' => $latestReading->potassium !== null ? (float) $latestReading->potassium : null,
+                'temperature' => $latestReading->temperature !== null ? (float) $latestReading->temperature : null,
+                'provenance' => $latestReading->provenance ?? 'unknown',
+                'recorded_at' => $latestReading->recorded_at->toIso8601String(),
                 'evidence_verified' => true,
             ];
             $evidenceReadingId = $latestReading->id;

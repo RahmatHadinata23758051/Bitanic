@@ -2,17 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Practicum\SubmitStudentReportAction;
 use App\Models\ActivitySchedule;
 use App\Models\Device;
 use App\Models\ModulePracticum;
 use App\Models\ScheduleParticipant;
+use App\Models\School;
 use App\Models\StudentReport;
 use App\Models\TelemetryReading;
 use App\Models\User;
 use App\Models\UserProfile;
 use Database\Seeders\ModulePracticumSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class LksAllocationAndEvidenceTest extends TestCase
@@ -161,5 +162,174 @@ class LksAllocationAndEvidenceTest extends TestCase
         $this->assertNull($report->device_id);
         $this->assertNull($report->evidence_reading_id);
         $this->assertFalse($report->telemetry_snapshot['has_telemetry']);
+    }
+
+    public function test_partial_sensor_snapshot_preserves_nulls_and_real_zero_values(): void
+    {
+        $student = User::factory()->create(['role' => 'siswa']);
+        $device = Device::create(['code' => 'TK-PARTIAL-SNAPSHOT', 'name' => 'Meja Partial', 'is_active' => true]);
+        UserProfile::create([
+            'user_id' => $student->id,
+            'type' => 'siswa',
+            'assigned_kit_id' => $device->code,
+        ]);
+        $reading = TelemetryReading::create([
+            'device_id' => $device->id,
+            'provenance' => 'simulation',
+            'nitrogen' => 0,
+            'phosphorus' => null,
+            'potassium' => 12.5,
+            'ec' => null,
+            'ph' => 6.4,
+            'temperature' => null,
+            'humidity' => 0,
+            'recorded_at' => now(),
+        ]);
+
+        $report = app(SubmitStudentReportAction::class)->execute(
+            $student,
+            ModulePracticum::firstOrFail(),
+            [
+                'device_id' => $device->id,
+                'evidence_reading_id' => $reading->id,
+                'lks_answers' => ['q1' => 'Mencatat telemetri yang sebagian tersedia'],
+            ]
+        );
+
+        $snapshot = $report->telemetry_snapshot;
+        $this->assertSame(0.0, (float) $snapshot['nitrogen']);
+        $this->assertNull($snapshot['phosphorus']);
+        $this->assertSame(12.5, (float) $snapshot['potassium']);
+        $this->assertNull($snapshot['ec']);
+        $this->assertSame(6.4, (float) $snapshot['ph']);
+        $this->assertNull($snapshot['temperature']);
+        $this->assertSame(0.0, (float) $snapshot['humidity']);
+        $this->assertSame('simulation', $snapshot['provenance']);
+    }
+
+    public function test_missing_reading_provenance_is_not_invented_as_hardware(): void
+    {
+        $student = User::factory()->create(['role' => 'siswa']);
+        $device = Device::create(['code' => 'TK-FIXTURE-PROVENANCE', 'name' => 'Meja Fixture', 'is_active' => true]);
+        UserProfile::create([
+            'user_id' => $student->id,
+            'type' => 'siswa',
+            'assigned_kit_id' => $device->code,
+        ]);
+        $reading = TelemetryReading::create([
+            'device_id' => $device->id,
+            'provenance' => 'fixture',
+            'ph' => 6.1,
+            'recorded_at' => now(),
+        ]);
+
+        $report = app(SubmitStudentReportAction::class)->execute(
+            $student,
+            ModulePracticum::firstOrFail(),
+            [
+                'device_id' => $device->id,
+                'evidence_reading_id' => $reading->id,
+                'lks_answers' => ['q1' => 'Provenance fixture'],
+            ]
+        );
+
+        $this->assertSame('fixture', $report->telemetry_snapshot['provenance']);
+        $this->assertNotEquals('hardware', $report->telemetry_snapshot['provenance']);
+    }
+
+    public function test_scheduled_evidence_requires_timestamp_inside_current_practicum_window(): void
+    {
+        $this->travelTo(now()->setTime(10, 30));
+        $student = User::factory()->create(['role' => 'siswa']);
+        $device = Device::create(['code' => 'TK-WINDOW-EVIDENCE', 'name' => 'Meja Window', 'is_active' => true]);
+        UserProfile::create([
+            'user_id' => $student->id,
+            'type' => 'siswa',
+            'assigned_kit_id' => $device->code,
+        ]);
+        $schedule = ActivitySchedule::create([
+            'device_id' => $device->id,
+            'title' => 'Sesi aktif',
+            'activity_date' => today(),
+            'start_time' => '09:00:00',
+            'end_time' => '11:00:00',
+        ]);
+        ScheduleParticipant::create([
+            'activity_schedule_id' => $schedule->id,
+            'user_id' => $student->id,
+            'role' => 'siswa',
+        ]);
+        $reading = TelemetryReading::create([
+            'device_id' => $device->id,
+            'provenance' => 'hardware',
+            'ph' => 6.3,
+            'recorded_at' => today()->setTime(8, 59),
+        ]);
+
+        $response = $this->actingAs($student)->post(route('modules.submit-lks', ModulePracticum::firstOrFail()->id), [
+            'device_id' => $device->id,
+            'activity_schedule_id' => $schedule->id,
+            'evidence_reading_id' => $reading->id,
+            'lks_answers' => ['q1' => 'Evidence before session'],
+        ]);
+
+        $response->assertSessionHasErrors('evidence_reading_id');
+        $this->assertDatabaseMissing('student_reports', [
+            'user_id' => $student->id,
+            'module_id' => ModulePracticum::firstOrFail()->id,
+        ]);
+    }
+
+    public function test_cross_school_evidence_reading_is_strictly_rejected(): void
+    {
+        $schoolA = School::create([
+            'npsn' => '20200991',
+            'name' => 'SMK Pertanian A',
+            'slug' => 'smk-pertanian-a',
+            'status' => 'active',
+        ]);
+        $schoolB = School::create([
+            'npsn' => '20200992',
+            'name' => 'SMK Pertanian B',
+            'slug' => 'smk-pertanian-b',
+            'status' => 'active',
+        ]);
+
+        $studentA = User::factory()->create([
+            'role' => 'siswa',
+            'school_id' => $schoolA->id,
+        ]);
+        $kitA = Device::create([
+            'school_id' => $schoolA->id,
+            'code' => 'TK-SCHOOL-A',
+            'name' => 'Meja Sekolah A',
+            'is_active' => true,
+        ]);
+        $kitB = Device::create([
+            'school_id' => $schoolB->id,
+            'code' => 'TK-SCHOOL-B',
+            'name' => 'Meja Sekolah B',
+            'is_active' => true,
+        ]);
+        UserProfile::create([
+            'user_id' => $studentA->id,
+            'type' => 'siswa',
+            'assigned_kit_id' => $kitA->code,
+        ]);
+
+        $foreignReading = TelemetryReading::create([
+            'device_id' => $kitB->id,
+            'provenance' => 'hardware',
+            'ph' => 7.0,
+            'recorded_at' => now(),
+        ]);
+
+        $response = $this->actingAs($studentA)->post(route('modules.submit-lks', ModulePracticum::firstOrFail()->id), [
+            'device_id' => $kitA->id,
+            'evidence_reading_id' => $foreignReading->id,
+            'lks_answers' => ['q1' => 'Mencoba injeksi telemetri sekolah lain'],
+        ]);
+
+        $response->assertSessionHasErrors('evidence_reading_id');
     }
 }
