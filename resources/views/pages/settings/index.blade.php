@@ -10,7 +10,7 @@
                     SISTEM & AUDIT
                 </span>
                 <span class="text-xs text-slate-400">•</span>
-                <span class="text-xs font-semibold text-slate-600">SMK Pertanian Pembangunan Negeri 1 Sukaraja</span>
+                <span class="text-xs font-semibold text-slate-600">{{ $setting->school_name }}</span>
             </div>
             <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
                 Pengaturan Lab & Log Aktivitas Sistem
@@ -167,6 +167,9 @@
                         <p class="text-xs text-slate-700 font-medium">{{ $log->details }}</p>
                         <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1">
                             <span>Aksi: {{ $log->action }}</span>
+                            @if($log->correlation_id)
+                                <span>Ref: {{ \Illuminate\Support\Str::limit($log->correlation_id, 8, '') }}</span>
+                            @endif
                             <span>IP: {{ $log->ip_address ?? '127.0.0.1' }}</span>
                         </div>
                     </div>
