@@ -25,7 +25,12 @@ class SettingsAuditController extends Controller
             abort(403, 'Akses ditolak: akun Anda belum terdaftar pada sekolah manapun.');
         }
 
-        return (int) $user->school_id;
+        $school = $user->school;
+        if (! $school || $school->status !== 'active') {
+            abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+        }
+
+        return (int) $school->id;
     }
 
     /**

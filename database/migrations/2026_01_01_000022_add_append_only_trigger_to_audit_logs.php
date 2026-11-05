@@ -19,7 +19,8 @@ return new class extends Migration
                 CREATE OR REPLACE FUNCTION trg_audit_logs_append_only()
                 RETURNS TRIGGER AS $$
                 BEGIN
-                    IF current_setting('app.allow_audit_mutation', true) = 'on' THEN
+                    IF current_setting('app.allow_audit_mutation', true) = 'on'
+                       AND EXISTS (SELECT 1 FROM pg_user WHERE usename = CURRENT_USER AND usesuper = true) THEN
                         RETURN OLD;
                     END IF;
                     RAISE EXCEPTION 'audit_logs is append-only at the database engine level. UPDATE and DELETE operations are prohibited.';
