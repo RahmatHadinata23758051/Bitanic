@@ -2,6 +2,7 @@
     $user = Auth::user();
     $role = $user->role ?? 'siswa';
     $currentRoute = Route::currentRouteName() ?? '';
+    // LEGACY-01 / BR-504: Commercial subscription navigation retired; AI quota display retained for vocational LMS practice.
     // Sisa kuota AI (dari subscription atau default 15)
     $activeSub = $user ? \App\Models\UserSubscription::with('plan')->where('user_id', $user->id)->where('status', 'active')->latest()->first() : null;
     $remainingQuota = $activeSub ? max(0, ($activeSub->plan->quota ?? 50) - $activeSub->used_quota) : 15;
