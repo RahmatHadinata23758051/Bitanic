@@ -5,101 +5,157 @@ namespace App\Http\Controllers\Agronomy;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\Media;
+use App\Models\School;
 use App\Models\TelemetryReading;
 use App\Services\PlantConditionEvaluator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class PlantingMediaController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $medias = Media::with(['device', 'uploader'])->latest()->get();
+        $schoolId = $this->resolveSchoolId($request);
+        $medias = Media::with(['device', 'uploader'])
+            ->where('school_id', $schoolId)
+            ->latest()
+            ->paginate(20);
+        $devices = $this->devicesForSchool($schoolId);
 
-        return view('pages.media.index', compact('medias'));
+        return view('pages.media.index', compact('medias', 'devices'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        $devices = Device::where('is_active', true)->get();
+        $schoolId = $this->resolveSchoolId($request);
+        $devices = $this->devicesForSchool($schoolId);
 
         return view('pages.media.create', compact('devices'));
     }
 
     public function store(Request $request, PlantConditionEvaluator $evaluator): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'plants' => 'required|array|min:1',
-            'device_id' => 'nullable|exists:devices,id',
+        $schoolId = $this->resolveSchoolId($request);
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'plants' => ['required', 'array', 'min:1', 'max:20'],
+            'plants.*' => ['required', 'string', 'max:100'],
+            'device_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('devices', 'id')->where('school_id', $schoolId)->where('is_active', true),
+            ],
         ], [
             'name.required' => 'Nama media tanam wajib diisi.',
             'plants.required' => 'Daftar tanaman wajib dipilih.',
             'plants.array' => 'Daftar tanaman harus berupa array.',
+            'device_id.exists' => 'Perangkat tidak ditemukan atau bukan milik sekolah Anda.',
         ]);
 
-        // Null-safe fetch of latest telemetry reading
-        $deviceId = $request->input('device_id');
-        $latestReading = $deviceId
-            ? TelemetryReading::where('device_id', $deviceId)->latest('recorded_at')->first()
-            : TelemetryReading::latest('recorded_at')->first();
-
-        // Null-safe agronomy evaluation
-        $conditions = $evaluator->evaluate($request->plants, $latestReading);
+        $deviceId = $validated['device_id'] ?? null;
+        $latestReading = $this->latestReadingForSchool($schoolId, $deviceId);
+        $conditions = $evaluator->evaluate($validated['plants'], $latestReading);
 
         Media::create([
-            'name' => $request->name,
+            'school_id' => $schoolId,
+            'name' => $validated['name'],
             'device_id' => $deviceId,
-            'plants' => $request->plants,
+            'plants' => $validated['plants'],
             'plants_condition' => $conditions,
-            'uploaded_by' => Auth::id(),
+            'uploaded_by' => $request->user()->id,
         ]);
 
-        return redirect('/media')->with('success', 'Media tanam baru berhasil ditambahkan.');
+        return redirect()->route('media.index')->with('success', 'Media tanam baru berhasil ditambahkan.');
     }
 
-    public function edit(int $id): View
+    public function edit(Request $request, int $id): View
     {
-        $media = Media::findOrFail($id);
-        $devices = Device::where('is_active', true)->get();
+        $schoolId = $this->resolveSchoolId($request);
+        $media = Media::where('school_id', $schoolId)->findOrFail($id);
+        $devices = $this->devicesForSchool($schoolId);
 
         return view('pages.media.edit', compact('media', 'devices'));
     }
 
     public function update(Request $request, int $id, PlantConditionEvaluator $evaluator): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'plants' => 'required|array|min:1',
-            'device_id' => 'nullable|exists:devices,id',
+        $schoolId = $this->resolveSchoolId($request);
+        $media = Media::where('school_id', $schoolId)->findOrFail($id);
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'plants' => ['required', 'array', 'min:1', 'max:20'],
+            'plants.*' => ['required', 'string', 'max:100'],
+            'device_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('devices', 'id')->where('school_id', $schoolId)->where('is_active', true),
+            ],
+        ], [
+            'device_id.exists' => 'Perangkat tidak ditemukan atau bukan milik sekolah Anda.',
         ]);
 
-        $media = Media::findOrFail($id);
-        $deviceId = $request->input('device_id', $media->device_id);
-
-        $latestReading = $deviceId
-            ? TelemetryReading::where('device_id', $deviceId)->latest('recorded_at')->first()
-            : TelemetryReading::latest('recorded_at')->first();
-
-        $conditions = $evaluator->evaluate($request->plants, $latestReading);
+        $deviceId = $validated['device_id'] ?? null;
+        $latestReading = $this->latestReadingForSchool($schoolId, $deviceId);
+        $conditions = $evaluator->evaluate($validated['plants'], $latestReading);
 
         $media->update([
-            'name' => $request->name,
+            'name' => $validated['name'],
             'device_id' => $deviceId,
-            'plants' => $request->plants,
+            'plants' => $validated['plants'],
             'plants_condition' => $conditions,
         ]);
 
-        return redirect('/media')->with('success', 'Media tanam berhasil diperbarui.');
+        return redirect()->route('media.index')->with('success', 'Media tanam berhasil diperbarui.');
     }
 
-    public function destroy(int $id): RedirectResponse
+    public function destroy(Request $request, int $id): RedirectResponse
     {
-        $media = Media::findOrFail($id);
+        $schoolId = $this->resolveSchoolId($request);
+        $media = Media::where('school_id', $schoolId)->findOrFail($id);
         $media->delete();
 
-        return redirect('/media')->with('success', 'Media tanam berhasil dihapus.');
+        return redirect()->route('media.index')->with('success', 'Media tanam berhasil dihapus.');
+    }
+
+    private function resolveSchoolId(Request $request): int
+    {
+        $user = $request->user();
+        if (! $user || ! $user->school_id) {
+            abort(403, 'Akses media tanam memerlukan asosiasi sekolah yang valid.');
+        }
+
+        $school = School::whereKey($user->school_id)->where('status', 'active')->first();
+        if (! $school) {
+            abort(403, 'Akses media tanam memerlukan sekolah yang aktif.');
+        }
+
+        return (int) $school->id;
+    }
+
+    /** @return Collection<int, Device> */
+    private function devicesForSchool(int $schoolId)
+    {
+        return Device::where('school_id', $schoolId)
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->get();
+    }
+
+    private function latestReadingForSchool(int $schoolId, ?int $deviceId): ?TelemetryReading
+    {
+        if ($deviceId === null) {
+            return null;
+        }
+
+        // Defense in depth: validate the device's tenant again before reading its telemetry.
+        $device = Device::whereKey($deviceId)
+            ->where('school_id', $schoolId)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        return $device->telemetryReadings()->latest('recorded_at')->first();
     }
 }

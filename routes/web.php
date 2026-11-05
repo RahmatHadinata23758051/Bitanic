@@ -129,8 +129,10 @@ Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool']
     ->middleware(['auth', 'role:superuser'])
     ->name('settings.update');
 
-// Manajemen Media Tanam (Null-Safe)
-Route::resource('media', PlantingMediaController::class)->except(['show']);
+// Manajemen Media Tanam (Null-Safe & Tenant-Isolated)
+Route::middleware(['auth', 'role:guru,superuser'])->group(function () {
+    Route::resource('media', PlantingMediaController::class)->except(['show']);
+});
 
 // LEGACY-01: Retired SaaS module — routes disabled, historic data preserved.
 // Route::get('/subscription', [SubscriptionCheckoutController::class, 'index'])->name('subscription.index');
