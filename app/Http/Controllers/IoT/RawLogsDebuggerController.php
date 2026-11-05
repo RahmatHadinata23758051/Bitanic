@@ -5,6 +5,7 @@ namespace App\Http\Controllers\IoT;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\RawDataLog;
+use App\Models\School;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -16,32 +17,81 @@ class RawLogsDebuggerController extends Controller
      */
     public function index(Request $request): View
     {
+        $user = $request->user();
+        $isSuperuser = (bool) $user?->isSuperuser();
+        $schoolId = $user?->school_id;
+
+        if ($user && ! $isSuperuser) {
+            if (! $schoolId) {
+                abort(403, 'Akses debugger memerlukan asosiasi sekolah yang valid.');
+            }
+            $school = $user->school;
+            if (! $school || $school->status !== 'active') {
+                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+            }
+        }
+
+        $selectedSchoolId = $request->query('school_id');
+        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
+
+        if ($isSuperuser && $selectedSchoolId) {
+            $targetSchoolId = (int) $selectedSchoolId;
+        } else {
+            $targetSchoolId = $isSuperuser
+                ? null
+                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        }
+
+        $devices = Device::query()
+            ->where('is_active', true)
+            ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->orderBy('code')
+            ->get();
+
+        $allowedKitCodes = $devices->pluck('code')->all();
+
         $levelFilter = $request->query('level');
         $kitFilter = $request->query('kit_code');
 
-        $query = RawDataLog::with('device')->latest();
+        $query = RawDataLog::with('device')
+            ->when($targetSchoolId, function ($q) use ($targetSchoolId) {
+                $q->whereHas('device', fn ($dq) => $dq->where('school_id', $targetSchoolId));
+            })
+            ->latest('recorded_at');
 
-        if ($levelFilter && in_array($levelFilter, ['INFO', 'WARN', 'ERROR'])) {
+        if ($levelFilter && in_array($levelFilter, ['INFO', 'WARN', 'ERROR'], true)) {
             $query->where('level', $levelFilter);
         }
 
         if ($kitFilter) {
-            $query->where('kit_code', $kitFilter);
+            if (in_array($kitFilter, $allowedKitCodes, true) || ($isSuperuser && ! $targetSchoolId)) {
+                $query->where('kit_code', $kitFilter);
+            } else {
+                // Cross-school IDOR attempt: kit code does not belong to authorized school
+                $query->whereRaw('1 = 0');
+            }
         }
 
         $logs = $query->paginate(30)->withQueryString();
-        $devices = Device::orderBy('code')->get();
+
+        $statsBaseQuery = RawDataLog::query()
+            ->when($targetSchoolId, function ($q) use ($targetSchoolId) {
+                $q->whereHas('device', fn ($dq) => $dq->where('school_id', $targetSchoolId));
+            });
 
         $stats = [
-            'total' => RawDataLog::count(),
-            'errors' => RawDataLog::where('level', 'ERROR')->count(),
-            'warnings' => RawDataLog::where('level', 'WARN')->count(),
-            'info' => RawDataLog::where('level', 'INFO')->count(),
+            'total' => (clone $statsBaseQuery)->count(),
+            'errors' => (clone $statsBaseQuery)->where('level', 'ERROR')->count(),
+            'warnings' => (clone $statsBaseQuery)->where('level', 'WARN')->count(),
+            'info' => (clone $statsBaseQuery)->where('level', 'INFO')->count(),
         ];
 
         return view('pages.rawlogs.index', [
             'logs' => $logs,
             'devices' => $devices,
+            'schools' => $schools,
+            'selectedSchoolId' => $targetSchoolId,
+            'isSuperuser' => $isSuperuser,
             'stats' => $stats,
             'currentLevel' => $levelFilter,
             'currentKit' => $kitFilter,
@@ -60,21 +110,28 @@ class RawLogsDebuggerController extends Controller
         ]);
 
         $device = Device::where('code', $validated['kit_code'])->first();
+        if (! $device) {
+            return redirect()->route('rawlogs.index')
+                ->with('error', 'Perangkat kit dengan kode tersebut tidak ditemukan.');
+        }
 
         RawDataLog::create([
-            'device_id' => $device?->id,
-            'kit_code' => $validated['kit_code'],
+            'device_id' => $device->id,
+            'kit_code' => $device->code,
             'packet_hex' => strtoupper(str_replace(' ', '', $validated['packet_hex'])),
             'protocol' => 'Modbus RS485 RTU',
             'level' => $validated['level'],
             'parsed_payload' => [
+                'source' => 'manual_injection',
                 'injected_manually' => true,
+                'is_simulated' => true,
+                'hardware_io_disclaimer' => 'Simulasi frame diagnostik laboratorium tanpa transmisi aktuasi fisik.',
                 'timestamp' => now()->toIso8601String(),
             ],
             'recorded_at' => now(),
         ]);
 
         return redirect()->route('rawlogs.index')
-            ->with('success', 'Frame Modbus RS485 berhasil disuntikkan ke stream debugger.');
+            ->with('success', 'Frame Modbus RS485 simulasi berhasil disuntikkan ke stream debugger.');
     }
 }

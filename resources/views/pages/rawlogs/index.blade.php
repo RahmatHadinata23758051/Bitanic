@@ -20,10 +20,10 @@
             </p>
         </div>
 
-        <!-- Connection Status -->
-        <div class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono text-emerald-400 shrink-0">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>COM Port Stream Terhubung</span>
+        <!-- Connection Status & Honest Provenance Indicator -->
+        <div class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300 shrink-0">
+            <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+            <span>Ingress Debugger Stream (Modbus RS485)</span>
         </div>
     </div>
 
@@ -72,24 +72,42 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h3 class="text-sm font-bold text-slate-900">Log Debug Serial Port</h3>
-                <p class="text-xs text-slate-500">Stream byte mentah dari gateway Modbus RTU mikrokontroler ESP32</p>
+                <p class="text-xs text-slate-500">Record diagnostik logger; tampilan ini tidak mengindikasikan koneksi COM atau aktuasi perangkat aktif.</p>
             </div>
 
             <!-- Filter Form -->
-            <form method="GET" action="{{ url('/raw-logs') }}" class="flex flex-wrap items-center gap-2">
-                <select name="kit_code" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="">Semua Kit</option>
-                    @foreach($devices as $dev)
-                        <option value="{{ $dev->code }}" {{ $currentKit === $dev->code ? 'selected' : '' }}>{{ $dev->code }}</option>
-                    @endforeach
-                </select>
-                <select name="level" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="">Semua Level</option>
-                    <option value="INFO" {{ $currentLevel === 'INFO' ? 'selected' : '' }}>INFO</option>
-                    <option value="WARN" {{ $currentLevel === 'WARN' ? 'selected' : '' }}>WARN</option>
-                    <option value="ERROR" {{ $currentLevel === 'ERROR' ? 'selected' : '' }}>ERROR</option>
-                </select>
-            </form>
+            <div class="flex flex-wrap items-center gap-2">
+                @if(!empty($isSuperuser) && $schools->isNotEmpty())
+                    <form method="GET" action="{{ url('/raw-logs') }}" class="flex items-center gap-2">
+                        <label for="school_id" class="text-xs font-semibold text-slate-600">Sekolah:</label>
+                        <select id="school_id" name="school_id" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Semua Sekolah</option>
+                            @foreach($schools as $school)
+                                <option value="{{ $school->id }}" {{ (string) $selectedSchoolId === (string) $school->id ? 'selected' : '' }}>{{ $school->name }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endif
+                <form method="GET" action="{{ url('/raw-logs') }}" class="flex flex-wrap items-center gap-2">
+                    @if(!empty($selectedSchoolId))
+                        <input type="hidden" name="school_id" value="{{ $selectedSchoolId }}">
+                    @endif
+                    <label for="kit_code" class="sr-only">Filter kit</label>
+                    <select id="kit_code" name="kit_code" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Semua Kit</option>
+                        @foreach($devices as $dev)
+                            <option value="{{ $dev->code }}" {{ $currentKit === $dev->code ? 'selected' : '' }}>{{ $dev->code }}</option>
+                        @endforeach
+                    </select>
+                    <label for="level" class="sr-only">Filter level</label>
+                    <select id="level" name="level" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Semua Level</option>
+                        <option value="INFO" {{ $currentLevel === 'INFO' ? 'selected' : '' }}>INFO</option>
+                        <option value="WARN" {{ $currentLevel === 'WARN' ? 'selected' : '' }}>WARN</option>
+                        <option value="ERROR" {{ $currentLevel === 'ERROR' ? 'selected' : '' }}>ERROR</option>
+                    </select>
+                </form>
+            </div>
         </div>
 
         <div class="overflow-x-auto rounded-lg border border-slate-800 bg-slate-950">
@@ -100,6 +118,7 @@
                         <th class="py-2.5 px-4">Level</th>
                         <th class="py-2.5 px-4">Kit ID</th>
                         <th class="py-2.5 px-4">Protocol</th>
+                        <th class="py-2.5 px-4">Sumber Provenance</th>
                         <th class="py-2.5 px-4">Hex Stream Payload</th>
                         <th class="py-2.5 px-4 text-right">Parsed Sensor Data</th>
                     </tr>
@@ -116,6 +135,21 @@
                             </td>
                             <td class="py-2.5 px-4 font-bold text-indigo-300">{{ $log->kit_code ?? $log->device?->code ?? '-' }}</td>
                             <td class="py-2.5 px-4 text-slate-500">{{ $log->protocol ?? 'Modbus RTU' }}</td>
+                            <td class="py-2.5 px-4">
+                                @if(!empty($payload['injected_manually']))
+                                    <span class="px-2 py-0.5 rounded text-[10px] bg-amber-950/80 text-amber-300 border border-amber-800 font-bold">
+                                        Simulasi Injeksi
+                                    </span>
+                                @elseif(($payload['source'] ?? '') === 'sensor_gateway')
+                                    <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-bold">
+                                        Gateway Sensor
+                                    </span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700 font-bold">
+                                        Serial Ingress
+                                    </span>
+                                @endif
+                            </td>
                             <td class="py-2.5 px-4 text-amber-300 tracking-widest">{{ $log->packet_hex ?? '-' }}</td>
                             <td class="py-2.5 px-4 text-right text-[10px]">
                                 @if(!empty($payload))
@@ -127,8 +161,8 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-8 text-center text-slate-600 italic">
-                                Belum ada data serial. Stream akan muncul setelah Trainer Kit mengirimkan frame Modbus.
+                            <td colspan="7" class="py-8 text-center text-slate-500 italic text-xs">
+                                Belum ada catatan frame serial untuk sekolah atau stasiun meja ini.
                             </td>
                         </tr>
                     @endforelse
