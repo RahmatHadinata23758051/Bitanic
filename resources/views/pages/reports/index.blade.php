@@ -9,6 +9,10 @@
                 <span class="px-2.5 py-0.5 rounded-md text-xs font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
                     LAPORAN PRAKTIKUM
                 </span>
+                @if($isSuperuser && $selectedSchoolId)
+                    <span class="text-xs text-slate-400">•</span>
+                    <span class="text-xs font-semibold text-slate-600">{{ $schools->firstWhere('id', (int) $selectedSchoolId)?->name ?? 'Sekolah tidak aktif atau tidak ditemukan' }}</span>
+                @endif
                 <span class="text-xs text-slate-400">•</span>
                 <span class="text-xs font-semibold text-slate-600">Verifikasi LKS & Snapshot Sensor Meja</span>
             </div>
