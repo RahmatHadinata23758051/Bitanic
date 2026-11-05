@@ -7,6 +7,8 @@ use App\Http\Controllers\Academic\ModulePracticumController;
 use App\Http\Controllers\Academic\PracticumReportController;
 use App\Http\Controllers\Academic\UserDirectoryController;
 use App\Http\Controllers\Agronomy\AnalyticsController;
+use App\Http\Controllers\Admin\SettingsAuditController;
+use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\Agronomy\PlantingMediaController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\FirstPasswordChangeController;
@@ -15,10 +17,8 @@ use App\Http\Controllers\IoT\IotMonitoringController;
 use App\Http\Controllers\IoT\RawLogsDebuggerController;
 use App\Http\Controllers\IoT\TelemetryHistoryController;
 use App\Http\Controllers\IoT\TrainerKitManagerController;
-use App\Http\Controllers\SettingsAuditController;
 // LEGACY-01: SubscriptionCheckoutController import disabled — routes retired (BR-504)
 // use App\Http\Controllers\SubscriptionCheckoutController;
-use App\Http\Controllers\UserImportController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication portal

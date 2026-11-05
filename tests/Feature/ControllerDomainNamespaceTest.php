@@ -17,9 +17,11 @@ use App\Http\Controllers\ModulePracticumController;
 use App\Http\Controllers\PlantingMediaController;
 use App\Http\Controllers\PracticumReportController;
 use App\Http\Controllers\RawLogsDebuggerController;
+use App\Http\Controllers\SettingsAuditController;
 use App\Http\Controllers\TelemetryHistoryController;
 use App\Http\Controllers\TrainerKitManagerController;
 use App\Http\Controllers\UserDirectoryController;
+use App\Http\Controllers\UserImportController;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -141,6 +143,37 @@ class ControllerDomainNamespaceTest extends TestCase
         $legacyControllers = [
             AnalyticsController::class => \App\Http\Controllers\Agronomy\AnalyticsController::class,
             PlantingMediaController::class => \App\Http\Controllers\Agronomy\PlantingMediaController::class,
+        ];
+
+        foreach ($legacyControllers as $legacyClass => $domainClass) {
+            $this->assertTrue(class_exists($domainClass), "Domain controller [{$domainClass}] must be autoloadable.");
+            $this->assertTrue(class_exists($legacyClass), "Legacy controller [{$legacyClass}] must remain autoloadable.");
+            $this->assertTrue(is_subclass_of($legacyClass, $domainClass), "Legacy controller [{$legacyClass}] must extend the domain controller.");
+        }
+    }
+
+    public function test_admin_routes_keep_their_names_and_use_domain_controllers(): void
+    {
+        $expectedRoutes = [
+            'settings.index' => \App\Http\Controllers\Admin\SettingsAuditController::class,
+            'settings.update' => \App\Http\Controllers\Admin\SettingsAuditController::class,
+            'users.import.preview' => \App\Http\Controllers\Admin\UserImportController::class,
+            'users.import.execute' => \App\Http\Controllers\Admin\UserImportController::class,
+        ];
+
+        foreach ($expectedRoutes as $routeName => $controllerClass) {
+            $route = Route::getRoutes()->getByName($routeName);
+
+            $this->assertNotNull($route, "Route [{$routeName}] must remain registered.");
+            $this->assertSame($controllerClass, $route->getControllerClass(), "Route [{$routeName}] must use its Admin domain controller.");
+        }
+    }
+
+    public function test_legacy_admin_controller_class_names_remain_compatible(): void
+    {
+        $legacyControllers = [
+            SettingsAuditController::class => \App\Http\Controllers\Admin\SettingsAuditController::class,
+            UserImportController::class => \App\Http\Controllers\Admin\UserImportController::class,
         ];
 
         foreach ($legacyControllers as $legacyClass => $domainClass) {
