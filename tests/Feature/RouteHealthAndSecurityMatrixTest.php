@@ -46,6 +46,13 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
             'school_id' => $this->school->id,
             'name' => 'Superuser Matrix',
         ]);
+
+        \App\Models\Device::create([
+            'school_id' => $this->school->id,
+            'code' => 'TK-MATRIX-01',
+            'name' => 'Meja Matrix 01',
+            'is_active' => true,
+        ]);
     }
 
     public function test_guest_public_routes_return_ok(): void
@@ -96,6 +103,11 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
         $this->actingAs($this->student)->get('/users-data')->assertForbidden();
         $this->actingAs($this->student)->get('/classes')->assertForbidden();
         $this->actingAs($this->student)->get('/settings')->assertForbidden();
+        $this->actingAs($this->student)->post('/schedules', [])->assertForbidden();
+        $this->actingAs($this->student)->post('/trainer-kits/1/reboot')->assertForbidden();
+        $this->actingAs($this->student)->post('/settings/school', [])->assertForbidden();
+        $this->actingAs($this->student)->post('/raw-logs/inject', [])->assertForbidden();
+        $this->actingAs($this->student)->post('/trainer-kits/1/api-key/rotate')->assertForbidden();
     }
 
     public function test_teacher_role_authorization_matrix(): void
@@ -107,8 +119,11 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
         $this->actingAs($this->teacher)->get('/users-data')->assertOk();
         $this->actingAs($this->teacher)->get('/classes')->assertOk();
 
-        // Teachers are blocked from superuser settings
+        // Teachers are blocked from superuser-only mutation endpoints
         $this->actingAs($this->teacher)->get('/settings')->assertForbidden();
+        $this->actingAs($this->teacher)->post('/settings/school', [])->assertForbidden();
+        $this->actingAs($this->teacher)->post('/raw-logs/inject', [])->assertForbidden();
+        $this->actingAs($this->teacher)->post('/trainer-kits/1/api-key/rotate')->assertForbidden();
     }
 
     public function test_superuser_role_authorization_matrix(): void
