@@ -7,6 +7,7 @@ use App\Models\School;
 use App\Models\SchoolSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
@@ -103,6 +104,28 @@ class SchoolSettingsAndAuditTrailTest extends TestCase
         $this->actingAs($superuser)
             ->post(route('settings.update'), $this->validSettingsPayload())
             ->assertStatus(403);
+    }
+
+    public function test_user_with_inactive_school_is_denied_settings_access(): void
+    {
+        $school = School::create([
+            'npsn' => '20208999',
+            'name' => 'SMK Nonaktif',
+            'slug' => 'smk-nonaktif-settings',
+            'status' => 'inactive',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'school_id' => $school->id]);
+
+        $this->actingAs($admin)
+            ->get(route('settings.index'))
+            ->assertStatus(403);
+
+        $this->actingAs($admin)
+            ->post(route('settings.update'), $this->validSettingsPayload())
+            ->assertStatus(403);
+
+        $this->assertDatabaseCount('school_settings', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
     }
 
     public function test_admin_cannot_view_or_update_another_schools_settings(): void
@@ -420,6 +443,47 @@ class SchoolSettingsAndAuditTrailTest extends TestCase
         ]));
 
         $this->assertDatabaseCount('audit_logs', 2);
+    }
+
+    public function test_transaction_rolls_back_school_settings_mutation_if_audit_logging_fails(): void
+    {
+        $school = $this->makeSchool();
+        $admin = User::factory()->create(['role' => 'admin', 'school_id' => $school->id]);
+
+        $setting = SchoolSetting::create([
+            'school_id' => $school->id,
+            'school_name' => 'Nama Sebelum Rollback',
+            'academic_year' => '2026/2027',
+            'semester' => 'Ganjil',
+            'course_name' => 'ATPH',
+            'lead_teacher' => 'Guru Asli',
+            'sensor_thresholds' => $this->validThresholds(),
+        ]);
+
+        // Install a temporary SQLite trigger to make INSERT on audit_logs fail with an exception
+        DB::unprepared("CREATE TRIGGER trg_test_force_audit_failure BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT, 'Simulasi kegagalan audit'); END;");
+
+        try {
+            $this->withoutExceptionHandling()
+                ->actingAs($admin)
+                ->post(route('settings.update'), $this->validSettingsPayload([
+                    'school_name' => 'Nama Yang Harus Di-Rollback',
+                ]));
+            $this->fail('Expected QueryException was not thrown.');
+        } catch (QueryException $e) {
+            $this->assertStringContainsString('Simulasi kegagalan audit', $e->getMessage());
+        } finally {
+            DB::unprepared('DROP TRIGGER IF EXISTS trg_test_force_audit_failure;');
+        }
+
+        // Verify the setting rolled back to original values due to DB::transaction()
+        $setting->refresh();
+        $this->assertEquals('Nama Sebelum Rollback', $setting->school_name);
+        $this->assertDatabaseMissing('school_settings', [
+            'school_id' => $school->id,
+            'school_name' => 'Nama Yang Harus Di-Rollback',
+        ]);
+        $this->assertDatabaseCount('audit_logs', 0);
     }
 
     public function test_validation_failure_does_not_create_orphan_audit_log(): void
