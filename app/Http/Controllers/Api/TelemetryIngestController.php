@@ -16,7 +16,9 @@ class TelemetryIngestController extends Controller
             'soilrs485' => 'required|array',
             'soilrs485.Nitrogen' => 'nullable|numeric',
             'soilrs485.Phosporus' => 'nullable|numeric',
+            'soilrs485.Phosphorus' => 'nullable|numeric',
             'soilrs485.Kalium' => 'nullable|numeric',
+            'soilrs485.Potassium' => 'nullable|numeric',
             'soilrs485.Ec' => 'nullable|numeric',
             'soilrs485.Ph' => 'nullable|numeric',
             'soilrs485.Temperature' => 'nullable|numeric',
@@ -38,11 +40,11 @@ class TelemetryIngestController extends Controller
         }
 
         // Fallback jika device_id dikirim di body dan cocok (hanya jika device attribute belum di-set)
-        if (!$device && $request->filled('device_id')) {
+        if (! $device && $request->filled('device_id')) {
             $device = Device::where('code', $request->device_id)->orWhere('id', $request->device_id)->first();
         }
 
-        if (!$device) {
+        if (! $device) {
             return response()->json([
                 'success' => false,
                 'message' => 'Target device could not be identified.',
@@ -50,6 +52,8 @@ class TelemetryIngestController extends Controller
         }
 
         $reading = $action->execute($device, $request->all(), provenance: 'hardware');
+
+        $formatReading = static fn ($val): ?float => $val !== null ? (float) $val : null;
 
         return response()->json([
             'success' => true,
@@ -59,13 +63,13 @@ class TelemetryIngestController extends Controller
                 'device_code' => $device->code,
                 'recorded_at' => $reading->recorded_at->toIso8601String(),
                 'readings' => [
-                    'nitrogen' => (float) $reading->nitrogen,
-                    'phosphorus' => (float) $reading->phosphorus,
-                    'potassium' => (float) $reading->potassium,
-                    'ec' => (float) $reading->ec,
-                    'ph' => (float) $reading->ph,
-                    'temperature' => (float) $reading->temperature,
-                    'humidity' => (float) $reading->humidity,
+                    'nitrogen' => $formatReading($reading->nitrogen),
+                    'phosphorus' => $formatReading($reading->phosphorus),
+                    'potassium' => $formatReading($reading->potassium),
+                    'ec' => $formatReading($reading->ec),
+                    'ph' => $formatReading($reading->ph),
+                    'temperature' => $formatReading($reading->temperature),
+                    'humidity' => $formatReading($reading->humidity),
                 ],
                 'threshold_flags' => $reading->threshold_flags,
             ],

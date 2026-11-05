@@ -16,6 +16,7 @@ class TelemetryIngestTest extends TestCase
     use RefreshDatabase;
 
     protected Device $device;
+
     protected string $rawKey = 'test-secret-device-key-999';
 
     protected function setUp(): void
@@ -78,6 +79,15 @@ class TelemetryIngestTest extends TestCase
                 'success' => true,
                 'message' => 'Telemetry reading successfully ingested and evaluated.',
             ]);
+
+        $jsonReadings = $response->json('data.readings');
+        $this->assertEquals(45.5, $jsonReadings['nitrogen']);
+        $this->assertEquals(32.0, $jsonReadings['phosphorus']);
+        $this->assertEquals(110.2, $jsonReadings['potassium']);
+        $this->assertEquals(450.0, $jsonReadings['ec']);
+        $this->assertEquals(5.2, $jsonReadings['ph']);
+        $this->assertEquals(34.5, $jsonReadings['temperature']);
+        $this->assertEquals(78.4, $jsonReadings['humidity']);
 
         // Verifikasi latensi di bawah 100ms
         $this->assertLessThan(1000, $executionTimeMs);
@@ -176,5 +186,102 @@ class TelemetryIngestTest extends TestCase
         $this->assertEquals(1050, (float) $reading->ec);
         $this->assertEquals(0.45, (float) $reading->applied_offsets['ph']);
         $this->assertEquals(-1.2, (float) $reading->applied_offsets['temperature']);
+    }
+
+    public function test_partial_payload_preserves_null_in_json_response_and_does_not_convert_to_zero(): void
+    {
+        $payload = [
+            'device_id' => 'BTLP-TEST-STATION',
+            'soilrs485' => [
+                'Ph' => 6.8,
+                'Temperature' => 27.5,
+                // Nitrogen, Phosporus, Kalium, Ec, Humidity are absent/unmeasured
+            ],
+        ];
+
+        $response = $this->withHeaders([
+            'X-Device-Key' => $this->rawKey,
+        ])->postJson('/api/v1/telemetry/ingest', $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.readings.ph', 6.8)
+            ->assertJsonPath('data.readings.temperature', 27.5)
+            ->assertJsonPath('data.readings.nitrogen', null)
+            ->assertJsonPath('data.readings.phosphorus', null)
+            ->assertJsonPath('data.readings.potassium', null)
+            ->assertJsonPath('data.readings.ec', null)
+            ->assertJsonPath('data.readings.humidity', null);
+
+        $reading = TelemetryReading::latest('id')->first();
+        $this->assertEquals(6.8, (float) $reading->ph);
+        $this->assertEquals(27.5, (float) $reading->temperature);
+        $this->assertNull($reading->nitrogen);
+        $this->assertNull($reading->phosphorus);
+        $this->assertNull($reading->potassium);
+        $this->assertNull($reading->ec);
+        $this->assertNull($reading->humidity);
+    }
+
+    public function test_genuine_zero_readings_are_preserved_as_numeric_zero_not_null(): void
+    {
+        $payload = [
+            'device_id' => 'BTLP-TEST-STATION',
+            'soilrs485' => [
+                'Nitrogen' => 0.0,
+                'Phosporus' => 0,
+                'Kalium' => 0.0,
+                'Ec' => 0,
+                'Ph' => 7.0,
+                'Temperature' => 25.0,
+                'Humidity' => 50.0,
+            ],
+        ];
+
+        $response = $this->withHeaders([
+            'X-Device-Key' => $this->rawKey,
+        ])->postJson('/api/v1/telemetry/ingest', $payload);
+
+        $response->assertStatus(201);
+        $jsonReadings = $response->json('data.readings');
+        $this->assertSame(0, $jsonReadings['nitrogen']);
+        $this->assertSame(0, $jsonReadings['phosphorus']);
+        $this->assertSame(0, $jsonReadings['potassium']);
+        $this->assertSame(0, $jsonReadings['ec']);
+        $this->assertSame(7, $jsonReadings['ph']);
+
+        $reading = TelemetryReading::latest('id')->first();
+        $this->assertSame(0.0, (float) $reading->nitrogen);
+        $this->assertSame(0.0, (float) $reading->phosphorus);
+        $this->assertSame(0.0, (float) $reading->potassium);
+        $this->assertSame(0.0, (float) $reading->ec);
+    }
+
+    public function test_payload_accepts_standard_and_legacy_parameter_aliases(): void
+    {
+        $payload = [
+            'device_id' => 'BTLP-TEST-STATION',
+            'soilrs485' => [
+                'Phosphorus' => 35.5,
+                'Potassium' => 125.0,
+                'Nitrogen' => 42.0,
+                'Ph' => 6.5,
+                'Temperature' => 24.0,
+                'Humidity' => 65.0,
+                'Ec' => 500,
+            ],
+        ];
+
+        $response = $this->withHeaders([
+            'X-Device-Key' => $this->rawKey,
+        ])->postJson('/api/v1/telemetry/ingest', $payload);
+
+        $response->assertStatus(201);
+        $jsonReadings = $response->json('data.readings');
+        $this->assertEquals(35.5, $jsonReadings['phosphorus']);
+        $this->assertEquals(125.0, $jsonReadings['potassium']);
+
+        $reading = TelemetryReading::latest('id')->first();
+        $this->assertEquals(35.5, (float) $reading->phosphorus);
+        $this->assertEquals(125.0, (float) $reading->potassium);
     }
 }
