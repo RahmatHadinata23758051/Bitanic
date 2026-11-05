@@ -121,4 +121,14 @@ class User extends Authenticatable
     {
         return $this->isSiswa();
     }
+
+    public function isTeacher(): bool
+    {
+        return $this->isGuru();
+    }
+
+    public function isStudent(): bool
+    {
+        return $this->isSiswa();
+    }
 }

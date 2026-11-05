@@ -9,6 +9,10 @@
                 <span class="px-2.5 py-0.5 rounded-md text-xs font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
                     RAPOR PRAKTIKUM
                 </span>
+                @if($isSuperuser && $selectedSchoolId)
+                    <span class="text-xs text-slate-400">•</span>
+                    <span class="text-xs font-semibold text-slate-600">{{ $schools->firstWhere('id', (int) $selectedSchoolId)?->name ?? 'Sekolah tidak aktif atau tidak ditemukan' }}</span>
+                @endif
                 <span class="text-xs text-slate-400">•</span>
                 <span class="text-xs font-semibold text-slate-600">Kurikulum Merdeka SMK Pertanian 4.0</span>
             </div>
@@ -21,6 +25,13 @@
         </div>
 
         <div class="flex items-center gap-3 shrink-0">
+            <a
+                href="{{ url('/assessment/export' . ($currentClass ? '?class=' . urlencode($currentClass) : '') . ($selectedSchoolId ? ($currentClass ? '&' : '?') . 'school_id=' . $selectedSchoolId : '')) }}"
+                class="px-4 py-2 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2 shadow-sm transition-colors"
+            >
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Ekspor CSV</span>
+            </a>
             <a
                 href="{{ url('/reports') }}"
                 class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-colors"
@@ -68,7 +79,22 @@
             </div>
 
             <!-- Class Filter -->
-            <form method="GET" action="{{ url('/assessment') }}" class="flex items-center gap-2">
+            <form method="GET" action="{{ url('/assessment') }}" class="flex flex-wrap items-center gap-2">
+                @if($isSuperuser)
+                    <label for="school_id" class="text-xs font-semibold text-slate-600">Sekolah:</label>
+                    <select
+                        id="school_id"
+                        name="school_id"
+                        onchange="this.form.submit()"
+                        class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                        <option value="">Semua Sekolah</option>
+                        @foreach($schools as $school)
+                            <option value="{{ $school->id }}" {{ (string) $selectedSchoolId === (string) $school->id ? 'selected' : '' }}>{{ $school->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                <input type="hidden" name="class" value="{{ $currentClass }}">
                 <label for="class" class="text-xs font-semibold text-slate-600">Kelas:</label>
                 <select
                     id="class"

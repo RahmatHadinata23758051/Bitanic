@@ -77,7 +77,12 @@ Route::get('/reports', [PracticumReportController::class, 'index'])
     ->name('reports.index');
 
 // 8. Rapor Capaian Kompetensi Siswa SMK ATPH
-Route::get('/assessment', [CompetencyAssessmentController::class, 'index'])->name('assessment.index');
+Route::get('/assessment', [CompetencyAssessmentController::class, 'index'])
+    ->middleware('auth')
+    ->name('assessment.index');
+Route::get('/assessment/export', [CompetencyAssessmentController::class, 'exportCsv'])
+    ->middleware('auth')
+    ->name('assessment.export');
 
 // 9. Direktori Akademik Siswa & Guru Pembimbing
 Route::get('/users-data', [UserDirectoryController::class, 'index'])
