@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use Database\Seeders\SubscriptionPlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class MidtransSandboxEndToEndTest extends TestCase
@@ -19,6 +20,11 @@ class MidtransSandboxEndToEndTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        if (!Route::has('subscription.index') || !Route::has('subscription.checkout')) {
+            $this->markTestSkipped('Legacy SaaS subscription routes are disabled under LEGACY-01.');
+        }
+
         config(['midtrans.server_key' => $this->serverKey]);
         $this->seed(SubscriptionPlanSeeder::class);
     }

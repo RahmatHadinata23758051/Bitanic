@@ -13,7 +13,8 @@ use App\Http\Controllers\PlantingMediaController;
 use App\Http\Controllers\PracticumReportController;
 use App\Http\Controllers\RawLogsDebuggerController;
 use App\Http\Controllers\SettingsAuditController;
-use App\Http\Controllers\SubscriptionCheckoutController;
+// LEGACY-01: SubscriptionCheckoutController import disabled — routes retired (BR-504)
+// use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TelemetryHistoryController;
 use App\Http\Controllers\TrainerKitManagerController;
 use App\Http\Controllers\UserDirectoryController;
@@ -126,6 +127,7 @@ Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool']
 // Manajemen Media Tanam (Null-Safe)
 Route::resource('media', PlantingMediaController::class);
 
-// Paket Langganan & Midtrans Snap Checkout (Legacy SaaS Module)
-Route::get('/subscription', [SubscriptionCheckoutController::class, 'index'])->name('subscription.index');
-Route::post('/subscription/checkout', [SubscriptionCheckoutController::class, 'checkout'])->name('subscription.checkout');
+// LEGACY-01: Retired SaaS module — routes disabled, historic data preserved.
+// Route::get('/subscription', [SubscriptionCheckoutController::class, 'index'])->name('subscription.index');
+// Route::post('/subscription/checkout', [SubscriptionCheckoutController::class, 'checkout'])->name('subscription.checkout');
+// Midtrans webhook callbacks in routes/api.php remain available to reconcile in-flight payments.
