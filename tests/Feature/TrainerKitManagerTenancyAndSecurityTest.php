@@ -71,6 +71,7 @@ class TrainerKitManagerTenancyAndSecurityTest extends TestCase
         $this->deviceA = Device::create([
             'school_id' => $this->schoolA->id,
             'code' => 'TK-FLEET-A1',
+            'connection_config' => ['password' => 'private-network-secret', 'ssid' => 'private-lab'],
             'name' => 'Trainer Kit Lab A1',
             'ip_address' => '10.14.0.21',
             'mac_address' => '02:00:00:00:00:21',
@@ -219,11 +220,15 @@ class TrainerKitManagerTenancyAndSecurityTest extends TestCase
         $this->assertNull($guestKit->ip_address);
         $this->assertNull($guestKit->mac_address);
         $this->assertNull($guestKit->firmware_version);
+        $this->assertNull($guestKit->connection_config);
         $this->assertFalse($guestKit->relationLoaded('activeApiKey'));
+        $this->assertFalse($guestKit->relationLoaded('apiKeys'));
         $guestKitJson = $guestKit->toJson();
         $this->assertStringNotContainsString('ip_address', $guestKitJson);
         $this->assertStringNotContainsString('mac_address', $guestKitJson);
         $this->assertStringNotContainsString('firmware_version', $guestKitJson);
+        $this->assertStringNotContainsString('connection_config', $guestKitJson);
+        $this->assertStringNotContainsString('private-network-secret', $guestKitJson);
         $this->assertStringNotContainsString('activeApiKey', $guestKitJson);
 
         // 2. Student access
@@ -240,11 +245,15 @@ class TrainerKitManagerTenancyAndSecurityTest extends TestCase
         $this->assertNull($studentKit->ip_address);
         $this->assertNull($studentKit->mac_address);
         $this->assertNull($studentKit->firmware_version);
+        $this->assertNull($studentKit->connection_config);
         $this->assertFalse($studentKit->relationLoaded('activeApiKey'));
+        $this->assertFalse($studentKit->relationLoaded('apiKeys'));
         $studentKitJson = $studentKit->toJson();
         $this->assertStringNotContainsString('ip_address', $studentKitJson);
         $this->assertStringNotContainsString('mac_address', $studentKitJson);
         $this->assertStringNotContainsString('firmware_version', $studentKitJson);
+        $this->assertStringNotContainsString('connection_config', $studentKitJson);
+        $this->assertStringNotContainsString('private-network-secret', $studentKitJson);
         $this->assertStringNotContainsString('activeApiKey', $studentKitJson);
 
         // 3. Teacher access
@@ -254,6 +263,9 @@ class TrainerKitManagerTenancyAndSecurityTest extends TestCase
         $teacherResponse->assertSee('02:00:00:00:00:21');
         $teacherResponse->assertSee('ESP32-PRIVATE-2.4');
         $teacherResponse->assertSee($activeKeyPrefix);
+        $teacherKit = $teacherResponse->viewData('kits')->first();
+        $this->assertNotNull($teacherKit->connection_config);
+        $this->assertEquals('private-network-secret', $teacherKit->connection_config['password']);
 
         // 4. Superuser access
         $superuserResponse = $this->actingAs($this->superuser)->get(route('kits.index'));
@@ -391,22 +403,21 @@ class TrainerKitManagerTenancyAndSecurityTest extends TestCase
         $profilesCount = SensorCalibrationProfile::where('device_id', $this->deviceA->id)->count();
         $this->assertSame(3, $profilesCount);
 
-        // 2. Injected failure case: partial failure rolls back everything
+        // 2. Injected failure case: partial real execution rolls back everything
+        $realAction = app(CreateSensorCalibrationProfileAction::class);
         $mockAction = $this->mock(CreateSensorCalibrationProfileAction::class);
         $mockAction->shouldReceive('execute')
-            ->once()
-            ->withArgs(fn ($device, $sensorModel, $param) => $param === 'ph')
-            ->andReturn(new SensorCalibrationProfile);
+            ->andReturnUsing(function (...$args) use ($realAction) {
+                $parameter = $args[2] ?? null;
+                if ($parameter === 'ec') {
+                    throw new \RuntimeException('Injected Modbus validation failure on EC parameter');
+                }
 
-        $mockAction->shouldReceive('execute')
-            ->once()
-            ->withArgs(fn ($device, $sensorModel, $param) => $param === 'humidity')
-            ->andReturn(new SensorCalibrationProfile);
+                return $realAction->execute(...$args);
+            });
 
-        $mockAction->shouldReceive('execute')
-            ->once()
-            ->withArgs(fn ($device, $sensorModel, $param) => $param === 'ec')
-            ->andThrow(new \RuntimeException('Injected Modbus validation failure on EC parameter'));
+        $initialProfilesCount = SensorCalibrationProfile::where('device_id', $this->deviceA->id)->count();
+        $initialAuditLogsCount = AuditLog::where('target_id', (string) $this->deviceA->id)->count();
 
         $failPayload = [
             'phOffset' => 0.9,
@@ -424,13 +435,27 @@ class TrainerKitManagerTenancyAndSecurityTest extends TestCase
         $this->assertEquals(0.4, $this->deviceA->calibration_offsets['ph']);
         $this->assertEquals(-1.8, $this->deviceA->calibration_offsets['humidity']);
         $this->assertEquals(75, $this->deviceA->calibration_offsets['ec']);
+
+        // Verify database rollback: no partial profiles or audit logs were persisted despite real execution of first two steps
+        $this->assertSame($initialProfilesCount, SensorCalibrationProfile::where('device_id', $this->deviceA->id)->count());
+        $this->assertSame($initialAuditLogsCount, AuditLog::where('target_id', (string) $this->deviceA->id)->count());
+        $this->assertDatabaseMissing('sensor_calibration_profiles', [
+            'device_id' => $this->deviceA->id,
+            'reason' => 'Kalibrasi yang gagal pada EC',
+        ]);
     }
 
     public function test_device_audit_trail_attribution_and_school_isolation(): void
     {
-        // Superuser rotates keys on deviceA (School A) and deviceB (School B)
+        $superuserB = User::factory()->create([
+            'role' => 'superuser',
+            'school_id' => $this->schoolB->id,
+            'name' => 'Superuser SMK B',
+        ]);
+
+        // Each superuser rotates keys for devices within their authorized school scope.
         $this->actingAs($this->superuser)->post(route('kits.api-key.rotate', $this->deviceA));
-        $this->actingAs($this->superuser)->post(route('kits.api-key.rotate', $this->deviceB));
+        $this->actingAs($superuserB)->post(route('kits.api-key.rotate', $this->deviceB));
 
         $logA = AuditLog::where('target_id', (string) $this->deviceA->id)
             ->where('action', 'Rotasi Kunci API Perangkat')
@@ -438,12 +463,24 @@ class TrainerKitManagerTenancyAndSecurityTest extends TestCase
         $this->assertNotNull($logA);
         $this->assertEquals($this->schoolA->id, $logA->school_id);
         $this->assertEquals(Device::class, $logA->target_type);
-        $this->assertArrayHasKey('new_prefix', $logA->diff);
+        $this->assertArrayHasKey('new_key_id', $logA->diff);
+        $this->assertArrayNotHasKey('new_prefix', $logA->diff);
+        $this->assertArrayNotHasKey('revoked_prefix', $logA->diff);
+        $this->assertStringNotContainsString($this->deviceA->activeApiKey->key_prefix, json_encode($logA->diff));
+        $this->assertStringNotContainsString($this->deviceA->activeApiKey->key_prefix, $logA->details);
+        $this->assertDatabaseHas('audit_logs', [
+            'target_id' => (string) $this->deviceA->id,
+            'action' => 'Rotasi Kunci API Perangkat',
+            'user_id' => $this->superuser->id,
+        ]);
 
         $logB = AuditLog::where('target_id', (string) $this->deviceB->id)
             ->where('action', 'Rotasi Kunci API Perangkat')
             ->first();
         $this->assertNotNull($logB);
+        $this->assertArrayHasKey('new_key_id', $logB->diff);
+        $this->assertArrayNotHasKey('new_prefix', $logB->diff);
+        $this->assertArrayNotHasKey('revoked_prefix', $logB->diff);
         $this->assertEquals($this->schoolB->id, $logB->school_id);
         $this->assertEquals(Device::class, $logB->target_type);
 
@@ -472,30 +509,30 @@ class TrainerKitManagerTenancyAndSecurityTest extends TestCase
         $log->delete();
     }
 
-    public function test_superuser_cross_school_mutation_policy(): void
+    public function test_superuser_mutations_are_scoped_to_their_school_without_explicit_cross_school_grant(): void
     {
-        // 1. Superuser mutating active device in School A is allowed
-        $resA = $this->actingAs($this->superuser)->post(route('kits.reboot', $this->deviceA));
-        $resA->assertRedirect(route('kits.index'));
-        $resA->assertSessionHas('warning');
+        // Superuser's assigned school defines mutation scope; broader monitoring does not grant cross-school mutation.
+        $this->actingAs($this->superuser)->post(route('kits.reboot', $this->deviceA))
+            ->assertRedirect(route('kits.index'))
+            ->assertSessionHas('warning');
 
-        // 2. Superuser mutating active device in School B is allowed
-        $resB = $this->actingAs($this->superuser)->post(route('kits.reboot', $this->deviceB));
-        $resB->assertRedirect(route('kits.index'));
-        $resB->assertSessionHas('warning');
-
-        // 3. Mark School B as inactive
-        $this->schoolB->update(['status' => 'inactive']);
-
-        // 4. Superuser is blocked (403) from mutating device in inactive School B
         $this->actingAs($this->superuser)->post(route('kits.reboot', $this->deviceB))->assertForbidden();
-
         $this->actingAs($this->superuser)->post(route('kits.calibration', $this->deviceB), [
             'phOffset' => 0.1,
             'moistureOffset' => 1.0,
             'ecOffset' => 10,
         ])->assertForbidden();
-
         $this->actingAs($this->superuser)->post(route('kits.api-key.rotate', $this->deviceB))->assertForbidden();
+
+        $this->assertDatabaseMissing('audit_logs', [
+            'target_id' => (string) $this->deviceB->id,
+            'action' => 'Simulasi Soft-Reboot (Transport Hardware Belum Tersedia)',
+        ]);
+        $this->assertSame(1, DeviceApiKey::query()->where('device_id', $this->deviceB->id)->whereNull('revoked_at')->count());
+
+        // Inactive target schools reject even explicitly assigned actors.
+        $schoolBAdmin = User::factory()->create(['role' => 'superuser', 'school_id' => $this->schoolB->id]);
+        $this->schoolB->update(['status' => 'inactive']);
+        $this->actingAs($schoolBAdmin)->post(route('kits.reboot', $this->deviceB))->assertForbidden();
     }
 }

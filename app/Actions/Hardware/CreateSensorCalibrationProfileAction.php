@@ -37,10 +37,11 @@ class CreateSensorCalibrationProfileAction
             throw new InvalidArgumentException('Kalibrasi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
         }
 
-        if ($user && ! $user->isSuperuser()) {
-            if (! $user->school_id || (int) $device->school_id !== (int) $user->school_id) {
-                throw new InvalidArgumentException('Pengguna tidak memiliki wewenang untuk mengkalibrasi perangkat sekolah lain.');
-            }
+        if (! $user || ! $user->school_id || (int) $device->school_id !== (int) $user->school_id) {
+            throw new InvalidArgumentException('Pengguna tidak memiliki wewenang untuk mengkalibrasi perangkat sekolah lain.');
+        }
+        if (! $user->school || $user->school->status !== 'active') {
+            throw new InvalidArgumentException('Kalibrasi ditolak: sekolah pengguna tidak aktif atau belum terdaftar.');
         }
 
         if (trim($reason) === '') {

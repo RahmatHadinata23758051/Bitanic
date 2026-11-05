@@ -65,8 +65,10 @@ class TrainerKitManagerController extends Controller
                 $kit->ip_address = null;
                 $kit->mac_address = null;
                 $kit->firmware_version = null;
+                $kit->connection_config = null;
                 $kit->unsetRelation('activeApiKey');
-                $kit->makeHidden(['ip_address', 'mac_address', 'firmware_version', 'activeApiKey']);
+                $kit->unsetRelation('apiKeys');
+                $kit->makeHidden(['ip_address', 'mac_address', 'firmware_version', 'connection_config', 'activeApiKey', 'apiKeys']);
             });
         }
 
@@ -102,10 +104,10 @@ class TrainerKitManagerController extends Controller
             abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
         }
 
-        if ($user && ! $user->isSuperuser()) {
-            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403, 'Akses ditolak: Anda tidak memiliki wewenang untuk perangkat sekolah lain.');
-            abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+        if (! $user || ! $user->school_id || (int) $device->school_id !== (int) $user->school_id) {
+            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk memutasi perangkat sekolah lain.');
         }
+        abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
 
         // No command transport or physical ACK is currently implemented.
         // Record the simulated operation, but never claim the device rebooted or changed its heartbeat/status.
@@ -121,6 +123,7 @@ class TrainerKitManagerController extends Controller
                 'operation' => 'simulated_soft_reboot',
                 'hardware_transport' => 'unavailable',
                 'device_status_mutated' => false,
+                'is_cross_school' => $user && $user->school_id && (int) $user->school_id !== (int) $device->school_id,
             ],
             'details' => 'Simulasi permintaan reboot untuk '.$device->code.' dicatat: perintah fisik tidak dikirim karena transport hardware/ACK belum tersedia.',
             'ip_address' => $request->ip() ?? '127.0.0.1',
@@ -146,10 +149,10 @@ class TrainerKitManagerController extends Controller
             abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
         }
 
-        if ($user && ! $user->isSuperuser()) {
-            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403, 'Akses ditolak: Anda tidak memiliki wewenang untuk perangkat sekolah lain.');
-            abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+        if (! $user || ! $user->school_id || (int) $device->school_id !== (int) $user->school_id) {
+            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk memutasi perangkat sekolah lain.');
         }
+        abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
 
         $validated = $request->validate([
             'phOffset' => 'required|numeric|between:-5,5',
@@ -202,8 +205,10 @@ class TrainerKitManagerController extends Controller
                 );
             });
         } catch (\Throwable $e) {
+            report($e);
+
             return redirect()->route('kits.index')
-                ->with('error', 'Gagal memperbarui kalibrasi multi-parameter: '.$e->getMessage());
+                ->with('error', 'Gagal memperbarui kalibrasi multi-parameter. Tidak ada perubahan yang disimpan; silakan periksa nilai dan coba lagi.');
         }
 
         return redirect()->route('kits.index')
@@ -223,10 +228,10 @@ class TrainerKitManagerController extends Controller
             abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
         }
 
-        if ($user && ! $user->isSuperuser()) {
-            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403, 'Akses ditolak: Anda tidak memiliki wewenang untuk perangkat sekolah lain.');
-            abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+        if (! $user || ! $user->school_id || (int) $device->school_id !== (int) $user->school_id) {
+            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk memutasi perangkat sekolah lain.');
         }
+        abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
 
         $rotation = DeviceApiKey::rotateForDevice($device, $request->user());
 
