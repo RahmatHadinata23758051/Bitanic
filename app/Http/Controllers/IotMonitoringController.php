@@ -18,19 +18,31 @@ class IotMonitoringController extends Controller
     public function index(Request $request, DeviceAvailabilityResolver $resolver): View
     {
         $deviceId = $request->query('device_id');
-        $schoolId = $request->user()?->school_id;
-        $isSuperuser = (bool) $request->user()?->isSuperuser();
+        $user = $request->user();
+        $schoolId = $user?->school_id;
+        $isSuperuser = (bool) $user?->isSuperuser();
 
-        if ($request->user() && ! $isSuperuser && ! $schoolId) {
-            abort(403, 'Akses monitoring memerlukan asosiasi sekolah yang valid.');
+        if ($user && ! $isSuperuser) {
+            if (! $schoolId) {
+                abort(403, 'Akses monitoring memerlukan asosiasi sekolah yang valid.');
+            }
+            $school = $user->school;
+            if (! $school || $school->status !== 'active') {
+                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+            }
         }
 
-        $targetSchoolId = $isSuperuser
-            ? null
-            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        $selectedSchoolId = $request->query('school_id');
+        if ($isSuperuser && $selectedSchoolId) {
+            $targetSchoolId = (int) $selectedSchoolId;
+        } else {
+            $targetSchoolId = $isSuperuser
+                ? null
+                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        }
 
         $query = Device::query()
-            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId));
+            ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId));
 
         $allRawDevices = (clone $query)->orderBy('code')->get();
         $allDevices = $resolver->applyToCollection($allRawDevices);

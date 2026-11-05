@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\School;
 use App\Models\StudentReport;
 use App\Models\TelemetryReading;
+use App\Models\UserProfile;
 use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,19 +21,32 @@ class DashboardController extends Controller
     public function index(Request $request, DeviceAvailabilityResolver $availability): View
     {
         $user = $request->user();
-        $isSuperuser = $user?->isSuperuser();
+        $isSuperuser = (bool) $user?->isSuperuser();
         $schoolId = $user?->school_id;
 
-        if ($user && ! $isSuperuser && ! $schoolId) {
-            abort(403, 'Akses Dasbor memerlukan asosiasi sekolah yang valid.');
+        if ($user && ! $isSuperuser) {
+            if (! $schoolId) {
+                abort(403, 'Akses Dasbor memerlukan asosiasi sekolah yang valid.');
+            }
+            $school = $user->school;
+            if (! $school || $school->status !== 'active') {
+                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+            }
         }
 
-        $targetSchoolId = $isSuperuser
-            ? null
-            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        $selectedSchoolId = $request->query('school_id');
+        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
+
+        if ($isSuperuser && $selectedSchoolId) {
+            $targetSchoolId = (int) $selectedSchoolId;
+        } else {
+            $targetSchoolId = $isSuperuser
+                ? null
+                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        }
 
         // 1. Hardware fleet overview scoped to school
-        $deviceQuery = Device::with('latestReading')
+        $deviceQuery = Device::with(['latestReading', 'school'])
             ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('code');
 
@@ -53,7 +67,7 @@ class DashboardController extends Controller
         }
 
         // 2. Practicum schedule for today & upcoming
-        $upcomingSchedules = ActivitySchedule::with('device')
+        $upcomingSchedules = ActivitySchedule::with(['device', 'classroom.homeroomTeacher', 'participants.user'])
             ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->where('activity_date', '>=', now()->toDateString())
             ->orderBy('activity_date')
@@ -61,67 +75,130 @@ class DashboardController extends Controller
             ->take(4)
             ->get();
 
-        $todaySchedule = $upcomingSchedules->firstWhere('activity_date', now()->toDateString())
+
+        $todaySchedule = $upcomingSchedules->first(fn ($s) => $s->activity_date && $s->activity_date->toDateString() === now()->toDateString())
             ?? $upcomingSchedules->first();
 
-        // 3. Pending student LKS reports count
-        $pendingReportsCount = StudentReport::where('status', 'submitted')
-            ->when($targetSchoolId, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('school_id', $targetSchoolId)))
-            ->count();
+        $isScheduleToday = $todaySchedule?->activity_date
+            ? $todaySchedule->activity_date->toDateString() === now()->toDateString()
+            : false;
 
-        // 4. Evaluate system-wide anomalies
+        // 3. Student reports count scoped by role
+        $isSiswa = (bool) $user?->isSiswa();
+        $pendingReportsCount = 0;
+        $studentOwnReportsCount = 0;
+        $studentReportsNeedingRevisionCount = 0;
+
+        if ($isSiswa) {
+            $studentOwnReportsCount = StudentReport::where('user_id', $user->id)
+                ->whereIn('status', ['submitted', 'graded', 'revision'])
+                ->count();
+            $studentReportsNeedingRevisionCount = StudentReport::where('user_id', $user->id)
+                ->where('status', 'revision')
+                ->count();
+        } else {
+            $pendingReportsCount = StudentReport::where('status', 'submitted')
+                ->when($targetSchoolId, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('school_id', $targetSchoolId)))
+                ->count();
+        }
+
+        // 4. Evaluate system-wide anomalies (gated to live/fresh telemetry only)
         $anomalies = [];
+        $affectedStationCodes = [];
+
         foreach ($devices as $dev) {
             $latest = $dev->latestReading;
-            if (!$latest) continue;
+            if (! $latest) {
+                continue;
+            }
 
-            if ($latest->ph < 5.5) {
+            $freshTimeout = $availability->getTimeoutSeconds($dev);
+            $isFresh = $latest->recorded_at && $latest->recorded_at->greaterThanOrEqualTo(now()->subSeconds($freshTimeout));
+            $isOnline = (bool) $dev->is_online;
+            $isHardware = (bool) $latest->isHardware();
+
+            // Only alert on live/fresh hardware telemetry to avoid false alarms from stale history or fixtures
+            if (! $isOnline || ! $isFresh || ! $isHardware) {
+                continue;
+            }
+
+            if ($latest->ph !== null && (float) $latest->ph < 5.5) {
                 $anomalies[] = [
                     'device' => $dev->code,
                     'bench' => $dev->bench_location ?? $dev->name,
                     'parameter' => 'pH Tanah',
-                    'value' => number_format((float)$latest->ph, 2),
+                    'value' => number_format((float) $latest->ph, 2),
                     'severity' => 'critical',
                     'message' => 'Kemasaman masam ekstrem (< 5.5). Risiko keracunan Al/Fe.',
                     'action' => 'Aplikasi dolomit/kapur pertanian 50g/m².',
+                    'recorded_at' => $latest->recorded_at,
+                    'provenance' => $latest->provenance,
                 ];
+                $affectedStationCodes[$dev->code] = true;
             }
-            if ($latest->humidity < 25.0) {
+            if ($latest->humidity !== null && (float) $latest->humidity < 25.0) {
                 $anomalies[] = [
                     'device' => $dev->code,
                     'bench' => $dev->bench_location ?? $dev->name,
                     'parameter' => 'Kadar Lengas',
-                    'value' => number_format((float)$latest->humidity, 1) . '%',
+                    'value' => number_format((float) $latest->humidity, 1) . '%',
                     'severity' => 'critical',
                     'message' => 'Tanah mendekati titik layu permanen (< 25%).',
                     'action' => 'Aktifkan pompa irigasi tetes.',
+                    'recorded_at' => $latest->recorded_at,
+                    'provenance' => $latest->provenance,
                 ];
+                $affectedStationCodes[$dev->code] = true;
             }
-            if ($latest->ec > 2200) {
+            if ($latest->ec !== null && (float) $latest->ec > 2200) {
                 $anomalies[] = [
                     'device' => $dev->code,
                     'bench' => $dev->bench_location ?? $dev->name,
                     'parameter' => 'EC Salinitas',
-                    'value' => number_format((float)$latest->ec, 0) . ' µS/cm',
+                    'value' => number_format((float) $latest->ec, 0) . ' µS/cm',
                     'severity' => 'warning',
                     'message' => 'Salinitas garam pupuk tinggi (> 2200 µS/cm).',
                     'action' => 'Lakukan pembilasan air murni (leaching).',
+                    'recorded_at' => $latest->recorded_at,
+                    'provenance' => $latest->provenance,
                 ];
+                $affectedStationCodes[$dev->code] = true;
             }
         }
+        $affectedStationsCount = count($affectedStationCodes);
 
-        $activeDevice = $devices->first();
+        // 5. PRD FR-002 Student Attendance Percentage
+        $avgAttendance = UserProfile::query()
+            ->whereHas('user', function ($q) use ($targetSchoolId) {
+                $q->where('role', 'siswa');
+                if ($targetSchoolId) {
+                    $q->where('school_id', $targetSchoolId);
+                }
+            })
+            ->whereNotNull('attendance_percent')
+            ->avg('attendance_percent');
+
+        $averageAttendance = $avgAttendance !== null ? round((float) $avgAttendance, 1) : null;
 
         return view('pages.dashboard.index', [
+            'user' => $user,
             'devices' => $devices,
-            'activeDevice' => $activeDevice,
+            'activeDevice' => $devices->first(),
             'onlineKitsCount' => $onlineKitsCount,
             'totalKitsCount' => $totalKitsCount,
             'todaySchedule' => $todaySchedule,
+            'isScheduleToday' => $isScheduleToday,
             'upcomingSchedules' => $upcomingSchedules,
             'pendingReportsCount' => $pendingReportsCount,
+            'studentOwnReportsCount' => $studentOwnReportsCount,
+            'studentReportsNeedingRevisionCount' => $studentReportsNeedingRevisionCount,
             'anomalies' => $anomalies,
+            'affectedStationsCount' => $affectedStationsCount,
             'criticalAlertsCount' => count($anomalies),
+            'averageAttendance' => $averageAttendance,
+            'isSuperuser' => $isSuperuser,
+            'schools' => $schools,
+            'selectedSchoolId' => $selectedSchoolId,
         ]);
     }
 }
