@@ -1,3 +1,7 @@
+{{-- @deprecated LEGACY-01 / BR-504 — Retired SaaS subscription pricing page.
+     Web routes to this view are disabled in routes/web.php.
+     Preserved intact for historic reference and potential re-activation.
+     Do NOT delete. --}}
 @extends('layouts.app')
 
 @section('content')

@@ -10,6 +10,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
+/**
+ * @deprecated LEGACY-01 / BR-504 — Legacy SaaS Midtrans Snap Transaction Action.
+ *
+ * Web checkout routes are disabled in routes/web.php. Preserved intact for historic
+ * transaction auditing and backward compatibility. Do NOT delete.
+ */
 class CreateMidtransSnapTransactionAction
 {
     /**

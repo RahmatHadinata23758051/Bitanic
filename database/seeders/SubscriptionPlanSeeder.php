@@ -5,6 +5,12 @@ namespace Database\Seeders;
 use App\Models\SubscriptionPlan;
 use Illuminate\Database\Seeder;
 
+/**
+ * @deprecated LEGACY-01 / BR-504 — Subscription plan seeder.
+ *
+ * Direct SaaS subscription checkout routes are retired. This seeder is retained
+ * to seed tier specifications used by tests, AI quota calculations, and historical data.
+ */
 class SubscriptionPlanSeeder extends Seeder
 {
     /**

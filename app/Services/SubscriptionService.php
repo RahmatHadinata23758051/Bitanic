@@ -6,6 +6,14 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * @deprecated LEGACY-01 / BR-504 — Subscription & AI Quota Service.
+ *
+ * Direct SaaS subscription checkout routes are retired. This service remains active
+ * as an internal entitlement bridge for AI Gemini crop recommendation quota checks
+ * (CropRecommendationController / GenerateCropRecommendationJob) and user quota display.
+ * Do NOT delete.
+ */
 class SubscriptionService
 {
     /**

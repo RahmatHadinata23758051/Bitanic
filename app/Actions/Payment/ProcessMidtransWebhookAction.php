@@ -8,6 +8,13 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @deprecated LEGACY-01 / BR-504 — Legacy Midtrans webhook reconciliation Action.
+ *
+ * Customer-facing checkout routes are disabled, but API callbacks are retained
+ * to reconcile in-flight payments. Preserve historic payment/subscription records.
+ * Do NOT delete or disable callback processing without a separate decision.
+ */
 class ProcessMidtransWebhookAction
 {
     /**

@@ -14,6 +14,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
+/**
+ * @deprecated LEGACY-01 / BR-504 — Retired SaaS subscription checkout controller.
+ *
+ * Web routes to this controller have been disabled. The controller, its actions,
+ * and all associated models/migrations/data are preserved intact for historic
+ * reference and potential future re-activation. Do NOT delete.
+ *
+ * @see routes/web.php — subscription routes commented out
+ * @see App\Actions\Payment\CreateMidtransSnapTransactionAction
+ * @see App\Services\SubscriptionService
+ */
 class SubscriptionCheckoutController extends Controller
 {
     /**
