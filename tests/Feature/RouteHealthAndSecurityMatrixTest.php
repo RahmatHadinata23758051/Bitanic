@@ -89,6 +89,8 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
             '/users-data',
             '/classes',
             '/settings',
+            '/media',
+            '/media/create',
         ];
 
         foreach ($protectedRoutes as $uri) {
@@ -108,6 +110,9 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
         $this->actingAs($this->student)->get('/users-data')->assertForbidden();
         $this->actingAs($this->student)->get('/classes')->assertForbidden();
         $this->actingAs($this->student)->get('/settings')->assertForbidden();
+        $this->actingAs($this->student)->get('/media')->assertForbidden();
+        $this->actingAs($this->student)->get('/media/create')->assertForbidden();
+        $this->actingAs($this->student)->post('/media', [])->assertForbidden();
         $this->actingAs($this->student)->post('/schedules', [])->assertForbidden();
         $this->actingAs($this->student)->post('/trainer-kits/1/reboot')->assertForbidden();
         $this->actingAs($this->student)->post('/settings/school', [])->assertForbidden();
@@ -123,6 +128,7 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
         $this->actingAs($this->teacher)->get('/assessment/export')->assertOk();
         $this->actingAs($this->teacher)->get('/users-data')->assertOk();
         $this->actingAs($this->teacher)->get('/classes')->assertOk();
+        $this->actingAs($this->teacher)->get('/media')->assertOk();
 
         // Teachers are blocked from superuser-only mutation endpoints
         $this->actingAs($this->teacher)->get('/settings')->assertForbidden();
@@ -140,6 +146,7 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
         $this->actingAs($this->superuser)->get('/users-data')->assertOk();
         $this->actingAs($this->superuser)->get('/classes')->assertOk();
         $this->actingAs($this->superuser)->get('/settings')->assertOk();
+        $this->actingAs($this->superuser)->get('/media')->assertOk();
     }
 
     public function test_api_endpoints_security_matrix(): void
