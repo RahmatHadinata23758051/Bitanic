@@ -6,6 +6,7 @@ use App\Models\Device;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -139,6 +140,29 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
         $this->actingAs($this->superuser)->get('/users-data')->assertOk();
         $this->actingAs($this->superuser)->get('/classes')->assertOk();
         $this->actingAs($this->superuser)->get('/settings')->assertOk();
+    }
+
+    public function test_api_endpoints_security_matrix(): void
+    {
+        Auth::logout();
+
+        // Unauthenticated device telemetry ingest is rejected
+        $this->postJson('/api/v1/telemetry/ingest', [])->assertUnauthorized();
+        $this->postJson('/api/rsc-data', [])->assertUnauthorized();
+
+        // Relay toggle requires authenticated educator/superuser
+        $this->post('/api/v1/devices/relay/toggle', ['device_id' => 1, 'relay' => 'relay1', 'state' => true])
+            ->assertRedirect('/login');
+
+        $this->actingAs($this->student)
+            ->post('/api/v1/devices/relay/toggle', ['device_id' => 1, 'relay' => 'relay1', 'state' => true])
+            ->assertForbidden();
+
+        Auth::logout();
+
+        // AI recommendation endpoints require authentication
+        $this->postJson('/api/v1/recommendations/request', [])->assertUnauthorized();
+        $this->getJson('/api/v1/recommendations/status/non-existent-ticket')->assertUnauthorized();
     }
 
     public function test_retired_legacy_subscription_routes_return_404(): void
