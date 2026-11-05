@@ -1,23 +1,23 @@
 <?php
 
-use App\Http\Controllers\ActivityScheduleController;
+use App\Http\Controllers\Academic\ActivityScheduleController;
+use App\Http\Controllers\Academic\ClassroomController;
+use App\Http\Controllers\Academic\CompetencyAssessmentController;
+use App\Http\Controllers\Academic\ModulePracticumController;
+use App\Http\Controllers\Academic\PracticumReportController;
+use App\Http\Controllers\Academic\UserDirectoryController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\FirstPasswordChangeController;
-use App\Http\Controllers\ClassroomController;
-use App\Http\Controllers\CompetencyAssessmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IotMonitoringController;
-use App\Http\Controllers\ModulePracticumController;
 use App\Http\Controllers\PlantingMediaController;
-use App\Http\Controllers\PracticumReportController;
 use App\Http\Controllers\RawLogsDebuggerController;
 use App\Http\Controllers\SettingsAuditController;
 // LEGACY-01: SubscriptionCheckoutController import disabled — routes retired (BR-504)
 // use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TelemetryHistoryController;
 use App\Http\Controllers\TrainerKitManagerController;
-use App\Http\Controllers\UserDirectoryController;
 use App\Http\Controllers\UserImportController;
 use Illuminate\Support\Facades\Route;
 
