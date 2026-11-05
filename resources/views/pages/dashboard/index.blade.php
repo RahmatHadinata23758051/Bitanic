@@ -13,6 +13,13 @@
                 <span class="text-xs font-semibold text-slate-600">Lab Presisi Agritech & Hidroponik</span>
                 <span class="text-xs text-slate-400">•</span>
                 <span class="text-xs text-slate-500 font-mono">{{ now()->translatedFormat('l, d F Y') }}</span>
+                @if($averageAttendance !== null)
+                    <span class="text-xs text-slate-400">•</span>
+                    <span class="text-xs font-semibold text-slate-600 flex items-center gap-1 font-mono">
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>Kehadiran: {{ number_format($averageAttendance, 1) }}%</span>
+                    </span>
+                @endif
             </div>
             <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
                 Pusat Kendali Laboratorium Vokasi IoT
@@ -23,8 +30,18 @@
         </div>
 
         <div class="flex items-center gap-3 shrink-0">
+            @if($isSuperuser)
+                <label class="text-xs font-semibold text-slate-600" for="dashboard-school-filter">Sekolah</label>
+                <select id="dashboard-school-filter" name="school_id" form="dashboard-school-form" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-md text-xs bg-white border border-slate-300 text-slate-700">
+                    <option value="">Semua Sekolah</option>
+                    @foreach($schools as $school)
+                        <option value="{{ $school->id }}" @selected($selectedSchoolId == $school->id)>{{ $school->name }}</option>
+                    @endforeach
+                </select>
+                <form id="dashboard-school-form" method="GET" action="{{ url('/') }}" class="hidden"></form>
+            @endif
             <a
-                href="{{ url('/iot-monitoring') }}"
+                href="{{ url('/iot-monitoring') }}{{ $isSuperuser && $selectedSchoolId ? '?school_id=' . $selectedSchoolId : '' }}"
                 class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-colors"
             >
                 <i data-lucide="gauge" class="w-4 h-4"></i>
@@ -58,13 +75,13 @@
             </div>
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span class="text-slate-500">Status Gateway</span>
-                <span class="font-semibold {{ $onlineKitsCount === $totalKitsCount ? 'text-emerald-700' : 'text-amber-600' }}">
-                    {{ $onlineKitsCount === $totalKitsCount ? 'Semua Siap Pakai' : ($totalKitsCount - $onlineKitsCount) . ' Perlu Periksa' }}
+                <span class="font-semibold {{ $totalKitsCount === 0 ? 'text-slate-500' : ($onlineKitsCount === $totalKitsCount ? 'text-emerald-700' : 'text-amber-600') }}">
+                    {{ $totalKitsCount === 0 ? 'Belum Ada Meja Terdaftar' : ($onlineKitsCount === $totalKitsCount ? 'Semua Siap Pakai' : ($totalKitsCount - $onlineKitsCount) . ' Perlu Periksa') }}
                 </span>
             </div>
         </div>
 
-        <!-- Card 2: Praktikum Hari Ini -->
+        <!-- Card 2: Sesi Praktikum -->
         <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Sesi Praktikum</span>
@@ -75,9 +92,15 @@
             <div class="my-3">
                 @if($todaySchedule)
                     <p class="font-bold text-sm text-slate-900 line-clamp-1">{{ $todaySchedule->title }}</p>
+                    @if(! $isScheduleToday)
+                        <p class="text-xs font-semibold text-amber-700 mt-0.5">Jadwal berikutnya · {{ $todaySchedule->activity_date?->format('d/m/Y') }}</p>
+                    @endif
                     <p class="text-xs text-slate-500 font-mono mt-0.5">
-                        {{ substr($todaySchedule->start_time ?? '08:00', 0, 5) }} – {{ substr($todaySchedule->end_time ?? '10:00', 0, 5) }} WIB
+                        {{ substr($todaySchedule->start_time ?? '', 0, 5) }} – {{ substr($todaySchedule->end_time ?? '', 0, 5) }} WIB
                     </p>
+                    @if($todaySchedule->lead_teacher)
+                        <p class="text-xs text-slate-500 mt-1">Guru pengampu: {{ $todaySchedule->lead_teacher->name }}</p>
+                    @endif
                 @else
                     <p class="font-bold text-sm text-slate-500">Tidak ada sesi aktif</p>
                     <p class="text-xs text-slate-400 mt-0.5">Laboratorium bebas tugas</p>
@@ -86,32 +109,56 @@
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span class="text-slate-500">Kelas</span>
                 <span class="font-semibold text-indigo-700 font-mono">
-                    {{ $todaySchedule->class_grade ?? '—' }}
+                    {{ $todaySchedule?->classroom?->name ?? $todaySchedule?->class_grade ?? '—' }}
                 </span>
             </div>
         </div>
 
-        <!-- Card 3: LKS Siswa Menunggu Verifikasi -->
-        <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">LKS Menunggu Review</span>
-                <span class="p-2 rounded-lg bg-amber-50 text-amber-700">
-                    <i data-lucide="file-check" class="w-4 h-4"></i>
-                </span>
-            </div>
-            <div class="my-3">
-                <div class="flex items-baseline gap-2">
-                    <span class="font-tabular text-3xl font-extrabold text-amber-600">{{ $pendingReportsCount }}</span>
-                    <span class="text-xs font-semibold text-slate-500">Laporan Praktikan</span>
+        <!-- Card 3: LKS Status by Role -->
+        @if($user?->isSiswa())
+            <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">LKS Praktikum Saya</span>
+                    <span class="p-2 rounded-lg bg-indigo-50 text-indigo-700">
+                        <i data-lucide="file-check" class="w-4 h-4"></i>
+                    </span>
+                </div>
+                <div class="my-3">
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-tabular text-3xl font-extrabold text-indigo-700">{{ $studentOwnReportsCount }}</span>
+                        <span class="text-xs font-semibold text-slate-500">Laporan Saya</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">{{ $studentReportsNeedingRevisionCount }} perlu revisi</p>
+                </div>
+                <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <a href="{{ url('/reports') }}" class="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1">
+                        <span>Lihat LKS Saya</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
                 </div>
             </div>
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <a href="{{ url('/reports') }}" class="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1">
-                    <span>Periksa Laporan</span>
-                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                </a>
+        @else
+            <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">LKS Menunggu Review</span>
+                    <span class="p-2 rounded-lg bg-amber-50 text-amber-700">
+                        <i data-lucide="file-check" class="w-4 h-4"></i>
+                    </span>
+                </div>
+                <div class="my-3">
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-tabular text-3xl font-extrabold text-amber-600">{{ $pendingReportsCount }}</span>
+                        <span class="text-xs font-semibold text-slate-500">Laporan Praktikan</span>
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <a href="{{ url('/reports') }}" class="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1">
+                        <span>Periksa Laporan</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
             </div>
-        </div>
+        @endif
 
         <!-- Card 4: Anomali Sensor Tanah -->
         <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
@@ -124,10 +171,11 @@
             <div class="my-3">
                 <div class="flex items-baseline gap-2">
                     <span class="font-tabular text-3xl font-extrabold {{ count($anomalies) > 0 ? 'text-rose-600' : 'text-emerald-700' }}">
-                        {{ count($anomalies) }}
+                        {{ $affectedStationsCount }}
                     </span>
-                    <span class="text-xs font-semibold text-slate-500">Stasiun Meja</span>
+                    <span class="text-xs font-semibold text-slate-500">Meja Terdampak</span>
                 </div>
+                <p class="text-xs text-slate-500 mt-1"><span class="font-semibold text-slate-700">{{ count($anomalies) }}</span> parameter melewati ambang pada data terbaru</p>
             </div>
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span class="text-slate-500">Tindakan Lapangan</span>
@@ -160,11 +208,16 @@
                 <div class="p-4 rounded-xl border border-slate-200 hover:border-emerald-300 transition-colors bg-slate-50/50 flex flex-col justify-between space-y-3">
                     <div class="flex items-start justify-between">
                         <div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
                                 <span class="font-mono text-xs font-bold text-slate-900">{{ $kit->code }}</span>
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono {{ $isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">
                                     {{ $kit->status ?? 'offline' }}
                                 </span>
+                                @if($isSuperuser && $kit->school)
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-sans border border-slate-200">
+                                        {{ $kit->school->name }}
+                                    </span>
+                                @endif
                             </div>
                             <p class="text-xs text-slate-600 font-medium mt-1">{{ $kit->bench_location ?? $kit->name }}</p>
                         </div>
