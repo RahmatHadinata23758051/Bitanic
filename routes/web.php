@@ -10,14 +10,14 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\FirstPasswordChangeController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\IotMonitoringController;
+use App\Http\Controllers\IoT\IotMonitoringController;
+use App\Http\Controllers\IoT\RawLogsDebuggerController;
+use App\Http\Controllers\IoT\TelemetryHistoryController;
+use App\Http\Controllers\IoT\TrainerKitManagerController;
 use App\Http\Controllers\PlantingMediaController;
-use App\Http\Controllers\RawLogsDebuggerController;
 use App\Http\Controllers\SettingsAuditController;
 // LEGACY-01: SubscriptionCheckoutController import disabled — routes retired (BR-504)
 // use App\Http\Controllers\SubscriptionCheckoutController;
-use App\Http\Controllers\TelemetryHistoryController;
-use App\Http\Controllers\TrainerKitManagerController;
 use App\Http\Controllers\UserImportController;
 use Illuminate\Support\Facades\Route;
 
