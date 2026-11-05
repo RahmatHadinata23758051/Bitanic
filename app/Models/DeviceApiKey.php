@@ -92,6 +92,15 @@ class DeviceApiKey extends Model
             throw new InvalidArgumentException('Rotasi kunci API ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
         }
 
+        if ($actor) {
+            if (! $actor->school_id || (int) $device->school_id !== (int) $actor->school_id) {
+                throw new InvalidArgumentException('Pengguna tidak memiliki wewenang untuk merotasi kunci perangkat sekolah lain.');
+            }
+            if (! $actor->school || $actor->school->status !== 'active') {
+                throw new InvalidArgumentException('Rotasi kunci API ditolak: sekolah pengguna tidak aktif atau belum terdaftar.');
+            }
+        }
+
         return DB::transaction(function () use ($device, $actor) {
             // Serialize rotations per device so concurrent requests cannot leave multiple active keys.
             Device::query()->whereKey($device->getKey())->lockForUpdate()->firstOrFail();
@@ -100,8 +109,6 @@ class DeviceApiKey extends Model
                 ->whereNull('revoked_at')
                 ->latest('id')
                 ->first();
-            $previousPrefix = $previousActiveKey?->key_prefix;
-
             // Revoke all existing unrevoked keys for this device
             self::where('device_id', $device->id)
                 ->whereNull('revoked_at')
@@ -119,8 +126,10 @@ class DeviceApiKey extends Model
                     'target_type' => Device::class,
                     'target_id' => (string) $device->id,
                     'diff' => [
-                        'revoked_prefix' => $previousPrefix,
-                        'new_prefix' => $newKeyData['api_key']->key_prefix,
+                        'action' => 'rotated',
+                        'revoked_key_id' => $previousActiveKey?->id,
+                        'new_key_id' => $newKeyData['api_key']->id,
+                        'revoked_at' => now()->toIso8601String(),
                     ],
                     'details' => 'Kunci API untuk perangkat '.$device->code.' berhasil dirotasi. Kunci lama telah direvokasi.',
                     'ip_address' => request()?->ip() ?? '127.0.0.1',

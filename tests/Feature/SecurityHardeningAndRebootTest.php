@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Device;
 use App\Models\DeviceApiKey;
 use App\Models\User;
@@ -73,6 +74,13 @@ class SecurityHardeningAndRebootTest extends TestCase
             'user_id' => $teacher->id,
             'action' => 'Rotasi Kunci API Perangkat',
         ]);
+        $rotationLog = AuditLog::where('user_id', $teacher->id)
+            ->where('action', 'Rotasi Kunci API Perangkat')
+            ->first();
+        $this->assertNotNull($rotationLog);
+        $this->assertArrayNotHasKey('new_prefix', $rotationLog->diff);
+        $this->assertArrayNotHasKey('revoked_prefix', $rotationLog->diff);
+        $this->assertArrayHasKey('new_key_id', $rotationLog->diff);
 
         // Test revoke
         $apiKey->refresh();
