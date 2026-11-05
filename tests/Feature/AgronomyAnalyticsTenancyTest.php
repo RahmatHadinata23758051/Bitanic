@@ -222,5 +222,14 @@ class AgronomyAnalyticsTenancyTest extends TestCase
         $this->assertArrayHasKey('ph', $chartData);
         $this->assertArrayHasKey('ec', $chartData);
         $this->assertCount(2, $chartData['ph']['values']);
+        $this->assertSame(6.5, $chartData['ph']['values'][0]['y']);
+        $this->assertSame(6.8, $chartData['ph']['values'][1]['y']);
+        $this->assertSame(
+            $this->deviceA1->telemetryReadings()->orderBy('recorded_at')->first()->recorded_at->toIso8601String(),
+            $chartData['ph']['values'][0]['x'],
+        );
+        $response->assertDontSee('mockVals');
+        $response->assertSee('initialData:');
+        $response->assertSee($chartData['ph']['values'][0]['x']);
     }
 }

@@ -96,7 +96,7 @@
     </div>
 
     <!-- Multi-Parameter Interactive Chart Component -->
-    <x-telemetry-chart />
+    <x-telemetry-chart :initial-data="$chartData" />
 
     <!-- Agronomic Reference Thresholds Matrix -->
     <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">

@@ -82,7 +82,7 @@ class AnalyticsController extends Controller
                 'label' => $meta['label'],
                 'unit' => $meta['unit'],
                 'values' => $readings->map(fn ($reading) => [
-                    'x' => $reading->recorded_at?->format('Y-m-d H:i:s'),
+                    'x' => $reading->recorded_at?->toIso8601String() ?? $reading->recorded_at?->format('Y-m-d H:i:s'),
                     'y' => $reading->{$key} === null ? null : (float) $reading->{$key},
                 ])->values(),
             ];
