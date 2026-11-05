@@ -80,6 +80,16 @@
                 <span>Stasiun Meja Praktik</span>
             </a>
 
+            @if($user && in_array($role, ['guru', 'superuser', 'admin'], true))
+            <a
+                href="{{ url('/media') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('media*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+            >
+                <i data-lucide="sprout" class="w-4 h-4 {{ Request::is('media*') ? 'text-emerald-600' : 'text-slate-400' }}"></i>
+                <span>Media Tanam &amp; Plot</span>
+            </a>
+            @endif
+
             <a
                 href="{{ url('/analytics') }}"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ Request::is('analytics*') ? 'bg-emerald-50 text-emerald-800 border-l-4 border-emerald-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
