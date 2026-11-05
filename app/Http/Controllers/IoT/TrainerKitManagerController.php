@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Device;
 use App\Models\DeviceApiKey;
+use App\Models\School;
 use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,27 +21,48 @@ class TrainerKitManagerController extends Controller
      */
     public function index(Request $request, DeviceAvailabilityResolver $resolver): View
     {
-        $schoolId = $request->user()?->school_id;
-        $isSuperuser = (bool) $request->user()?->isSuperuser();
+        $user = $request->user();
+        $isSuperuser = (bool) $user?->isSuperuser();
+        $schoolId = $user?->school_id;
 
-        if ($request->user() && ! $isSuperuser && ! $schoolId) {
-            abort(403, 'Akses Trainer Kit memerlukan asosiasi sekolah yang valid.');
+        if ($user && ! $isSuperuser) {
+            if (! $schoolId) {
+                abort(403, 'Akses Trainer Kit memerlukan asosiasi sekolah yang valid.');
+            }
+            $school = $user->school;
+            if (! $school || $school->status !== 'active') {
+                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+            }
+        }
+
+        $selectedSchoolId = $request->query('school_id');
+        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
+
+        if ($isSuperuser && $selectedSchoolId) {
+            $targetSchoolId = (int) $selectedSchoolId;
+        } else {
+            $targetSchoolId = $isSuperuser
+                ? null
+                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
         }
 
         $kits = Device::with(['latestReading', 'activeApiKey'])
-            ->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId))
+            ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
             ->orderBy('code')
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         // Compute deterministic availability per device based on heartbeat
         $kits->getCollection()->transform(fn ($kit) => $resolver->applyToDevice($kit));
 
-        $targetSchoolId = ! $isSuperuser ? $schoolId : null;
         $totalCount = $resolver->countTotal($targetSchoolId);
         $onlineCount = $resolver->countOnline($targetSchoolId);
 
         return view('pages.kits.index', [
             'kits' => $kits,
+            'schools' => $schools,
+            'selectedSchoolId' => $targetSchoolId,
+            'isSuperuser' => $isSuperuser,
             'stats' => [
                 'total' => $totalCount,
                 'online' => $onlineCount,
@@ -57,6 +79,7 @@ class TrainerKitManagerController extends Controller
         $user = $request->user();
         if ($user && ! $user->isSuperuser()) {
             abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
+            abort_unless($user->school && $user->school->status === 'active', 403);
         }
 
         // No command transport or physical ACK is currently implemented.
@@ -85,6 +108,7 @@ class TrainerKitManagerController extends Controller
         $user = $request->user();
         if ($user && ! $user->isSuperuser()) {
             abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
+            abort_unless($user->school && $user->school->status === 'active', 403);
         }
 
         $validated = $request->validate([
@@ -145,6 +169,12 @@ class TrainerKitManagerController extends Controller
      */
     public function rotateApiKey(Request $request, Device $device): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && ! $user->isSuperuser()) {
+            abort_unless($user->school_id && (int) $device->school_id === (int) $user->school_id, 403);
+            abort_unless($user->school && $user->school->status === 'active', 403);
+        }
+
         $rotation = DeviceApiKey::rotateForDevice($device, $request->user());
 
         return redirect()->route('kits.index')

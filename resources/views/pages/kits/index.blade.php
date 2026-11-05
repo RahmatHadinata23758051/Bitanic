@@ -20,7 +20,25 @@
             </p>
         </div>
 
-        <div class="flex items-center gap-3 shrink-0">
+        <div class="flex items-center gap-3 shrink-0 flex-wrap">
+            @if(!empty($isSuperuser) && $schools->isNotEmpty())
+                <form method="GET" action="{{ route('kits.index') }}" class="flex items-center gap-2">
+                    <label for="school_id" class="text-xs font-semibold text-slate-600">Sekolah:</label>
+                    <select
+                        id="school_id"
+                        name="school_id"
+                        onchange="this.form.submit()"
+                        class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer"
+                    >
+                        <option value="">Semua Sekolah</option>
+                        @foreach($schools as $school)
+                            <option value="{{ $school->id }}" {{ (string) $selectedSchoolId === (string) $school->id ? 'selected' : '' }}>
+                                {{ $school->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+            @endif
             <a
                 href="{{ url('/raw-logs') }}"
                 class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-sm transition-colors"
@@ -187,6 +205,12 @@
             </div>
         @endforelse
     </div>
+
+    @if($kits->hasPages())
+        <div class="pt-2">
+            {{ $kits->links() }}
+        </div>
+    @endif
 
     <!-- Calibration Info Modal / Guide -->
     <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-2">
