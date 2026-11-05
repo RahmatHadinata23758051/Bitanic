@@ -13,6 +13,7 @@ class Media extends Model
     protected $table = 'media';
 
     protected $fillable = [
+        'school_id',
         'name',
         'device_id',
         'activity_schedule_id',
@@ -33,6 +34,11 @@ class Media extends Model
             'plants_condition' => 'array',
             'file_size' => 'integer',
         ];
+    }
+
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
     }
 
     public function device(): BelongsTo
