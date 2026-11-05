@@ -86,7 +86,7 @@ Route::get('/assessment/export', [CompetencyAssessmentController::class, 'export
 
 // 9. Direktori Akademik Siswa & Guru Pembimbing
 Route::get('/users-data', [UserDirectoryController::class, 'index'])
-    ->middleware(['auth', 'role:guru'])
+    ->middleware(['auth', 'role:guru,superuser'])
     ->name('users.index');
 
 Route::middleware(['auth', 'role:guru'])->group(function () {

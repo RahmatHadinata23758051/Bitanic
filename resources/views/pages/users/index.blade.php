@@ -11,6 +11,19 @@
                 </span>
                 <span class="text-xs text-slate-400">•</span>
                 <span class="text-xs font-semibold text-slate-600">{{ $schoolName }}</span>
+                @if($isSuperuser)
+                    <form method="GET" action="{{ url('/users-data') }}" class="flex items-center gap-2">
+                        @if($currentRole)<input type="hidden" name="role" value="{{ $currentRole }}">@endif
+                        @if($search !== '')<input type="hidden" name="q" value="{{ $search }}">@endif
+                        <label for="school_id" class="sr-only">Pilih sekolah</label>
+                        <select id="school_id" name="school_id" onchange="this.form.submit()" class="px-2 py-1 rounded-md border border-slate-300 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Semua Sekolah</option>
+                            @foreach($schools as $school)
+                                <option value="{{ $school->id }}" {{ (string) $selectedSchoolId === (string) $school->id ? 'selected' : '' }}>{{ $school->name }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endif
             </div>
             <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
                 Data Siswa & Guru Pembimbing
@@ -42,25 +55,25 @@
         <!-- Role Tabs -->
         <div class="flex items-center gap-2">
             <a
-                href="{{ url('/users-data') }}"
+                href="{{ url('/users-data' . ($selectedSchoolId ? '?school_id=' . $selectedSchoolId : '')) }}"
                 class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors {{ empty($currentRole) ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
             >
                 Semua
             </a>
             <a
-                href="{{ url('/users-data?role=siswa') }}"
+                href="{{ url('/users-data?role=siswa' . ($selectedSchoolId ? '&school_id=' . $selectedSchoolId : '')) }}"
                 class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors {{ $currentRole === 'siswa' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
             >
                 Siswa Praktikan
             </a>
             <a
-                href="{{ url('/users-data?role=guru') }}"
+                href="{{ url('/users-data?role=guru' . ($selectedSchoolId ? '&school_id=' . $selectedSchoolId : '')) }}"
                 class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors {{ $currentRole === 'guru' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
             >
                 Guru Pembimbing
             </a>
             <a
-                href="{{ url('/users-data?role=superuser') }}"
+                href="{{ url('/users-data?role=superuser' . ($selectedSchoolId ? '&school_id=' . $selectedSchoolId : '')) }}"
                 class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors {{ $currentRole === 'superuser' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
             >
                 Admin Lab
@@ -71,6 +84,9 @@
         <form method="GET" action="{{ url('/users-data') }}" class="flex items-center gap-2">
             @if($currentRole)
                 <input type="hidden" name="role" value="{{ $currentRole }}">
+            @endif
+            @if($isSuperuser && $selectedSchoolId)
+                <input type="hidden" name="school_id" value="{{ $selectedSchoolId }}">
             @endif
             <div class="relative">
                 <input
@@ -86,7 +102,7 @@
                 Cari
             </button>
             @if($search)
-                <a href="{{ url('/users-data' . ($currentRole ? '?role=' . $currentRole : '')) }}" class="text-xs text-rose-600 hover:text-rose-700 font-semibold">
+                <a href="{{ url('/users-data' . ($currentRole ? '?role=' . $currentRole : '') . ($selectedSchoolId ? ($currentRole ? '&' : '?') . 'school_id=' . $selectedSchoolId : '')) }}" class="text-xs text-rose-600 hover:text-rose-700 font-semibold">
                     Reset
                 </a>
             @endif
