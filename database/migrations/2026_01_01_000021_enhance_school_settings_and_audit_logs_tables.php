@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,26 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $defaultSchoolId = DB::table('schools')->where('slug', 'smk-ppn-1-sukaraja')->value('id')
-            ?? DB::table('schools')->value('id');
-
         // 1. Add school_id to school_settings
         Schema::table('school_settings', function (Blueprint $table) {
             $table->foreignId('school_id')->nullable()->after('id')->constrained('schools')->cascadeOnDelete();
         });
 
-        if ($defaultSchoolId) {
-            DB::table('school_settings')->whereNull('school_id')->update(['school_id' => $defaultSchoolId]);
-        }
-
-        // Do not discard existing rows or guess their ownership to force one row per school.
-        // A nullable unique key still allows schools without settings while preventing duplicates.
+        // Legacy settings do not carry reliable school ownership. Preserve unknown ownership
+        // as NULL rather than assigning every row to one school; multiple NULL values remain
+        // valid under the unique constraint while known school-owned rows remain distinct.
         Schema::table('school_settings', function (Blueprint $table) {
             $table->unique('school_id');
         });
 
         // 2. Add school_id, target, diff, and correlation_id to audit_logs
-        Schema::table('audit_logs', function (Blueprint $table) use ($defaultSchoolId) {
+        Schema::table('audit_logs', function (Blueprint $table) {
             $table->foreignId('school_id')->nullable()->after('id')->constrained('schools')->nullOnDelete();
             $table->string('target_type')->nullable()->after('action');
             $table->string('target_id')->nullable()->after('target_type');
@@ -42,9 +35,8 @@ return new class extends Migration
             $table->index('correlation_id');
         });
 
-        if ($defaultSchoolId) {
-            DB::table('audit_logs')->whereNull('school_id')->update(['school_id' => $defaultSchoolId]);
-        }
+        // Legacy audit records also have unknown school ownership. Leave it NULL rather than
+        // falsely attributing historical actions to the default school.
     }
 
     /**
