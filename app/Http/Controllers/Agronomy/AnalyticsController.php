@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Agronomy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Device;
+use App\Models\School;
 use App\Models\TelemetryReading;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,15 +16,49 @@ class AnalyticsController extends Controller
      */
     public function index(Request $request): View
     {
-        $deviceId = $request->query('device_id');
-        $devices = Device::where('is_active', true)->orderBy('code')->get();
+        $user = $request->user();
+        $isSuperuser = (bool) $user?->isSuperuser();
+        $schoolId = $user?->school_id;
 
-        $selectedDevice = $deviceId
-            ? $devices->firstWhere('id', (int) $deviceId)
-            : $devices->first();
+        if ($user && ! $isSuperuser) {
+            if (! $schoolId) {
+                abort(403, 'Akses analitik memerlukan asosiasi sekolah yang valid.');
+            }
+            $school = $user->school;
+            if (! $school || $school->status !== 'active') {
+                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+            }
+        }
+
+        $selectedSchoolId = $request->query('school_id');
+        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
+
+        if ($isSuperuser && $selectedSchoolId) {
+            $targetSchoolId = (int) $selectedSchoolId;
+        } else {
+            $targetSchoolId = $isSuperuser
+                ? null
+                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        }
+
+        $deviceId = $request->query('device_id');
+        $devices = Device::query()
+            ->where('is_active', true)
+            ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->orderBy('code')
+            ->get();
+
+        $selectedDevice = null;
+        if ($deviceId) {
+            $selectedDevice = $devices->first(fn ($d) => (string) $d->id === (string) $deviceId || $d->code === (string) $deviceId);
+        }
+        if (! $selectedDevice) {
+            $selectedDevice = $devices->first();
+        }
 
         $readings = $selectedDevice
             ? TelemetryReading::where('device_id', $selectedDevice->id)
+                ->when($targetSchoolId, fn ($q) => $q->whereHas('device', fn ($dq) => $dq->where('school_id', $targetSchoolId)))
                 ->latest('recorded_at')
                 ->take(100)
                 ->get()
@@ -81,9 +116,13 @@ class AnalyticsController extends Controller
 
         return view('pages.analytics.index', [
             'devices' => $devices,
+            'schools' => $schools,
+            'selectedSchoolId' => $targetSchoolId,
+            'isSuperuser' => $isSuperuser,
             'selectedDevice' => $selectedDevice,
             'chartData' => $chartData,
             'readingCount' => $readings->count(),
+            'readings' => $readings,
             'correlations' => [
                 ['label' => 'pH Tanah ↔ EC Nutrisi', 'value' => $correlation('ph', 'ec')],
                 ['label' => 'Suhu Tanah ↔ Kadar Lengas', 'value' => $correlation('temperature', 'humidity')],

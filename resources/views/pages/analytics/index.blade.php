@@ -20,22 +20,48 @@
             </p>
         </div>
 
-        <!-- Device Selector Form -->
-        <form method="GET" action="{{ url('/analytics') }}" class="flex items-center gap-2 shrink-0">
-            <label for="device_id" class="text-xs font-semibold text-slate-600">Stasiun:</label>
-            <select
-                id="device_id"
-                name="device_id"
-                onchange="this.form.submit()"
-                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer"
-            >
-                @foreach($devices as $dev)
-                    <option value="{{ $dev->id }}" {{ ($selectedDevice->id ?? null) === $dev->id ? 'selected' : '' }}>
-                        {{ $dev->code }} — {{ $dev->bench_location ?? $dev->name }}
-                    </option>
-                @endforeach
-            </select>
-        </form>
+        <!-- Filters Form -->
+        <div class="flex items-center gap-3 shrink-0 flex-wrap">
+            @if(!empty($isSuperuser) && $schools->isNotEmpty())
+            <form method="GET" action="{{ url('/analytics') }}" class="flex items-center gap-2">
+                <label for="school_id" class="text-xs font-semibold text-slate-600">Sekolah:</label>
+                <select
+                    id="school_id"
+                    name="school_id"
+                    onchange="this.form.submit()"
+                    class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer"
+                >
+                    <option value="">Semua Sekolah</option>
+                    @foreach($schools as $sch)
+                        <option value="{{ $sch->id }}" {{ ((string) $selectedSchoolId === (string) $sch->id) ? 'selected' : '' }}>
+                            {{ $sch->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </form>
+            @endif
+
+            <form method="GET" action="{{ url('/analytics') }}" class="flex items-center gap-2">
+                @if(!empty($selectedSchoolId))
+                    <input type="hidden" name="school_id" value="{{ $selectedSchoolId }}">
+                @endif
+                <label for="device_id" class="text-xs font-semibold text-slate-600">Stasiun:</label>
+                <select
+                    id="device_id"
+                    name="device_id"
+                    onchange="this.form.submit()"
+                    class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer"
+                >
+                    @forelse($devices as $dev)
+                        <option value="{{ $dev->id }}" {{ ($selectedDevice->id ?? null) === $dev->id ? 'selected' : '' }}>
+                            {{ $dev->code }} — {{ $dev->bench_location ?? $dev->name }}
+                        </option>
+                    @empty
+                        <option value="">Tidak ada perangkat aktif</option>
+                    @endforelse
+                </select>
+            </form>
+        </div>
     </div>
 
     <!-- Correlation Cards Bento Grid -->
