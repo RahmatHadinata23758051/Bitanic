@@ -33,6 +33,29 @@ class ActivityScheduleTest extends TestCase
         $response->assertSee('Meja Praktik 1');
     }
 
+    public function test_guest_schedule_page_uses_default_school_without_exposing_other_schools(): void
+    {
+        $otherSchool = School::create([
+            'npsn' => '20200999',
+            'name' => 'SMK Other School',
+            'slug' => 'smk-other-schedule-school',
+            'status' => 'active',
+        ]);
+        Device::create([
+            'school_id' => $otherSchool->id,
+            'code' => 'TK-OTHER-SCHOOL',
+            'name' => 'Other School Trainer Kit',
+            'is_active' => true,
+        ]);
+
+        $response = $this->get(route('schedules.index'));
+
+        $response->assertOk();
+        $response->assertSee('TK-01');
+        $response->assertDontSee('TK-OTHER-SCHOOL');
+        $response->assertDontSee('Other School Trainer Kit');
+    }
+
     public function test_teacher_can_create_schedule_with_kit_allocation(): void
     {
         $teacher = User::factory()->create(['role' => 'guru']);

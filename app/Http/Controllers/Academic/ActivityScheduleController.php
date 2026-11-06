@@ -8,6 +8,7 @@ use App\Models\ActivitySchedule;
 use App\Models\Classroom;
 use App\Models\Device;
 use App\Models\ModulePracticum;
+use App\Models\School;
 use App\Models\StudentGroup;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -29,20 +30,24 @@ class ActivityScheduleController extends Controller
             abort(403, 'Akses jadwal praktikum memerlukan asosiasi sekolah yang valid.');
         }
 
+        $targetSchoolId = $isSuperuser
+            ? null
+            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+
         $schedules = ActivitySchedule::with(['device', 'participants.user', 'classroom', 'studentGroup', 'modulePracticum'])
-            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('activity_date', 'asc')
             ->orderBy('start_time', 'asc')
             ->get();
 
         $devices = Device::where('is_active', true)
-            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('code')
             ->get();
-        $classrooms = Classroom::when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
+        $classrooms = Classroom::when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('name')
             ->get();
-        $studentGroups = StudentGroup::when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
+        $studentGroups = StudentGroup::when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('name')
             ->get();
         $modules = ModulePracticum::orderBy('meeting_number')->get();
@@ -50,7 +55,7 @@ class ActivityScheduleController extends Controller
         // Status kit ketersediaan hari ini
         $today = now()->toDateString();
         $bookedDevicesToday = ActivitySchedule::where('activity_date', $today)
-            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $schoolId))
+            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->pluck('device_id')
             ->filter()
             ->unique()
