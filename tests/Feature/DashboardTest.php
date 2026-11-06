@@ -46,6 +46,12 @@ class DashboardTest extends TestCase
         $response->assertSee('BITANIC Precision Agritech Kit #01');
         $response->assertSee('Pusat Kendali Laboratorium Vokasi IoT');
         $response->assertSee('Armada Trainer Kit');
+        preg_match('/<header\b.*?<\/header>/s', (string) $response->getContent(), $topbarMatches);
+        $this->assertCount(1, $topbarMatches, 'The dashboard must render the shared topbar.');
+        $this->assertStringContainsString('BITANIC-TK-01', $topbarMatches[0]);
+        $this->assertStringNotContainsString('Live', $topbarMatches[0]);
+        $this->assertStringNotContainsString('-54 dBm', $topbarMatches[0]);
+        $this->assertStringNotContainsString('94%', $topbarMatches[0]);
     }
 
     public function test_iot_monitoring_page_renders_real_time_workstation(): void
@@ -282,6 +288,13 @@ class DashboardTest extends TestCase
         $response->assertOk();
         $response->assertSee('Belum Ada Meja Terdaftar');
         $response->assertDontSee('Semua Siap Pakai');
+        preg_match('/<header\b.*?<\/header>/s', (string) $response->getContent(), $topbarMatches);
+        $this->assertCount(1, $topbarMatches, 'The dashboard must render the shared topbar.');
+
+        foreach (['BITANIC-TK-01', 'Meja Praktik 01', 'Live', 'animate-ping', '-54 dBm', '94%'] as $fabricatedValue) {
+            $this->assertStringNotContainsString($fabricatedValue, $topbarMatches[0]);
+        }
+        $this->assertStringContainsString('Tidak ada trainer kit terdaftar', $topbarMatches[0]);
     }
 
     public function test_dashboard_card_2_does_not_claim_upcoming_schedule_is_today(): void
