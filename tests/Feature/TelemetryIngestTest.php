@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\SensorData;
 use App\Models\Device;
 use App\Models\DeviceApiKey;
+use App\Models\SchoolSetting;
 use App\Models\SensorThreshold;
 use App\Models\TelemetryReading;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -119,6 +120,80 @@ class TelemetryIngestTest extends TestCase
         Event::assertDispatched(SensorData::class, function ($event) use ($reading) {
             return $event->reading->id === $reading->id;
         });
+    }
+
+    public function test_school_settings_thresholds_are_used_for_evaluation(): void
+    {
+        Event::fake([SensorData::class]);
+
+        SensorThreshold::where('device_id', $this->device->id)->delete();
+        SensorThreshold::create([
+            'device_id' => null,
+            'parameter' => 'Nitrogen',
+            'min_value' => 0,
+            'max_value' => 20,
+        ]);
+        SchoolSetting::create([
+            'school_id' => $this->device->school_id,
+            'sensor_thresholds' => [
+                'minNitrogen' => 50,
+                'maxNitrogen' => 100,
+                'minMoisture' => 30,
+                'maxMoisture' => 75,
+                'minPH' => 5.5,
+                'maxPH' => 7.2,
+                'minEC' => 800,
+                'maxEC' => 2200,
+            ],
+        ]);
+
+        $response = $this->withHeaders([
+            'X-Device-Key' => $this->rawKey,
+        ])->postJson('/api/v1/telemetry/ingest', [
+            'device_id' => 'BTLP-TEST-STATION',
+            'soilrs485' => [
+                'Nitrogen' => 45,
+                'Ph' => 5.4,
+                'Ec' => 700,
+                'Humidity' => 20,
+            ],
+        ]);
+
+        $response->assertCreated();
+        $flags = TelemetryReading::latest('id')->firstOrFail()->threshold_flags;
+        $this->assertSame('low', $flags['Nitrogen']);
+        $this->assertSame('low', $flags['Ph']);
+        $this->assertSame('low', $flags['Ec']);
+        $this->assertSame('low', $flags['Humidity']);
+    }
+
+    public function test_device_threshold_overrides_school_threshold(): void
+    {
+        Event::fake([SensorData::class]);
+
+        SchoolSetting::create([
+            'school_id' => $this->device->school_id,
+            'sensor_thresholds' => [
+                'minNitrogen' => 50,
+                'maxNitrogen' => 100,
+            ],
+        ]);
+        SensorThreshold::create([
+            'device_id' => $this->device->id,
+            'parameter' => 'Nitrogen',
+            'min_value' => 40,
+            'max_value' => 60,
+        ]);
+
+        $response = $this->withHeaders([
+            'X-Device-Key' => $this->rawKey,
+        ])->postJson('/api/v1/telemetry/ingest', [
+            'device_id' => 'BTLP-TEST-STATION',
+            'soilrs485' => ['Nitrogen' => 65],
+        ]);
+
+        $response->assertCreated();
+        $this->assertSame('high', TelemetryReading::latest('id')->firstOrFail()->threshold_flags['Nitrogen']);
     }
 
     public function test_it_supports_legacy_route_with_device_key(): void

@@ -4,6 +4,7 @@ namespace App\Actions\Telemetry;
 
 use App\Events\SensorData;
 use App\Models\Device;
+use App\Models\SchoolSetting;
 use App\Models\SensorThreshold;
 use App\Models\TelemetryReading;
 use Illuminate\Support\Carbon;
@@ -72,12 +73,15 @@ class IngestTelemetryAction
         // Resolve active versioned calibration profile or legacy offset per parameter
         $primaryProfile = null;
         $appliedOffsets = [];
+        $calibrationLineage = [];
         $calibratedValues = [];
 
         foreach ($rawMetrics as $param => $rawVal) {
             if ($rawVal === null) {
                 $calibratedValues[$param] = null;
                 $appliedOffsets[$param] = 0.0;
+                $calibrationLineage[$param] = null;
+
                 continue;
             }
 
@@ -86,6 +90,11 @@ class IngestTelemetryAction
             if ($activeProfile) {
                 $calibratedValues[$param] = $activeProfile->calibrate($rawVal);
                 $appliedOffsets[$param] = round($calibratedValues[$param] - $rawVal, 2);
+                $calibrationLineage[$param] = [
+                    'profile_id' => $activeProfile->id,
+                    'version' => $activeProfile->version,
+                    'method' => $activeProfile->method,
+                ];
 
                 if (! $primaryProfile || $activeProfile->version > $primaryProfile->version) {
                     $primaryProfile = $activeProfile;
@@ -94,14 +103,40 @@ class IngestTelemetryAction
                 $legacyOffset = $getLegacyOffset($param);
                 $calibratedValues[$param] = $rawVal + $legacyOffset;
                 $appliedOffsets[$param] = $legacyOffset;
+                $calibrationLineage[$param] = null;
             }
         }
 
-        // Evaluasi threshold terhadap nilai yang sudah dikalibrasi
-        $thresholds = SensorThreshold::where('device_id', $device->id)
-            ->orWhereNull('device_id')
+        // Resolve thresholds by specificity: global defaults, school settings, then device overrides.
+        $thresholds = SensorThreshold::query()
+            ->whereNull('device_id')
             ->get()
             ->keyBy('parameter');
+        $schoolThresholds = $device->school_id !== null
+            ? (SchoolSetting::query()->where('school_id', $device->school_id)->first()?->sensor_thresholds ?? [])
+            : [];
+
+        foreach ([
+            'Nitrogen' => ['minNitrogen', 'maxNitrogen'],
+            'Phosporus' => ['minPhosphorus', 'maxPhosphorus'],
+            'Kalium' => ['minPotassium', 'maxPotassium'],
+            'Ec' => ['minEC', 'maxEC'],
+            'Ph' => ['minPH', 'maxPH'],
+            'Temperature' => ['minTemperature', 'maxTemperature'],
+            'Humidity' => ['minMoisture', 'maxMoisture'],
+        ] as $parameter => [$minimumKey, $maximumKey]) {
+            if (array_key_exists($minimumKey, $schoolThresholds) && array_key_exists($maximumKey, $schoolThresholds)) {
+                $thresholds->put($parameter, (object) [
+                    'min_value' => $schoolThresholds[$minimumKey],
+                    'max_value' => $schoolThresholds[$maximumKey],
+                ]);
+            }
+        }
+
+        SensorThreshold::query()
+            ->where('device_id', $device->id)
+            ->get()
+            ->each(fn (SensorThreshold $threshold) => $thresholds->put($threshold->parameter, $threshold));
 
         $paramValues = [
             'Nitrogen' => $calibratedValues['nitrogen'],
@@ -146,6 +181,7 @@ class IngestTelemetryAction
             'raw_payload' => $rawPayload,
             'raw_metrics' => $rawMetrics,
             'applied_offsets' => $appliedOffsets,
+            'calibration_lineage' => $calibrationLineage,
             'calibration_profile_id' => $primaryProfile?->id,
             'calibration_version' => $primaryProfile?->version,
             'calibration_applied_at' => $primaryProfile ? $now : null,
