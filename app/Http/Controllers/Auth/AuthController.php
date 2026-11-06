@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +38,7 @@ class AuthController extends Controller
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
 
-        $throttleKey = 'login:' . Str::lower($request->input('email')) . '|' . $request->ip();
+        $throttleKey = 'login:'.Str::lower($request->input('email')).'|'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -47,6 +48,20 @@ class AuthController extends Controller
         }
 
         if (! Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+            RateLimiter::hit($throttleKey, 60);
+
+            throw ValidationException::withMessages([
+                'email' => 'Kredensial yang diberikan tidak cocok dengan data pengguna kami.',
+            ]);
+        }
+
+        $user = Auth::user();
+        $schoolIsActive = $user instanceof User
+            && $user->school_id !== null
+            && $user->school()->where('status', 'active')->exists();
+
+        if (! $schoolIsActive) {
+            Auth::logout();
             RateLimiter::hit($throttleKey, 60);
 
             throw ValidationException::withMessages([

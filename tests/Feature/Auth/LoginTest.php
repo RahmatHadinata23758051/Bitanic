@@ -92,6 +92,28 @@ class LoginTest extends TestCase
         $this->get(route('settings.index'))->assertOk();
     }
 
+    public function test_users_from_inactive_schools_cannot_authenticate(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'inactive.guru@smk.id',
+            'password' => Hash::make('password123'),
+            'role' => 'guru',
+        ]);
+        $user->school->update(['status' => 'inactive']);
+
+        $response = $this->from('/login')->post('/login', [
+            'email' => 'inactive.guru@smk.id',
+            'password' => 'password123',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('email');
+        $this->assertSame(
+            'Kredensial yang diberikan tidak cocok dengan data pengguna kami.',
+            session('errors')->first('email')
+        );
+    }
+
     public function test_users_cannot_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create([
