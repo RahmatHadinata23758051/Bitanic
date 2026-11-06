@@ -114,10 +114,12 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
         $this->actingAs($this->student)->get('/media/create')->assertForbidden();
         $this->actingAs($this->student)->post('/media', [])->assertForbidden();
         $this->actingAs($this->student)->post('/schedules', [])->assertForbidden();
-        $this->actingAs($this->student)->post('/trainer-kits/1/reboot')->assertForbidden();
+        $kitId = Device::query()->where('school_id', $this->student->school_id)->value('id');
+        $this->assertNotNull($kitId, 'The student authorization fixture must include a trainer kit.');
+        $this->actingAs($this->student)->post("/trainer-kits/{$kitId}/reboot")->assertForbidden();
         $this->actingAs($this->student)->post('/settings/school', [])->assertForbidden();
         $this->actingAs($this->student)->post('/raw-logs/inject', [])->assertForbidden();
-        $this->actingAs($this->student)->post('/trainer-kits/1/api-key/rotate')->assertForbidden();
+        $this->actingAs($this->student)->post("/trainer-kits/{$kitId}/api-key/rotate")->assertForbidden();
     }
 
     public function test_teacher_role_authorization_matrix(): void
@@ -134,7 +136,9 @@ class RouteHealthAndSecurityMatrixTest extends TestCase
         $this->actingAs($this->teacher)->get('/settings')->assertForbidden();
         $this->actingAs($this->teacher)->post('/settings/school', [])->assertForbidden();
         $this->actingAs($this->teacher)->post('/raw-logs/inject', [])->assertForbidden();
-        $this->actingAs($this->teacher)->post('/trainer-kits/1/api-key/rotate')->assertForbidden();
+        $kitId = Device::query()->where('school_id', $this->teacher->school_id)->value('id');
+        $this->assertNotNull($kitId, 'The teacher authorization fixture must include a trainer kit.');
+        $this->actingAs($this->teacher)->post("/trainer-kits/{$kitId}/api-key/rotate")->assertForbidden();
     }
 
     public function test_superuser_role_authorization_matrix(): void
