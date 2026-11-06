@@ -11,7 +11,6 @@ use App\Models\School;
 use App\Models\SensorCalibrationProfile;
 use App\Models\TelemetryReading;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -87,7 +86,7 @@ class SensorCalibrationProfileTest extends TestCase
     public function test_out_of_boundary_offsets_are_rejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("berada di luar batas aman spesifikasi");
+        $this->expectExceptionMessage('berada di luar batas aman spesifikasi');
 
         // pH offset allows [-2.0, 2.0], 5.0 is dangerous/invalid
         SensorCalibrationProfile::validateSpecification(
@@ -101,7 +100,7 @@ class SensorCalibrationProfileTest extends TestCase
     public function test_invalid_two_point_reference_vector_is_rejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("raw_high (4) harus lebih besar dari raw_low (7)");
+        $this->expectExceptionMessage('raw_high (4) harus lebih besar dari raw_low (7)');
 
         SensorCalibrationProfile::validateSpecification(
             'RS485-SOIL-7IN1',
@@ -238,6 +237,52 @@ class SensorCalibrationProfileTest extends TestCase
         $this->assertEquals(1, $reading->calibration_version);
         $this->assertNotNull($reading->calibration_applied_at);
         $this->assertEquals(0.35, (float) $reading->applied_offsets['ph']);
+    }
+
+    public function test_multi_parameter_readings_preserve_lineage_for_each_applied_profile(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $device = Device::create([
+            'school_id' => $teacher->school_id,
+            'code' => 'TK-CALIB-LINEAGE',
+            'name' => 'Meja Multi-Parameter Lineage',
+            'is_active' => true,
+        ]);
+        $action = app(CreateSensorCalibrationProfileAction::class);
+
+        $phProfile = $action->execute(
+            device: $device,
+            sensorModel: 'RS485-SOIL-7IN1',
+            parameter: 'ph',
+            method: 'offset',
+            parameters: ['offset' => 0.25],
+            reason: 'Verifikasi lineage pH',
+            profileName: 'Profil pH Lineage',
+            user: $teacher
+        );
+        $humidityProfile = $action->execute(
+            device: $device,
+            sensorModel: 'RS485-SOIL-7IN1',
+            parameter: 'humidity',
+            method: 'offset',
+            parameters: ['offset' => -2.0],
+            reason: 'Verifikasi lineage kelembapan',
+            profileName: 'Profil kelembapan Lineage',
+            user: $teacher
+        );
+
+        $reading = app(IngestTelemetryAction::class)->execute($device, [
+            'soilrs485' => [
+                'Ph' => 6.0,
+                'Humidity' => 50.0,
+            ],
+        ], 'fixture');
+
+        $this->assertSame($phProfile->id, $reading->calibration_lineage['ph']['profile_id']);
+        $this->assertSame(1, $reading->calibration_lineage['ph']['version']);
+        $this->assertSame($humidityProfile->id, $reading->calibration_lineage['humidity']['profile_id']);
+        $this->assertSame(1, $reading->calibration_lineage['humidity']['version']);
+        $this->assertSame($phProfile->id, $reading->calibration_profile_id, 'The scalar compatibility column must remain populated.');
     }
 
     // -------------------------------------------------------------------------
