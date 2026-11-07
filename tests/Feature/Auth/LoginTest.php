@@ -17,8 +17,10 @@ class LoginTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        $response->assertSee('Portal Laboratorium Vokasi IoT');
-        $response->assertSee('BITANIC LMS');
+        $response->assertSee('Pembelajaran');
+        $response->assertSee('Vokasi Pertanian');
+        $response->assertSee('yang Lebih Nyata');
+        $response->assertSee('Selamat datang kembali');
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void
