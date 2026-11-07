@@ -207,6 +207,15 @@ class PostgresIntegrationAndConcurrencyTest extends TestCase
             $this->assertStringContainsString('append-only', strtolower($e->getMessage()));
         }
         $this->assertTrue($deleteBlocked, 'PostgreSQL trigger MUST block direct DELETE on audit_logs');
+
+        // Cleanup: this test class does not use RefreshDatabase, so fixtures persist.
+        // The append-only trigger blocks DELETE, so use its documented superuser
+        // escape hatch (app.allow_audit_mutation) scoped to this transaction only.
+        $this->pg->transaction(function () use ($auditId, $schoolId) {
+            $this->pg->statement("SET LOCAL app.allow_audit_mutation = 'on'");
+            $this->pg->table('audit_logs')->where('id', $auditId)->delete();
+            $this->pg->table('schools')->where('id', $schoolId)->delete();
+        });
     }
 
     public function test_postgresql_transaction_atomic_rollback(): void
