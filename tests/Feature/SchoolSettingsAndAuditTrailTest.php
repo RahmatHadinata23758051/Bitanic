@@ -460,8 +460,11 @@ class SchoolSettingsAndAuditTrailTest extends TestCase
             'sensor_thresholds' => $this->validThresholds(),
         ]);
 
-        // Install a temporary SQLite trigger to make INSERT on audit_logs fail with an exception
-        DB::unprepared("CREATE TRIGGER trg_test_force_audit_failure BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT, 'Simulasi kegagalan audit'); END;");
+        // Install a temporary trigger to make INSERT on audit_logs fail with an exception.
+        // Trigger bodies are engine-specific: SQLite uses BEGIN...RAISE(ABORT), PostgreSQL
+        // needs a plpgsql function. Using the wrong dialect aborts the surrounding test
+        // transaction and cascades failures into every later test in the process.
+        $this->installForcedAuditInsertFailure();
 
         try {
             $this->withoutExceptionHandling()
@@ -473,7 +476,7 @@ class SchoolSettingsAndAuditTrailTest extends TestCase
         } catch (QueryException $e) {
             $this->assertStringContainsString('Simulasi kegagalan audit', $e->getMessage());
         } finally {
-            DB::unprepared('DROP TRIGGER IF EXISTS trg_test_force_audit_failure;');
+            $this->dropForcedAuditInsertFailure();
         }
 
         // Verify the setting rolled back to original values due to DB::transaction()
@@ -548,14 +551,18 @@ class SchoolSettingsAndAuditTrailTest extends TestCase
             'details' => 'Data asli yang tidak boleh diubah.',
         ]);
 
-        // Attempt bulk update via Query Builder (bypasses Eloquent events)
+        // Attempt bulk update via Query Builder (bypasses Eloquent events).
+        // Wrapped in a savepoint: on PostgreSQL a raised exception aborts the whole
+        // transaction, so any verification query afterwards would fail with 25P02
+        // unless the savepoint is rolled back first.
         try {
-            DB::table('audit_logs')->where('id', $log->id)->update(['details' => 'DIMANIPULASI']);
-            // If no trigger is installed (SQLite without triggers), the Eloquent model
-            // still protects. But verify the data either way:
+            DB::transaction(function () use ($log) {
+                DB::table('audit_logs')->where('id', $log->id)->update(['details' => 'DIMANIPULASI']);
+            });
+
+            // No exception: the trigger didn't fire on this engine. Verify the data
+            // stayed the same via the Eloquent model protection path instead.
             $log->refresh();
-            // If we reach here, the trigger didn't fire. Assert the data stayed the same
-            // via Eloquent model protection path.
             $this->assertEquals('Data asli yang tidak boleh diubah.', $log->details,
                 'Query builder bypass succeeded — trigger protection missing on this DB engine.');
         } catch (\Exception $e) {
@@ -581,7 +588,10 @@ class SchoolSettingsAndAuditTrailTest extends TestCase
         $countBefore = AuditLog::count();
 
         try {
-            DB::table('audit_logs')->where('action', 'DELETE_TARGET')->delete();
+            DB::transaction(function () {
+                DB::table('audit_logs')->where('action', 'DELETE_TARGET')->delete();
+            });
+
             $countAfter = AuditLog::count();
             $this->assertEquals($countBefore, $countAfter,
                 'Query builder delete bypassed trigger — protection missing.');
@@ -634,5 +644,53 @@ class SchoolSettingsAndAuditTrailTest extends TestCase
     {
         $this->get(route('settings.index'))->assertRedirect('/login');
         $this->post(route('settings.update'), $this->validSettingsPayload())->assertRedirect('/login');
+    }
+
+    /**
+     * Install a trigger that forces INSERT on audit_logs to fail.
+     * Works on both SQLite (RAISE) and PostgreSQL (plpgsql function).
+     */
+    private function installForcedAuditInsertFailure(): void
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::unprepared(<<<'SQL'
+                CREATE OR REPLACE FUNCTION trg_test_force_audit_failure()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    RAISE EXCEPTION 'Simulasi kegagalan audit';
+                END;
+                $$ LANGUAGE plpgsql;
+
+                DROP TRIGGER IF EXISTS trg_test_force_audit_failure ON audit_logs;
+                CREATE TRIGGER trg_test_force_audit_failure
+                BEFORE INSERT ON audit_logs
+                FOR EACH ROW
+                EXECUTE FUNCTION trg_test_force_audit_failure();
+            SQL);
+        } elseif ($driver === 'sqlite') {
+            DB::unprepared(<<<'SQL'
+                CREATE TRIGGER IF NOT EXISTS trg_test_force_audit_failure
+                BEFORE INSERT ON audit_logs
+                BEGIN
+                    SELECT RAISE(ABORT, 'Simulasi kegagalan audit');
+                END;
+            SQL);
+        }
+    }
+
+    private function dropForcedAuditInsertFailure(): void
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::unprepared(<<<'SQL'
+                DROP TRIGGER IF EXISTS trg_test_force_audit_failure ON audit_logs;
+                DROP FUNCTION IF EXISTS trg_test_force_audit_failure();
+            SQL);
+        } elseif ($driver === 'sqlite') {
+            DB::unprepared('DROP TRIGGER IF EXISTS trg_test_force_audit_failure;');
+        }
     }
 }
