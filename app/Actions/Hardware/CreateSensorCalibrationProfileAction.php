@@ -58,7 +58,6 @@ class CreateSensorCalibrationProfileAction
 
             $lastVersion = (int) SensorCalibrationProfile::where('device_id', $device->id)
                 ->where('parameter', $parameter)
-                ->lockForUpdate()
                 ->max('version');
             $newVersion = $lastVersion + 1;
 
