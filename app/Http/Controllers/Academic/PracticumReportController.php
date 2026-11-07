@@ -47,9 +47,15 @@ class PracticumReportController extends Controller
         }
 
         if ($classFilter) {
-            $baseQuery->whereHas('user.profile', function ($p) use ($classFilter) {
-                $p->where('class_grade', $classFilter)
-                    ->orWhere('classroom_id', $classFilter);
+            // class_grade is a free-text label (e.g. "XII ATPH 1") while classroom_id is an
+            // integer key. Comparing the label against the integer column is invalid SQL on
+            // PostgreSQL, so only the numeric form is matched against classroom_id.
+            $isNumericClass = is_numeric($classFilter);
+            $baseQuery->whereHas('user.profile', function ($p) use ($classFilter, $isNumericClass) {
+                $p->where('class_grade', $classFilter);
+                if ($isNumericClass) {
+                    $p->orWhere('classroom_id', (int) $classFilter);
+                }
             });
         }
 
