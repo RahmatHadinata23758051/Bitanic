@@ -30,6 +30,48 @@
     };
 @endphp
 
+{{-- Real-Time System Clock (Outside Floating Sidebar - Desktop Only) --}}
+<div
+    x-data="{
+        timeString: '',
+        timer: null,
+        initClock() {
+            this.update();
+            this.timer = setInterval(() => this.update(), 1000);
+        },
+        destroyClock() {
+            if (this.timer) {
+                clearInterval(this.timer);
+                this.timer = null;
+            }
+        },
+        update() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            this.timeString = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        }
+    }"
+    x-init="initClock()"
+    x-on:unmount.window="destroyClock()"
+    :class="sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'"
+    class="hidden lg:flex fixed z-40 left-3 top-3 h-11 items-center justify-center bg-white border border-slate-200/90 rounded-2xl shadow-xs transition-all duration-200 ease-in-out px-3 select-none"
+    role="timer"
+    aria-label="Waktu sistem real-time (WIB)"
+>
+    <!-- Expanded Clock Display -->
+    <div x-show="!sidebarCollapsed" class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
+        <span class="font-mono text-xs font-bold tracking-tight text-slate-800 font-tabular" x-text="timeString">--:--:--</span>
+        <span class="text-[10px] font-semibold text-slate-500 tracking-wider">WIB</span>
+    </div>
+
+    <!-- Collapsed Clock Display -->
+    <div x-show="sidebarCollapsed" class="flex flex-col items-center justify-center text-center">
+        <span class="font-mono text-[11px] font-bold tracking-tight text-slate-800 font-tabular" x-text="timeString ? timeString.substring(0, 5) : '--:--'">--:--</span>
+        <span class="text-[9px] font-semibold text-slate-400 -mt-0.5">WIB</span>
+    </div>
+</div>
+
 <!-- Backdrop (mobile off-canvas only) -->
 <div
     x-show="sidebarOpen"
@@ -53,54 +95,55 @@
         'w-72'
     ]"
     class="fixed z-40 bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between transition-all duration-200 ease-in-out
-           inset-y-0 left-0 lg:inset-y-auto lg:top-3 lg:bottom-3 lg:left-3 lg:h-[calc(100vh-1.5rem)] lg:rounded-2xl overflow-hidden"
+           inset-y-0 left-0 lg:inset-y-auto lg:top-16 lg:bottom-3 lg:left-3 lg:h-[calc(100vh-4.75rem)] lg:rounded-2xl overflow-hidden"
     role="navigation"
     aria-label="Navigasi utama Bitanic"
     ref="sidebar"
 >
-    <!-- Brand Header Area -->
-    <div class="p-3 border-b border-slate-100 shrink-0">
-        <!-- Expanded Desktop / Mobile Brand Box -->
-        <div x-show="!sidebarCollapsed" class="p-2.5 rounded-xl bg-[#0c3c26] text-white flex items-center justify-between shadow-xs">
-            <a href="{{ url('/') }}" class="flex items-center gap-2.5 min-w-0" aria-label="Bitanic - Kembali ke dashboard">
+    <!-- Brand Header Area (Clean Centered Logo Composition, No Background Panel) -->
+    <div class="p-3 border-b border-slate-100 shrink-0 relative">
+        <!-- Desktop Collapse Button -->
+        <button
+            type="button"
+            @click="toggleSidebarCollapse()"
+            class="hidden lg:flex absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Ciutkan navigasi"
+            aria-label="Ciutkan navigasi"
+        >
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Mobile Drawer Close Button -->
+        <button
+            type="button"
+            @click="sidebarOpen = false"
+            class="lg:hidden absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            aria-label="Tutup navigasi"
+        >
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Expanded Desktop / Mobile Brand View (Centered) -->
+        <div x-show="!sidebarCollapsed" class="flex flex-col items-center justify-center text-center py-1 px-4">
+            <a href="{{ url('/') }}" class="inline-flex items-center justify-center" aria-label="Bitanic - Kembali ke dashboard">
                 <img
-                    src="{{ asset('logo.png') }}"
+                    src="{{ asset('logo-dark.png') }}"
                     alt="Bitanic"
-                    class="h-6 w-auto max-w-[130px] object-contain"
+                    class="h-7 w-auto max-w-[145px] object-contain"
                 />
             </a>
-
-            <div class="flex items-center gap-1">
-                <!-- Desktop Collapse Button -->
-                <button
-                    type="button"
-                    @click="toggleSidebarCollapse()"
-                    class="hidden lg:flex p-1.5 rounded-lg text-emerald-200/80 hover:text-white hover:bg-white/10 transition-colors"
-                    title="Ciutkan navigasi"
-                    aria-label="Ciutkan navigasi"
-                >
-                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
-                </button>
-
-                <!-- Mobile Drawer Close Button -->
-                <button
-                    type="button"
-                    @click="sidebarOpen = false"
-                    class="lg:hidden p-1.5 rounded-lg text-emerald-200/80 hover:text-white hover:bg-white/10 transition-colors"
-                    aria-label="Tutup navigasi"
-                >
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
+            <p class="text-[11px] text-slate-500 font-medium tracking-tight mt-1 truncate">
+                LMS Vokasi &amp; IoT Pertanian
+            </p>
         </div>
 
-        <!-- Collapsed Desktop Brand Box -->
-        <div x-show="sidebarCollapsed" class="hidden lg:flex flex-col items-center gap-2">
-            <a href="{{ url('/') }}" class="w-12 h-10 rounded-xl bg-[#0c3c26] flex items-center justify-center p-1.5 shadow-xs" title="Bitanic - Kembali ke dashboard" aria-label="Bitanic - Kembali ke dashboard">
+        <!-- Collapsed Desktop Brand View -->
+        <div x-show="sidebarCollapsed" class="hidden lg:flex flex-col items-center gap-2 py-1">
+            <a href="{{ url('/') }}" class="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-slate-100 transition-colors" title="Bitanic - Kembali ke dashboard" aria-label="Bitanic - Kembali ke dashboard">
                 <img
-                    src="{{ asset('logo.png') }}"
+                    src="{{ asset('logo-dark.png') }}"
                     alt="Bitanic"
-                    class="h-4.5 w-auto object-contain"
+                    class="h-5 w-auto object-contain"
                 />
             </a>
             <button
@@ -113,11 +156,6 @@
                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
             </button>
         </div>
-
-        <!-- Official Product Descriptor -->
-        <p x-show="!sidebarCollapsed" class="text-[11px] text-slate-500 font-medium tracking-tight mt-1.5 px-1 truncate">
-            LMS Vokasi &amp; IoT Pertanian
-        </p>
     </div>
 
     <!-- Navigation Links Container -->
@@ -135,7 +173,7 @@
                 title="Dashboard"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
-                    {{ Request::is('/') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    {{ Request::is('/') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('/') ? 'page' : 'false' }}"
             >
                 <i data-lucide="layout-dashboard" class="w-4.5 h-4.5 shrink-0 {{ Request::is('/') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -148,7 +186,7 @@
                 title="Stasiun Meja Praktik"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
-                    {{ Request::is('iot*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    {{ Request::is('iot*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('iot*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="gauge" class="w-4.5 h-4.5 shrink-0 {{ Request::is('iot*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -162,7 +200,7 @@
                     title="Media Tanam & Plot"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
-                        {{ Request::is('media*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                        {{ Request::is('media*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('media*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="sprout" class="w-4.5 h-4.5 shrink-0 {{ Request::is('media*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -176,7 +214,7 @@
                 title="Analitik Agronomi"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
-                    {{ Request::is('analytics*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    {{ Request::is('analytics*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('analytics*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="line-chart" class="w-4.5 h-4.5 shrink-0 {{ Request::is('analytics*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -189,7 +227,7 @@
                 title="Riwayat & Ekspor Log"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
-                    {{ Request::is('telemetry/history*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    {{ Request::is('telemetry/history*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('telemetry/history*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="database" class="w-4.5 h-4.5 shrink-0 {{ Request::is('telemetry/history*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -210,7 +248,7 @@
                 title="12 Modul Praktikum"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
-                    {{ Request::is('modules*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    {{ Request::is('modules*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('modules*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="book-open" class="w-4.5 h-4.5 shrink-0 {{ Request::is('modules*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -224,7 +262,7 @@
                     title="Jadwal & Meja Praktik"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
-                        {{ Request::is('schedules*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                        {{ Request::is('schedules*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('schedules*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="calendar" class="w-4.5 h-4.5 shrink-0 {{ Request::is('schedules*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -239,7 +277,7 @@
                     title="Kelas & Kelompok"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
-                        {{ Request::is('classes*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                        {{ Request::is('classes*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('classes*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="graduation-cap" class="w-4.5 h-4.5 shrink-0 {{ Request::is('classes*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -254,7 +292,7 @@
                     title="Laporan LKS Siswa"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
-                        {{ Request::is('reports*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                        {{ Request::is('reports*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('reports*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="file-check" class="w-4.5 h-4.5 shrink-0 {{ Request::is('reports*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -269,7 +307,7 @@
                     title="Rapor Kompetensi"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
-                        {{ Request::is('assessment*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                        {{ Request::is('assessment*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('assessment*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="award" class="w-4.5 h-4.5 shrink-0 {{ Request::is('assessment*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -291,7 +329,7 @@
                 title="Armada Trainer Kit"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
-                    {{ Request::is('trainer-kits*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    {{ Request::is('trainer-kits*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('trainer-kits*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="cpu" class="w-4.5 h-4.5 shrink-0 {{ Request::is('trainer-kits*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -304,7 +342,7 @@
                 title="Raw RS485 Debugger"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
-                    {{ (Request::is('raw-logs*') || Request::is('rawlogs*')) ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    {{ (Request::is('raw-logs*') || Request::is('rawlogs*')) ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ (Request::is('raw-logs*') || Request::is('rawlogs*')) ? 'page' : 'false' }}"
             >
                 <i data-lucide="terminal" class="w-4.5 h-4.5 shrink-0 {{ (Request::is('raw-logs*') || Request::is('rawlogs*')) ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -318,7 +356,7 @@
                     title="Data Siswa & Guru"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
-                        {{ Request::is('users-data*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                        {{ Request::is('users-data*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('users-data*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="users" class="w-4.5 h-4.5 shrink-0 {{ Request::is('users-data*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
@@ -333,7 +371,7 @@
                     title="Pengaturan & Audit"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
-                        {{ Request::is('settings*') ? 'bg-emerald-600 text-white font-semibold shadow-xs shadow-emerald-600/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                        {{ Request::is('settings*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('settings*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="settings" class="w-4.5 h-4.5 shrink-0 {{ Request::is('settings*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
