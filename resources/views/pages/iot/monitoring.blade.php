@@ -50,11 +50,18 @@
                     <span>{{ ($activeDevice?->is_online ?? false) ? 'Online' : 'Offline' }}</span>
                 </span>
 
-                <!-- Last Update Timestamp -->
-                <span class="text-slate-500 flex items-center gap-1 text-xs">
-                    <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                    <span>Pembaruan terakhir: {{ $telemetry['has_telemetry'] ? $telemetry['recorded_at'] : 'belum ada transmisi data' }}</span>
+                <!-- Ingress & Telemetry Availability Status -->
+                <span class="inline-flex items-center gap-1.5 font-medium {{ ($telemetry['is_live'] ?? false) ? 'text-emerald-700' : 'text-slate-500' }}">
+                    <span class="w-1.5 h-1.5 rounded-full {{ ($telemetry['is_live'] ?? false) ? 'bg-emerald-500 animate-pulse' : ($telemetry['has_telemetry'] ? 'bg-amber-400' : 'bg-slate-400') }}"></span>
+                    <span>{{ ($telemetry['is_live'] ?? false) ? 'Streaming Modbus Aktif' : ($telemetry['has_telemetry'] ? 'Telemetri Terakhir (Stale / Offline)' : 'Belum Ada Transmisi Data') }}</span>
                 </span>
+
+                <!-- Last Update Timestamp -->
+                @if($telemetry['has_telemetry'])
+                    <span class="text-slate-400 text-xs">
+                        ({{ $telemetry['recorded_at'] }})
+                    </span>
+                @endif
 
                 <!-- Detail Gateway Modbus Popover -->
                 <div x-data="{ open: false }" class="relative inline-block">
@@ -122,46 +129,39 @@
 
     <!-- Section: Parameter Sensor Tanah 7-in-1 -->
     <div class="space-y-4">
-        <!-- Section Header -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="text-sm font-semibold text-slate-900 tracking-tight">Parameter sensor tanah 7-in-1</h2>
-                <p class="text-xs text-slate-400">Klik kartu untuk melihat glosarium agronomi.</p>
-            </div>
-            <span class="text-xs font-mono {{ ($telemetry['is_live'] ?? false) ? 'text-emerald-700' : 'text-slate-400' }} font-medium flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full {{ ($telemetry['is_live'] ?? false) ? 'bg-emerald-500 animate-pulse' : ($telemetry['has_telemetry'] ? 'bg-amber-400' : 'bg-slate-400') }}"></span>
-                <span>{{ ($telemetry['is_live'] ?? false) ? 'Streaming Modbus Aktif' : ($telemetry['has_telemetry'] ? 'Telemetri Terakhir (Stale / Offline)' : 'Belum Ada Transmisi Data') }}</span>
-            </span>
+        <!-- Simplified Section Header (Tanpa duplikasi transmisi & instruksi gesture) -->
+        <div>
+            <h2 class="text-sm font-semibold text-slate-900 tracking-tight">Parameter sensor tanah 7-in-1</h2>
         </div>
 
         @php
             $phVal = $telemetry['ph'];
-            $phStatus = $phVal === null ? 'optimal' : ($phVal < 5.5 ? 'critical' : ($phVal <= 7.2 ? 'optimal' : 'warning'));
-            $phLabel = $phVal === null ? 'Belum ada data' : ($phVal < 5.5 ? 'Masam Ekstrem' : ($phVal <= 7.2 ? 'Optimal' : 'Alkali/Basa'));
+            $phStatus = $phVal === null ? 'optimal' : ($phVal < 5.5 || $phVal > 7.2 ? 'critical' : 'optimal');
+            $phLabel = $phVal === null ? 'Belum ada data' : ($phVal < 5.5 || $phVal > 7.2 ? 'Di luar rentang acuan' : 'Dalam rentang acuan');
 
             $humVal = $telemetry['humidity'];
-            $humStatus = $humVal === null ? 'optimal' : ($humVal < 25 ? 'critical' : ($humVal <= 65 ? 'optimal' : 'warning'));
-            $humLabel = $humVal === null ? 'Belum ada data' : ($humVal < 25 ? 'Kering Kritis' : ($humVal <= 65 ? 'Optimal' : 'Jenuh Air'));
+            $humStatus = $humVal === null ? 'optimal' : ($humVal < 45 || $humVal > 65 ? 'critical' : 'optimal');
+            $humLabel = $humVal === null ? 'Belum ada data' : ($humVal < 45 || $humVal > 65 ? 'Di luar rentang acuan' : 'Dalam rentang acuan');
 
             $ecVal = $telemetry['ec'];
-            $ecStatus = $ecVal === null ? 'optimal' : ($ecVal > 2200 ? 'warning' : 'optimal');
-            $ecLabel = $ecVal === null ? 'Belum ada data' : ($ecVal > 2200 ? 'Salinitas Tinggi' : 'Optimal');
+            $ecStatus = $ecVal === null ? 'optimal' : ($ecVal < 1000 || $ecVal > 2200 ? 'warning' : 'optimal');
+            $ecLabel = $ecVal === null ? 'Belum ada data' : ($ecVal < 1000 || $ecVal > 2200 ? 'Di luar rentang acuan' : 'Dalam rentang acuan');
 
             $tempVal = $telemetry['temperature'];
-            $tempStatus = $tempVal === null ? 'optimal' : ($tempVal < 18 ? 'warning' : ($tempVal <= 29 ? 'optimal' : 'warning'));
-            $tempLabel = $tempVal === null ? 'Belum ada data' : ($tempVal < 18 ? 'Dingin' : ($tempVal <= 29 ? 'Ideal' : 'Panas'));
+            $tempStatus = $tempVal === null ? 'optimal' : ($tempVal < 22 || $tempVal > 29 ? 'warning' : 'optimal');
+            $tempLabel = $tempVal === null ? 'Belum ada data' : ($tempVal < 22 || $tempVal > 29 ? 'Di luar rentang acuan' : 'Dalam rentang acuan');
 
             $nVal = $telemetry['nitrogen'];
-            $nStatus = $nVal === null ? 'optimal' : ($nVal < 30 ? 'warning' : 'optimal');
-            $nLabel = $nVal === null ? 'Belum ada data' : ($nVal < 30 ? 'Rendah' : 'Cukup');
+            $nStatus = $nVal === null ? 'optimal' : ($nVal < 40 || $nVal > 120 ? 'warning' : 'optimal');
+            $nLabel = $nVal === null ? 'Belum ada data' : ($nVal < 40 || $nVal > 120 ? 'Di luar rentang acuan' : 'Dalam rentang acuan');
 
             $pVal = $telemetry['phosphorus'];
-            $pStatus = $pVal === null ? 'optimal' : ($pVal < 20 ? 'warning' : 'optimal');
-            $pLabel = $pVal === null ? 'Belum ada data' : ($pVal < 20 ? 'Rendah' : 'Cukup');
+            $pStatus = $pVal === null ? 'optimal' : ($pVal < 25 || $pVal > 60 ? 'warning' : 'optimal');
+            $pLabel = $pVal === null ? 'Belum ada data' : ($pVal < 25 || $pVal > 60 ? 'Di luar rentang acuan' : 'Dalam rentang acuan');
 
             $kVal = $telemetry['potassium'];
-            $kStatus = $kVal === null ? 'optimal' : ($kVal < 80 ? 'warning' : 'optimal');
-            $kLabel = $kVal === null ? 'Belum ada data' : ($kVal < 80 ? 'Rendah' : 'Optimal');
+            $kStatus = $kVal === null ? 'optimal' : ($kVal < 100 || $kVal > 200 ? 'warning' : 'optimal');
+            $kLabel = $kVal === null ? 'Belum ada data' : ($kVal < 100 || $kVal > 200 ? 'Di luar rentang acuan' : 'Dalam rentang acuan');
         @endphp
 
         <!-- Group 1: Kondisi Media Tanam (4 Kolom) -->
@@ -179,10 +179,8 @@
                     :idealMax="7.2"
                     :status="$phStatus"
                     :statusLabel="$phLabel"
-                    icon="flask-conical"
-                    definition="Derajat kemasaman tanah yang menentukan kelarutan ion hara bagi penyerapan perakaran tanaman budidaya."
-                    importance="Mengatur ketersediaan hara makro dan menjaga aktivitas mikroorganisme tanah yang menguntungkan."
-                    riskNote="pH terlalu rendah mengikat fosfor dan memicu keracunan aluminium, sedangkan pH tinggi menghambat hara mikro."
+                    definition="Tingkat kemasaman tanah yang menentukan kelarutan ion nutrisi dalam larutan perakaran."
+                    importance="Menjaga pH seimbang memastikan tanaman menyerap unsur hara secara optimal."
                 />
 
                 <!-- Lengas -->
@@ -196,10 +194,8 @@
                     :idealMax="65"
                     :status="$humStatus"
                     :statusLabel="$humLabel"
-                    icon="droplets"
-                    definition="Persentase volume air bebas dan kapiler dalam pori-pori tanah per satuan volume total tanah."
-                    importance="Menjamin turgor sel, efisiensi fotosintesis, dan pelarutan hara untuk diserap perakaran."
-                    riskNote="Lengas terlalu rendah memicu layu permanen, sedangkan kondisi jenuh air menyebabkan hipoksia dan busuk akar."
+                    definition="Kandungan air volumetrik dalam pori-pori tanah untuk kebutuhan perakaran."
+                    importance="Menjaga turgor sel tanaman dan menjadi pelarut utama transportasi nutrisi."
                 />
 
                 <!-- EC -->
@@ -213,10 +209,8 @@
                     :idealMax="2200"
                     :status="$ecStatus"
                     :statusLabel="$ecLabel"
-                    icon="zap"
-                    definition="Daya hantar listrik larutan tanah yang berbanding lurus dengan kepekatan total garam pupuk mineral."
-                    importance="Menjadi acuan kepekatan nutrisi larutan tanah agar sesuai dengan kebutuhan metabolisme fase tumbuh."
-                    riskNote="EC terlalu rendah menunjukkan defisiensi mineral, sedangkan EC tinggi meningkatkan tekanan osmotik dan membakar akar."
+                    definition="Daya hantar listrik yang mencerminkan total kepekatan garam pupuk terlarut."
+                    importance="Menjadi acuan kepekatan nutrisi agar sesuai kebutuhan metabolisme fase tumbuh."
                 />
 
                 <!-- Suhu Tanah -->
@@ -230,10 +224,8 @@
                     :idealMax="29"
                     :status="$tempStatus"
                     :statusLabel="$tempLabel"
-                    icon="thermometer"
-                    definition="Derajat panas zona perakaran yang mempengaruhi laju metabolisme akar dan mikrobioma dekomposer tanah."
-                    importance="Mempengaruhi kecepatan respirasi akar, absorpsi air, dan efisiensi serapan hara makro."
-                    riskNote="Suhu dingin memperlambat metabolisme perakaran, sedangkan suhu terlalu panas mempercepat kerusakan jaringan akar."
+                    definition="Derajat panas zona perakaran yang mempengaruhi laju metabolisme perakaran."
+                    importance="Suhu stabil menjaga aktivitas mikroorganisme tanah dan respirasi akar tetap seimbang."
                 />
             </div>
         </div>
@@ -253,10 +245,8 @@
                     :idealMax="120"
                     :status="$nStatus"
                     :statusLabel="$nLabel"
-                    letter="N"
-                    definition="Unsur hara makro primer penyusun asam amino, protein, dan klorofil untuk fotosintesis tanaman."
-                    importance="Mendorong pertumbuhan vegetatif, pembentukan daun baru, dan akumulasi biomassa hijau."
-                    riskNote="Kekurangan nitrogen menyebabkan klorosis daun tua, sedangkan kelebihan nitrogen membuat jaringan tanaman sukulen dan rentan hama."
+                    definition="Unsur hara makro primer penyusun asam amino, protein, dan klorofil daun."
+                    importance="Mendorong pertumbuhan vegetatif, pembentukan daun hijau, dan percabangan tanaman."
                 />
 
                 <!-- Fosfor -->
@@ -270,10 +260,8 @@
                     :idealMax="60"
                     :status="$pStatus"
                     :statusLabel="$pLabel"
-                    letter="P"
-                    definition="Unsur hara makro primer untuk transfer energi adenosin trifosfat (ATP) dan pembelahan sel tanaman."
-                    importance="Mempercepat inisiasi perakaran awal, pembentukan primordia bunga, dan kematangan benih."
-                    riskNote="Kekurangan fosfor menghambat pertumbuhan akar dan memicu daun keunguan, sedangkan kelebihan fosfor mengganggu serapan unsur mikro."
+                    definition="Unsur hara makro primer untuk transfer energi molekuler ATP dan pembelahan sel."
+                    importance="Merangsang inisiasi perakaran awal, pembungaan, dan pematangan benih."
                 />
 
                 <!-- Kalium -->
@@ -287,35 +275,30 @@
                     :idealMax="200"
                     :status="$kStatus"
                     :statusLabel="$kLabel"
-                    letter="K"
-                    definition="Aktivator enzim fisiologis, pengatur tekanan turgor stomata daun, dan translokasi asimilat."
-                    importance="Meningkatkan ketahanan terhadap cekaman kekeringan, memperkuat dinding sel, dan memperbaiki bobot hasil."
-                    riskNote="Kekurangan kalium memicu nekrosis tepi daun, sedangkan kelebihan kalium menghambat penyerapan kalsium dan magnesium."
+                    definition="Aktivator enzim fisiologis dan pengatur tekanan turgor stomata daun."
+                    importance="Meningkatkan daya tahan terhadap cekaman penyakit dan memperkuat mutu hasil."
                 />
 
                 <!-- Indeks Kesuburan (4th Card) -->
-                <div class="w-full h-[200px] p-4 rounded-2xl bg-[#f4f9f6] border border-emerald-100/70 shadow-2xs flex flex-col justify-between">
+                <div class="w-full h-[180px] p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
                     <div>
-                        <h3 class="text-xs font-semibold text-slate-900 leading-tight">Indeks kesuburan</h3>
-                        <span class="text-[10px] text-slate-400 font-normal block mt-0.5">Ringkasan seluruh parameter</span>
+                        <h3 class="text-xs font-semibold text-slate-700 truncate">
+                            Indeks kesuburan
+                        </h3>
                     </div>
 
-                    <div class="space-y-1 my-auto">
-                        <div class="flex items-baseline gap-1">
-                            <span class="font-tabular text-2xl font-bold text-slate-800 tracking-tight">
+                    <div class="my-auto py-1">
+                        <div class="flex items-baseline gap-1.5">
+                            <span class="font-tabular text-3xl font-bold {{ $healthScore !== null ? 'text-slate-900' : 'text-slate-300' }} tracking-tight">
                                 {{ $healthScore !== null ? $healthScore . '%' : '—' }}
                             </span>
                         </div>
-                        <div class="flex items-center gap-1.5 text-xs">
-                            <span class="w-1.5 h-1.5 rounded-full {{ $healthScore !== null ? 'bg-emerald-500' : 'bg-slate-300' }}"></span>
-                            <span class="{{ $healthScore !== null ? 'text-emerald-700 font-medium' : 'text-slate-400' }}">
-                                {{ $healthScore !== null ? ($healthScore >= 80 ? 'Optimal Horti' : 'Perlu Kalibrasi') : 'Menunggu Telemetri' }}
-                            </span>
-                        </div>
                     </div>
 
-                    <div class="pt-1.5 border-t border-emerald-100/60 text-[11px] text-slate-500 leading-relaxed">
-                        Terisi setelah ketujuh parameter terbaca.
+                    <div>
+                        <span class="text-xs {{ $healthScore !== null ? 'text-emerald-700 font-medium' : 'text-slate-400 font-normal' }}">
+                            {{ $healthScore !== null ? ($healthScore >= 80 ? 'Optimal Horti' : 'Perlu Kalibrasi') : 'Menunggu Telemetri' }}
+                        </span>
                     </div>
                 </div>
             </div>
