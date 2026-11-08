@@ -77,7 +77,7 @@ class CompetencyAssessmentController extends Controller
 
         $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
 
-        return view('pages.assessment.index', [
+        return view('pages.assessment.competency-reports', [
             'students' => $students,
             'stats' => $stats,
             'currentClass' => $classFilter,
