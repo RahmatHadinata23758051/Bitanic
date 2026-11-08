@@ -114,7 +114,7 @@ class AnalyticsController extends Controller
             return $denominator > 0 ? round($numerator / $denominator, 3) : null;
         };
 
-        return view('pages.analytics.index', [
+        return view('pages.analytics.agronomy-analytics', [
             'devices' => $devices,
             'schools' => $schools,
             'selectedSchoolId' => $targetSchoolId,
