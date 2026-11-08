@@ -56,11 +56,6 @@
                     </select>
                 </div>
             </form>
-        @elseif($user?->school)
-            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-600 shadow-2xs shrink-0">
-                <i data-lucide="building-2" class="w-3.5 h-3.5 text-slate-400"></i>
-                <span class="font-medium text-slate-800 truncate max-w-xs">{{ $user->school->name }}</span>
-            </div>
         @endif
     </header>
 
@@ -213,26 +208,13 @@
             </div>
 
             <div class="relative z-10 space-y-4">
-                {{-- Contextual Workstation Status & School Scope --}}
-                <div class="flex flex-wrap items-center gap-2.5 text-xs">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-medium {{ $onlineKitsCount > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200' }}">
-                        <span class="w-1.5 h-1.5 rounded-full {{ $onlineKitsCount > 0 ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
-                        <span>{{ $onlineKitsCount > 0 ? 'Workstation Aktif' : 'Perlu Pengecekan Kit' }}</span>
-                    </span>
-                    @if($user?->school)
-                        <span class="text-slate-300">•</span>
-                        <span class="font-medium text-slate-600 flex items-center gap-1.5">
-                            <i data-lucide="building-2" class="w-3.5 h-3.5 text-slate-400"></i>
-                            <span>{{ $user->school->name }}</span>
-                        </span>
-                    @else
-                        <span class="text-slate-300">•</span>
-                        <span class="font-medium text-slate-500 flex items-center gap-1.5">
-                            <i data-lucide="sprout" class="w-3.5 h-3.5 text-emerald-600"></i>
-                            <span>Laboratorium IoT Pertanian</span>
-                        </span>
-                    @endif
-                </div>
+                {{-- Academic School Scope --}}
+                @if($user?->school)
+                    <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <span>{{ $user->school->name }}</span>
+                    </div>
+                @endif
 
                 {{-- Greeting & Condition --}}
                 <div class="space-y-1">
@@ -248,31 +230,31 @@
                 <div class="pt-2 flex flex-wrap items-center gap-2 text-xs">
                     <a
                         href="{{ url('/iot-monitoring') }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
                     >
                         <i data-lucide="gauge" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span>Stasiun meja praktik</span>
+                        <span>Monitoring IoT</span>
                     </a>
                     <a
                         href="{{ url('/trainer-kits') }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
                     >
                         <i data-lucide="cpu" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span>Armada trainer kit</span>
+                        <span>Trainer Kit</span>
                     </a>
                     <a
                         href="{{ url('/raw-logs') }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
                     >
                         <i data-lucide="terminal" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span>Raw RS485 debugger</span>
+                        <span>Debugger RS485</span>
                     </a>
                     <a
                         href="{{ url('/telemetry/history') }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
                     >
                         <i data-lucide="database" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span>Riwayat &amp; ekspor log</span>
+                        <span>Riwayat Telemetri</span>
                     </a>
                 </div>
             </div>
