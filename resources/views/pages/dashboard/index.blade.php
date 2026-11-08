@@ -172,7 +172,7 @@
 
             <div class="space-y-1.5">
                 <dt class="text-label text-slate-600">Jadwal Terdekat</dt>
-                <dd class="text-sm font-semibold text-slate-900 line-clamp-1">
+                <dd class="text-sm font-semibold text-slate-900 break-words">
                     {{ $todaySchedule?->title ?? 'Tidak ada jadwal berikutnya' }}
                 </dd>
                 <dd class="text-supporting text-slate-600">
@@ -362,16 +362,21 @@
                     </a>
                 </div>
 
+                <p class="flex items-center gap-1.5 text-supporting text-slate-500 lg:hidden">
+                    <i data-lucide="chevrons-right" class="w-3.5 h-3.5 shrink-0" aria-hidden="true"></i>
+                    <span>Geser tabel ke samping untuk melihat semua kolom</span>
+                </p>
+
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm min-w-[800px]" role="table">
+                    <table class="w-full text-sm min-w-[840px]" role="table">
                         <thead>
-                            <tr class="text-left text-label text-slate-500 tracking-wider border-b border-slate-200">
+                            <tr class="text-left text-label text-slate-500 tracking-wider border-b border-slate-200 whitespace-nowrap">
                                 <th class="pb-3 pr-3 w-40 min-w-[140px]">Meja</th>
                                 <th class="pb-3 pr-3 w-28 min-w-[100px] text-center">Status</th>
                                 <th class="pb-3 pr-3 w-20 min-w-[72px] text-right">pH</th>
-                                <th class="pb-3 pr-3 w-24 min-w-[84px] text-right">Lengas (%)</th>
-                                <th class="pb-3 pr-3 w-24 min-w-[84px] text-right">EC (µS/cm)</th>
-                                <th class="pb-3 pr-3 w-36 min-w-[120px]">Terakhir</th>
+                                <th class="pb-3 pr-3 w-28 min-w-[96px] text-right">Lengas (%)</th>
+                                <th class="pb-3 pr-3 w-28 min-w-[96px] text-right">EC (µS/cm)</th>
+                                <th class="pb-3 pr-3 w-40 min-w-[140px]">Terakhir</th>
                                 <th class="pb-3 pr-3 w-24 min-w-[80px] text-center">Sumber</th>
                                 <th class="pb-3 w-36 min-w-[112px] text-right">Aksi</th>
                             </tr>
@@ -393,7 +398,7 @@
                                         </div>
                                     </td>
                                     <td class="py-3 pr-3 text-center">
-                                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase font-mono {{ $isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' }}">
+                                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-semibold {{ $isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' }}">
                                             <span class="w-1.5 h-1.5 rounded-full {{ $isOnline ? 'bg-emerald-600' : 'bg-slate-400' }}" aria-hidden="true"></span>
                                             {{ $isOnline ? 'Online' : 'Offline' }}
                                         </span>
@@ -445,19 +450,19 @@
 
             <!-- Anomalies with Truthful Empty State -->
             <section class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4 lg:col-span-2" aria-labelledby="anomalies-heading">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                         <h3 id="anomalies-heading" class="text-section-title text-slate-900">Anomali Lahan & Tindakan Lapangan</h3>
                         <p class="text-supporting text-slate-500">Deteksi otomatis batas ambang toleransi agronomi (hanya telemetri hardware segar)</p>
                     </div>
                     @if(count($anomalies) > 0)
-                        <span class="px-2 py-1 rounded text-label font-semibold bg-rose-100 text-rose-800">Perlu Intervensi</span>
+                        <span class="px-2 py-1 rounded text-label font-semibold bg-rose-100 text-rose-800 shrink-0">Perlu Intervensi</span>
                     @elseif($totalKitsCount === 0)
-                        <span class="px-2 py-1 rounded text-label font-medium bg-slate-100 text-slate-700">Belum Ada Meja</span>
+                        <span class="px-2 py-1 rounded text-label font-medium bg-slate-100 text-slate-700 shrink-0">Belum Ada Meja</span>
                     @elseif($onlineKitsCount === 0)
-                        <span class="px-2 py-1 rounded text-label font-medium bg-slate-100 text-slate-700">Data Tidak Tersedia</span>
+                        <span class="px-2 py-1 rounded text-label font-medium bg-slate-100 text-slate-700 shrink-0">Data Tidak Tersedia</span>
                     @else
-                        <span class="px-2 py-1 rounded text-label font-medium bg-slate-100 text-slate-700">Tidak Ada Anomali Terdeteksi</span>
+                        <span class="px-2 py-1 rounded text-label font-medium bg-emerald-100 text-emerald-800 shrink-0">Tidak Ada Anomali Terdeteksi</span>
                     @endif
                 </div>
 
