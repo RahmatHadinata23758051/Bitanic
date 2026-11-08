@@ -141,18 +141,6 @@
 >
     <!-- Brand Header Area (Clean Centered Logo Composition, No Background Panel) -->
     <div class="p-3 border-b border-slate-100 shrink-0 relative">
-        <!-- Desktop Collapse Button (Shown only when expanded) -->
-        <button
-            type="button"
-            x-show="!sidebarCollapsed"
-            @click="toggleSidebarCollapse()"
-            class="hidden lg:flex absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            title="Ciutkan navigasi"
-            aria-label="Ciutkan navigasi"
-        >
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-        </button>
-
         <!-- Mobile Drawer Close Button -->
         <button
             type="button"
@@ -164,7 +152,18 @@
         </button>
 
         <!-- Expanded Desktop / Mobile Brand View (Centered) -->
-        <div x-show="!sidebarCollapsed" class="flex flex-col items-center justify-center text-center py-1 px-4">
+        <div x-show="!sidebarCollapsed" class="relative flex flex-col items-center justify-center text-center py-1 px-4">
+            <!-- Desktop Collapse Button (Only inside expanded view) -->
+            <button
+                type="button"
+                @click="toggleSidebarCollapse()"
+                class="hidden lg:flex absolute top-0 -right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                title="Ciutkan navigasi"
+                aria-label="Ciutkan navigasi"
+            >
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+
             <a href="{{ url('/') }}" class="inline-flex items-center justify-center" aria-label="Bitanic - Kembali ke dashboard">
                 <img
                     src="{{ asset('logo-dark.png') }}"
