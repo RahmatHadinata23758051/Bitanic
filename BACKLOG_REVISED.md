@@ -519,6 +519,17 @@ Running the configured suite against isolated PostgreSQL 17.6 `bitanic_test` (in
 - **Verification — scheduler race test**: `PostgresScheduleConcurrencyRaceTest` passes explicitly on `pgsql_testing` (1 test / 12 assertions) and still skips on default SQLite.
 - **Scope/safety**: no baseline asset change, no development-database mutation, no physical hardware operation, no visual redesign. All verification ran against the isolated `bitanic_test` database and in-memory SQLite.
 
+### 2.11 — Dated Documentation Reconciliation (2026-11-09)
+
+Historical entries above are preserved verbatim; this subsection only records facts verified against the current HEAD. It does not close, renumber, or reinterpret any task.
+
+- **Application HEAD**: `345eb73b4fd9b3ebe24e3eda659229eccd9a5991` on `main`, identical to `origin/main`; working tree clean. This supersedes the `bb9fe94` / `09ba8cf` reconciliations recorded in the header and §2.7/§2.9.
+- **BR-602 status update (not a completion)**: The dashboard portion of BR-602 (`TASK-701–704`) has been implemented and merged to `main` as commits `47b0d79` → `345eb73` (shared shell typography, sidebar refinement, role-specific dashboard, fleet-table density/overflow fixes). **BR-602 remains open.** Its acceptance criteria require an approved visual direction per page; only the dashboard has been revised, its PO visual review is pending, and no other page has been redesigned. Merged code is not visual approval.
+- **Test evidence at `345eb73`**: configured SQLite suite 370 tests / 1960 assertions / 5 skipped, 0 failures; Pint `--test` pass; `npm run build` pass. PostgreSQL-isolated figures in §2.10 were recorded at an earlier HEAD and are not restated as current.
+- **Screenshot evidence**: QA screenshots generated during the dashboard revision were temporary untracked artifacts and have been deleted. No screenshot evidence is currently retained in the repository; regenerate only if the PO requests visual review.
+- **Handover artifacts**: `AGENTS.md` and `docs/HANDOVER_ANTIGRAVITY.md` were added as documentation-only changes for the Google Antigravity transfer. They contain no application implementation changes.
+- **Unchanged**: authentication browser smoke remains blocked on approved disposable QA accounts; hardware downlink items remain BLOCKED under BR-400/401/402/403; BR-002/BR-003/BR-100/BR-504 decisions remain with the PO.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |
