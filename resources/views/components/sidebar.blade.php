@@ -34,8 +34,36 @@
 <div
     x-data="{
         timeString: '',
+        dateString: '',
+        shortDateString: '',
         timer: null,
+        timeFormatter: null,
+        dateFormatter: null,
+        shortDateFormatter: null,
         initClock() {
+            try {
+                this.timeFormatter = new Intl.DateTimeFormat('en-GB', {
+                    timeZone: 'Asia/Jakarta',
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                this.dateFormatter = new Intl.DateTimeFormat('id-ID', {
+                    timeZone: 'Asia/Jakarta',
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                this.shortDateFormatter = new Intl.DateTimeFormat('id-ID', {
+                    timeZone: 'Asia/Jakarta',
+                    day: 'numeric',
+                    month: 'short'
+                });
+            } catch (e) {
+                // Fallback if Intl not available
+            }
             this.update();
             this.timer = setInterval(() => this.update(), 1000);
         },
@@ -47,28 +75,39 @@
         },
         update() {
             const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            this.timeString = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            if (this.timeFormatter && this.dateFormatter) {
+                this.timeString = this.timeFormatter.format(now);
+                this.dateString = this.dateFormatter.format(now);
+                this.shortDateString = this.shortDateFormatter.format(now);
+            } else {
+                const pad = (n) => String(n).padStart(2, '0');
+                this.timeString = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                this.dateString = now.toLocaleDateString('id-ID');
+                this.shortDateString = `${now.getDate()}/${now.getMonth() + 1}`;
+            }
         }
     }"
     x-init="initClock()"
     x-on:unmount.window="destroyClock()"
     :class="sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'"
-    class="hidden lg:flex fixed z-40 left-3 top-3 h-11 items-center justify-center bg-white border border-slate-200/90 rounded-2xl shadow-xs transition-all duration-200 ease-in-out px-3 select-none"
+    class="hidden lg:flex fixed z-40 left-3 top-3 h-16 items-center justify-center bg-white border border-slate-200/90 rounded-2xl shadow-xs transition-all duration-200 ease-in-out px-3 select-none"
     role="timer"
-    aria-label="Waktu sistem real-time (WIB)"
+    aria-label="Waktu dan tanggal sistem real-time (WIB)"
 >
     <!-- Expanded Clock Display -->
-    <div x-show="!sidebarCollapsed" class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
-        <span class="font-mono text-xs font-bold tracking-tight text-slate-800 font-tabular" x-text="timeString">--:--:--</span>
-        <span class="text-[10px] font-semibold text-slate-500 tracking-wider">WIB</span>
+    <div x-show="!sidebarCollapsed" class="flex flex-col items-center justify-center text-center">
+        <div class="flex items-baseline gap-1.5 justify-center">
+            <span class="font-mono text-base font-bold tracking-tight text-slate-800 font-tabular" x-text="timeString">--:--:--</span>
+            <span class="text-[11px] font-semibold text-slate-500 tracking-wide">WIB</span>
+        </div>
+        <span class="text-xs font-medium text-slate-500 tracking-normal mt-0.5" x-text="dateString">---------</span>
     </div>
 
     <!-- Collapsed Clock Display -->
     <div x-show="sidebarCollapsed" class="flex flex-col items-center justify-center text-center">
-        <span class="font-mono text-[11px] font-bold tracking-tight text-slate-800 font-tabular" x-text="timeString ? timeString.substring(0, 5) : '--:--'">--:--</span>
-        <span class="text-[9px] font-semibold text-slate-400 -mt-0.5">WIB</span>
+        <span class="font-mono text-xs font-bold tracking-tight text-slate-800 font-tabular" x-text="timeString ? timeString.substring(0, 5) : '--:--'">--:--</span>
+        <span class="text-[10px] font-medium text-slate-500 leading-tight" x-text="shortDateString">-- ---</span>
+        <span class="text-[9px] font-bold text-slate-400 tracking-wider">WIB</span>
     </div>
 </div>
 
@@ -95,7 +134,7 @@
         'w-72'
     ]"
     class="fixed z-40 bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between transition-all duration-200 ease-in-out
-           inset-y-0 left-0 lg:inset-y-auto lg:top-16 lg:bottom-3 lg:left-3 lg:h-[calc(100vh-4.75rem)] lg:rounded-2xl overflow-hidden"
+           inset-y-0 left-0 lg:inset-y-auto lg:top-[5.25rem] lg:bottom-3 lg:left-3 lg:h-[calc(100vh-6rem)] lg:rounded-2xl overflow-hidden"
     role="navigation"
     aria-label="Navigasi utama Bitanic"
     ref="sidebar"
