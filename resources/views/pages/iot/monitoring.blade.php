@@ -129,8 +129,8 @@
                 <p class="text-xs text-slate-400">Klik kartu untuk membalik dan melihat glosarium agronomi.</p>
             </div>
             <span class="text-xs font-mono {{ ($telemetry['is_live'] ?? false) ? 'text-emerald-700' : 'text-slate-400' }} font-medium flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full {{ ($telemetry['is_live'] ?? false) ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400' }}"></span>
-                <span>{{ ($telemetry['is_live'] ?? false) ? 'Streaming Modbus Aktif' : 'Belum Ada Transmisi Data' }}</span>
+                <span class="w-1.5 h-1.5 rounded-full {{ ($telemetry['is_live'] ?? false) ? 'bg-emerald-500 animate-pulse' : ($telemetry['has_telemetry'] ? 'bg-amber-400' : 'bg-slate-400') }}"></span>
+                <span>{{ ($telemetry['is_live'] ?? false) ? 'Streaming Modbus Aktif' : ($telemetry['has_telemetry'] ? 'Telemetri Terakhir (Stale / Offline)' : 'Belum Ada Transmisi Data') }}</span>
             </span>
         </div>
 
