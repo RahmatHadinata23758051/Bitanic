@@ -200,10 +200,10 @@
 
     <!-- Navigation Links Container -->
     <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-4" role="list" aria-label="Menu navigasi">
-        <!-- Section: Telemetri & Workstation -->
+        <!-- Section: IoT & Data -->
         <div class="space-y-1" role="listitem">
             <p x-show="!sidebarCollapsed" class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider" aria-hidden="true">
-                Telemetri &amp; Workstation
+                IoT &amp; Data
             </p>
             <div x-show="sidebarCollapsed" class="hidden lg:block w-8 h-px bg-slate-200 mx-auto my-2" aria-hidden="true"></div>
 
@@ -220,31 +220,31 @@
                 <span x-show="!sidebarCollapsed" class="text-sm truncate">Dashboard</span>
             </a>
 
-            <!-- Stasiun Meja Praktik -->
+            <!-- Monitoring IoT -->
             <a
                 href="{{ url('/iot-monitoring') }}"
-                title="Stasiun Meja Praktik"
+                title="Monitoring IoT"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
                     {{ Request::is('iot*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('iot*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="gauge" class="w-4.5 h-4.5 shrink-0 {{ Request::is('iot*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                <span x-show="!sidebarCollapsed" class="text-sm truncate">Stasiun Meja Praktik</span>
+                <span x-show="!sidebarCollapsed" class="text-sm truncate">Monitoring IoT</span>
             </a>
 
             @if($canViewMedia)
-                <!-- Media Tanam & Plot -->
+                <!-- Media Tanam -->
                 <a
                     href="{{ url('/media') }}"
-                    title="Media Tanam & Plot"
+                    title="Media Tanam"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
                         {{ Request::is('media*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('media*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="sprout" class="w-4.5 h-4.5 shrink-0 {{ Request::is('media*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Media Tanam &amp; Plot</span>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Media Tanam</span>
                 </a>
             @endif
 
@@ -261,82 +261,82 @@
                 <span x-show="!sidebarCollapsed" class="text-sm truncate">Analitik Agronomi</span>
             </a>
 
-            <!-- Riwayat & Ekspor Log -->
+            <!-- Riwayat Telemetri -->
             <a
                 href="{{ url('/telemetry/history') }}"
-                title="Riwayat & Ekspor Log"
+                title="Riwayat Telemetri"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
                     {{ Request::is('telemetry/history*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('telemetry/history*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="database" class="w-4.5 h-4.5 shrink-0 {{ Request::is('telemetry/history*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                <span x-show="!sidebarCollapsed" class="text-sm truncate">Riwayat &amp; Ekspor Log</span>
+                <span x-show="!sidebarCollapsed" class="text-sm truncate">Riwayat Telemetri</span>
             </a>
         </div>
 
-        <!-- Section: Kurikulum & Pembelajaran -->
+        <!-- Section: Akademik -->
         <div class="space-y-1" role="listitem">
             <p x-show="!sidebarCollapsed" class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider" aria-hidden="true">
-                Kurikulum &amp; Pembelajaran
+                Akademik
             </p>
             <div x-show="sidebarCollapsed" class="hidden lg:block w-8 h-px bg-slate-200 mx-auto my-2" aria-hidden="true"></div>
 
-            <!-- 12 Modul Praktikum -->
+            <!-- Modul Praktikum -->
             <a
                 href="{{ url('/modules') }}"
-                title="12 Modul Praktikum"
+                title="Modul Praktikum"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
                     {{ Request::is('modules*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('modules*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="book-open" class="w-4.5 h-4.5 shrink-0 {{ Request::is('modules*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                <span x-show="!sidebarCollapsed" class="text-sm truncate">12 Modul Praktikum</span>
+                <span x-show="!sidebarCollapsed" class="text-sm truncate">Modul Praktikum</span>
             </a>
 
             @if($canViewSchedules)
-                <!-- Jadwal & Meja Praktik -->
+                <!-- Jadwal Praktikum -->
                 <a
                     href="{{ url('/schedules') }}"
-                    title="Jadwal & Meja Praktik"
+                    title="Jadwal Praktikum"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
                         {{ Request::is('schedules*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('schedules*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="calendar" class="w-4.5 h-4.5 shrink-0 {{ Request::is('schedules*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Jadwal &amp; Meja Praktik</span>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Jadwal Praktikum</span>
                 </a>
             @endif
 
             @if($canViewClasses)
-                <!-- Kelas & Kelompok -->
+                <!-- Kelas -->
                 <a
                     href="{{ url('/classes') }}"
-                    title="Kelas & Kelompok"
+                    title="Kelas"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
                         {{ Request::is('classes*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('classes*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="graduation-cap" class="w-4.5 h-4.5 shrink-0 {{ Request::is('classes*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Kelas &amp; Kelompok</span>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Kelas</span>
                 </a>
             @endif
 
             @if($canViewReports)
-                <!-- Laporan LKS Siswa -->
+                <!-- Laporan LKS -->
                 <a
                     href="{{ url('/reports') }}"
-                    title="Laporan LKS Siswa"
+                    title="Laporan LKS"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
                         {{ Request::is('reports*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('reports*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="file-check" class="w-4.5 h-4.5 shrink-0 {{ Request::is('reports*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Laporan LKS Siswa</span>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Laporan LKS</span>
                 </a>
             @endif
 
@@ -356,66 +356,66 @@
             @endif
         </div>
 
-        <!-- Section: Lab & Perangkat -->
+        <!-- Section: Laboratorium -->
         <div class="space-y-1" role="listitem">
             <p x-show="!sidebarCollapsed" class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider" aria-hidden="true">
-                Lab &amp; Perangkat
+                Laboratorium
             </p>
             <div x-show="sidebarCollapsed" class="hidden lg:block w-8 h-px bg-slate-200 mx-auto my-2" aria-hidden="true"></div>
 
-            <!-- Armada Trainer Kit -->
+            <!-- Trainer Kit -->
             <a
                 href="{{ url('/trainer-kits') }}"
-                title="Armada Trainer Kit"
+                title="Trainer Kit"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
                     {{ Request::is('trainer-kits*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ Request::is('trainer-kits*') ? 'page' : 'false' }}"
             >
                 <i data-lucide="cpu" class="w-4.5 h-4.5 shrink-0 {{ Request::is('trainer-kits*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                <span x-show="!sidebarCollapsed" class="text-sm truncate">Armada Trainer Kit</span>
+                <span x-show="!sidebarCollapsed" class="text-sm truncate">Trainer Kit</span>
             </a>
 
-            <!-- Raw RS485 Debugger -->
+            <!-- Debugger RS485 -->
             <a
                 href="{{ url('/raw-logs') }}"
-                title="Raw RS485 Debugger"
+                title="Debugger RS485"
                 :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                 class="flex items-center rounded-xl transition-colors group
                     {{ (Request::is('raw-logs*') || Request::is('rawlogs*')) ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                 aria-current="{{ (Request::is('raw-logs*') || Request::is('rawlogs*')) ? 'page' : 'false' }}"
             >
                 <i data-lucide="terminal" class="w-4.5 h-4.5 shrink-0 {{ (Request::is('raw-logs*') || Request::is('rawlogs*')) ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                <span x-show="!sidebarCollapsed" class="text-sm truncate">Raw RS485 Debugger</span>
+                <span x-show="!sidebarCollapsed" class="text-sm truncate">Debugger RS485</span>
             </a>
 
             @if($canViewUsers)
-                <!-- Data Siswa & Guru -->
+                <!-- Direktori -->
                 <a
                     href="{{ url('/users-data') }}"
-                    title="Data Siswa & Guru"
+                    title="Direktori"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
                         {{ Request::is('users-data*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('users-data*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="users" class="w-4.5 h-4.5 shrink-0 {{ Request::is('users-data*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Data Siswa &amp; Guru</span>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Direktori</span>
                 </a>
             @endif
 
             @if($canViewSettings)
-                <!-- Pengaturan & Audit -->
+                <!-- Pengaturan -->
                 <a
                     href="{{ url('/settings') }}"
-                    title="Pengaturan & Audit"
+                    title="Pengaturan"
                     :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
                     class="flex items-center rounded-xl transition-colors group
                         {{ Request::is('settings*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
                     aria-current="{{ Request::is('settings*') ? 'page' : 'false' }}"
                 >
                     <i data-lucide="settings" class="w-4.5 h-4.5 shrink-0 {{ Request::is('settings*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
-                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Pengaturan &amp; Audit</span>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Pengaturan</span>
                 </a>
             @endif
         </div>
