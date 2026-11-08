@@ -213,16 +213,14 @@
             </div>
 
             <div class="relative z-10 space-y-4">
-                {{-- Meta Pill & Date Row --}}
+                {{-- Meta Pill & User Identity Row --}}
                 <div class="flex flex-wrap items-center gap-2.5 text-xs">
                     <span class="inline-flex items-center px-2 py-0.5 rounded font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
                         {{ $rolePillLabel }}
                     </span>
                     @if($user->name)
                         <span class="font-medium text-slate-700">{{ $user->name }}</span>
-                        <span class="text-slate-300">•</span>
                     @endif
-                    <time class="text-slate-500">{{ now()->translatedFormat('l, d F Y') }}</time>
                 </div>
 
                 {{-- Greeting & Condition --}}
@@ -376,7 +374,13 @@
                     </div>
                     <dd class="text-xs text-slate-500 mt-3">
                         @if($isSiswa)
-                            {{ $studentReportsNeedingRevisionCount > 0 ? $studentReportsNeedingRevisionCount . ' perlu revisi' : 'Semua laporan telah direview.' }}
+                            @if($studentOwnReportsCount === 0)
+                                Belum ada laporan dikumpulkan.
+                            @elseif($studentReportsNeedingRevisionCount > 0)
+                                {{ $studentReportsNeedingRevisionCount }} laporan perlu revisi.
+                            @else
+                                Semua laporan telah direview.
+                            @endif
                         @else
                             {{ $pendingReportsCount > 0 ? 'Laporan praktikan menunggu' : 'Antrean penilaian kosong.' }}
                         @endif
@@ -408,30 +412,38 @@
                     </dd>
                 </div>
 
-                {{-- 4. Rata-rata Kehadiran Siswa --}}
+                {{-- 4. Kehadiran Praktikum (Role-aware: Siswa vs Guru/Admin) --}}
                 <div class="p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
                     <div class="space-y-1">
                         <dt class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                             <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
-                            <span>Rata-rata Kehadiran Siswa</span>
+                            <span>{{ $isSiswa ? 'Kehadiran Praktikum Saya' : 'Rata-rata Kehadiran Siswa' }}</span>
                         </dt>
                         <dd class="flex items-center gap-2 mt-1">
                             <div class="relative w-7 h-7 shrink-0 text-emerald-600" aria-hidden="true">
                                 <svg class="w-7 h-7 transform -rotate-90" viewBox="0 0 36 36">
                                     <path class="text-slate-100" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                    <path class="text-emerald-600" stroke-dasharray="{{ $averageAttendance ?? 0 }}, 100" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path class="text-emerald-600" stroke-dasharray="{{ $attendanceDisplayPercent ?? 0 }}, 100" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                                 </svg>
                             </div>
                             <span class="font-tabular text-2xl font-bold text-slate-900">
-                                {{ $averageAttendance !== null ? number_format($averageAttendance, 1) : '—' }}%
+                                {{ $attendanceDisplayPercent !== null ? number_format($attendanceDisplayPercent, 1) : '—' }}%
                             </span>
                         </dd>
                     </div>
                     <dd class="text-xs text-slate-500 mt-3">
-                        @if($averageAttendance !== null)
-                            Rata-rata seluruh siswa pada cakupan sekolah. Sisa {{ number_format(100 - $averageAttendance, 1) }}% tidak hadir.
+                        @if($isSiswa)
+                            @if($attendanceDisplayPercent !== null)
+                                Kehadiran individual praktikum ATPH Anda semester ini.
+                            @else
+                                Belum ada rekam kehadiran praktikum Anda.
+                            @endif
                         @else
-                            Belum ada data kehadiran siswa tercatat.
+                            @if($attendanceDisplayPercent !== null)
+                                Rata-rata seluruh siswa pada cakupan sekolah. Sisa {{ number_format(100 - $attendanceDisplayPercent, 1) }}% tidak hadir.
+                            @else
+                                Belum ada data kehadiran siswa tercatat.
+                            @endif
                         @endif
                     </dd>
                 </div>
@@ -474,8 +486,15 @@
                                         {{ $dev->code }}
                                     </td>
                                     @foreach(range(6, 17) as $hour)
+                                        @php
+                                            $allocated = $hourlyAllocations[$dev->id][$hour] ?? null;
+                                        @endphp
                                         <td class="py-2.5 px-1 border-l border-slate-100 text-slate-300">
-                                            <span class="inline-block w-full h-4 rounded bg-transparent"></span>
+                                            @if($allocated)
+                                                <span class="inline-block w-full h-4 rounded bg-emerald-600/80 hover:bg-emerald-600 transition-colors cursor-pointer" title="{{ $allocated['title'] }} ({{ sprintf('%02d:00', $hour) }})"></span>
+                                            @else
+                                                <span class="inline-block w-full h-4 rounded bg-transparent"></span>
+                                            @endif
                                         </td>
                                     @endforeach
                                 </tr>
@@ -490,14 +509,15 @@
                     </table>
                 </div>
 
-                {{-- Schedule Caption & Current Clock Indicator --}}
+                {{-- Schedule Caption (Clock centralized to widget) --}}
                 <div class="space-y-1 text-xs text-slate-500">
                     <p class="flex items-center gap-1.5">
-                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
-                        <span>Sesi praktikum belum ada jadwal. Sesi yang ditambahkan guru atau admin tampil sebagai balok di baris mejanya.</span>
-                    </p>
-                    <p class="text-[11px] text-slate-400 pl-3">
-                        Sekarang pukul {{ now()->format('H.i') }}, {{ now()->hour >= 6 && now()->hour <= 17 ? 'dalam rentang jam operasional' : 'di luar rentang 06.00–18.00' }}.
+                        <span class="w-1.5 h-1.5 rounded-full {{ $todaySchedulesCount > 0 ? 'bg-emerald-600' : 'bg-slate-400' }} shrink-0"></span>
+                        @if($todaySchedulesCount > 0)
+                            <span>{{ $todaySchedulesCount }} alokasi sesi praktikum aktif hari ini pada rentang jam operasional (06.00–18.00).</span>
+                        @else
+                            <span>Sesi praktikum belum ada jadwal. Sesi yang ditambahkan guru atau admin tampil sebagai balok di baris mejanya.</span>
+                        @endif
                     </p>
                 </div>
             </div>
@@ -544,14 +564,14 @@
                     {{-- 3. Jadwal Praktikum --}}
                     <div class="pt-2 flex items-center justify-between gap-3">
                         <div class="flex items-start gap-2.5 min-w-0">
-                            <i data-lucide="calendar" class="w-4 h-4 shrink-0 mt-0.5 text-slate-400"></i>
+                            <i data-lucide="calendar" class="w-4 h-4 shrink-0 mt-0.5 {{ $todaySchedulesCount > 0 ? 'text-emerald-600' : 'text-slate-400' }}"></i>
                             <div class="min-w-0">
                                 <p class="font-semibold text-slate-800">Jadwal praktikum</p>
                                 <p class="text-[11px] text-slate-400 truncate">Sesi terdaftar hari ini</p>
                             </div>
                         </div>
-                        <span class="font-semibold text-slate-500 shrink-0">
-                            {{ $todaySchedule && $isScheduleToday ? '1 sesi aktif' : 'Belum ada' }}
+                        <span class="font-semibold {{ $todaySchedulesCount > 0 ? 'text-emerald-700' : 'text-slate-500' }} shrink-0">
+                            {{ $todaySchedulesCount > 0 ? $todaySchedulesCount . ' sesi aktif' : 'Belum ada' }}
                         </span>
                     </div>
 
