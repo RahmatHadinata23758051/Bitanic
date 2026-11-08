@@ -213,13 +213,24 @@
             </div>
 
             <div class="relative z-10 space-y-4">
-                {{-- Meta Pill & User Identity Row --}}
+                {{-- Contextual Workstation Status & School Scope --}}
                 <div class="flex flex-wrap items-center gap-2.5 text-xs">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        {{ $rolePillLabel }}
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-medium {{ $onlineKitsCount > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200' }}">
+                        <span class="w-1.5 h-1.5 rounded-full {{ $onlineKitsCount > 0 ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
+                        <span>{{ $onlineKitsCount > 0 ? 'Workstation Aktif' : 'Perlu Pengecekan Kit' }}</span>
                     </span>
-                    @if($user->name)
-                        <span class="font-medium text-slate-700">{{ $user->name }}</span>
+                    @if($user?->school)
+                        <span class="text-slate-300">•</span>
+                        <span class="font-medium text-slate-600 flex items-center gap-1.5">
+                            <i data-lucide="building-2" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>{{ $user->school->name }}</span>
+                        </span>
+                    @else
+                        <span class="text-slate-300">•</span>
+                        <span class="font-medium text-slate-500 flex items-center gap-1.5">
+                            <i data-lucide="sprout" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            <span>Laboratorium IoT Pertanian</span>
+                        </span>
                     @endif
                 </div>
 
