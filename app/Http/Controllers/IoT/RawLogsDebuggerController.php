@@ -86,7 +86,7 @@ class RawLogsDebuggerController extends Controller
             'info' => (clone $statsBaseQuery)->where('level', 'INFO')->count(),
         ];
 
-        return view('pages.rawlogs.index', [
+        return view('pages.rawlogs.raw-logs', [
             'logs' => $logs,
             'devices' => $devices,
             'schools' => $schools,
