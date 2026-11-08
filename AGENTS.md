@@ -88,12 +88,12 @@ Never touch `bitanic_db` (development) from tests.
 
 ## 5. Git & Commit Rules
 
-- **Mandatory One-File-Per-Commit Discipline**: Every commit must contain changes from exactly ONE tracked file. Never combine changes from multiple files into a single commit.
-- **Explicit staging**: Use `git add <specific-file>` only. `git add .` and `git add -A` are strictly prohibited.
-- **Atomic micro-commits**: one logical change = one commit (Conventional: `feat|fix|refactor|style|chore(scope): message`)
+- **One Logical Change Per Commit Discipline**: Every commit must represent exactly ONE cohesive logical change. Multiple related files (e.g. action + service + test, or controller + view) are permitted and encouraged within the same commit. Do not split inseparable changes into artificial per-file commits, and do not bundle multiple unrelated features into one giant commit.
+- **Explicit Logical Staging**: Stage only the files belonging to the logical unit using `git add <file1> <file2> ...`. `git add .` and `git add -A` without review are prohibited.
+- **Atomic logical commits**: one logical change = one commit (Conventional: `feat|fix|refactor|style|chore(scope): message`)
 - **No AI attribution**: no `Co-Authored-By`, no Claude footers in commit messages or PR descriptions
 - **Clean history**: bisect-friendly, focused per-module
-- **Push only when authorized**; no force-push, no history rewrite
+- **Push only when authorized / upon approval**; no force-push, no history rewrite
 - **Branch**: `main` is the integration branch; feature branches merged via fast-forward when clean
 
 ---
