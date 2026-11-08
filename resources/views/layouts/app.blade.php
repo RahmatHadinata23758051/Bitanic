@@ -20,77 +20,71 @@
     class="h-full font-sans text-slate-800 antialiased selection:bg-emerald-100 selection:text-emerald-900"
     x-data="{
         sidebarOpen: false,
-        aiDrawerOpen: false
+        aiDrawerOpen: false,
+        isCompact: false,
+        init() {
+            const mq = window.matchMedia('(max-width: 1023px)');
+            const sync = (e) => {
+                this.isCompact = e.matches;
+                if (! e.matches) this.sidebarOpen = false;
+            };
+            sync(mq);
+            mq.addEventListener('change', sync);
+        }
     }"
+    @keydown.escape.window="sidebarOpen = false"
     @open-ai-drawer.window="aiDrawerOpen = true"
     @close-ai-drawer.window="aiDrawerOpen = false"
 >
     <div class="min-h-full flex">
-        <!-- Backdrop mobile -->
-        <div
-            x-cloak
-            x-show="sidebarOpen"
-            @click="sidebarOpen = false"
-            x-transition:enter="transition-opacity ease-linear duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition-opacity ease-linear duration-200"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-slate-900/40 z-30 lg:hidden"
-        ></div>
-
         <!-- Sidebar Component -->
         @include('components.sidebar')
 
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col min-w-0 lg:pl-72">
-            <!-- Topbar Component -->
-            @include('components.topbar', [
-                'activeDevice' => $activeDevice ?? null,
-                'devices' => $devices ?? [],
-                'criticalAlertsCount' => $criticalAlertsCount ?? 0,
-            ])
+            <!-- Mobile Navigation Bar (compact viewports only) -->
+            <header
+                x-show="isCompact"
+                x-cloak
+                class="lg:hidden h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between sticky top-0 z-30"
+                role="banner"
+            >
+                <button
+                    type="button"
+                    @click="sidebarOpen = ! sidebarOpen"
+                    :aria-expanded="sidebarOpen ? 'true' : 'false'"
+                    aria-controls="app-sidebar"
+                    class="p-2 -ml-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    aria-label="Buka navigasi"
+                >
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-extrabold tracking-tight text-slate-900">BITANIC</span>
+                    <span class="text-xs font-mono text-slate-500">Lab Presisi Agritech</span>
+                </div>
+
+                <span class="w-9" aria-hidden="true"></span>
+            </header>
 
             <!-- Global Flash Messages -->
-            @if(session('success'))
-                <div class="mx-4 sm:mx-6 mt-4 p-4 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs text-emerald-800">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
-                        <span class="font-medium">{{ session('success') }}</span>
+            @foreach (['success' => ['check-circle-2', 'emerald'], 'warning' => ['alert-triangle', 'amber'], 'error' => ['alert-octagon', 'rose']] as $key => [$icon, $tone])
+                @if(session($key))
+                    <div class="mx-4 sm:mx-6 mt-4 p-4 rounded-lg bg-{{ $tone }}-50 border border-{{ $tone }}-200 flex items-center justify-between text-xs text-{{ $tone }}-800" role="alert">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="{{ $icon }}" class="w-4 h-4 text-{{ $tone }}-600 shrink-0"></i>
+                            <span class="font-medium">{{ session($key) }}</span>
+                        </div>
+                        <button type="button" @click="$el.parentElement.remove()" class="text-{{ $tone }}-600 hover:text-{{ $tone }}-800" aria-label="Tutup notifikasi">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
-                    <button type="button" @click="$el.parentElement.remove()" class="text-emerald-600 hover:text-emerald-800">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
-                </div>
-            @endif
-
-            @if(session('warning'))
-                <div class="mx-4 sm:mx-6 mt-4 p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between text-xs text-amber-800">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                        <span class="font-medium">{{ session('warning') }}</span>
-                    </div>
-                    <button type="button" @click="$el.parentElement.remove()" class="text-amber-600 hover:text-amber-800">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="mx-4 sm:mx-6 mt-4 p-4 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-between text-xs text-rose-800">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-600 shrink-0"></i>
-                        <span class="font-medium">{{ session('error') }}</span>
-                    </div>
-                    <button type="button" @click="$el.parentElement.remove()" class="text-rose-600 hover:text-rose-800">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
-                </div>
-            @endif
+                @endif
+            @endforeach
 
             <!-- Main Page Content -->
-            <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+            <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6" role="main">
                 @yield('content')
                 {{ $slot ?? '' }}
             </main>
