@@ -71,7 +71,7 @@ class SettingsAuditController extends Controller
             ->latest('id')
             ->paginate(15);
 
-        return view('pages.settings.index', [
+        return view('pages.settings.settings', [
             'setting' => $setting,
             'auditLogs' => $auditLogs,
         ]);
