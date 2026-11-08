@@ -5,6 +5,20 @@ Source of truth: `PRD.md`, `ARCHITECTURE.md`, `BACKLOG_REVISED.md` (canonical at
 
 ---
 
+## 0. Mandatory Pre-Flight Memory Loading (`.agent/`)
+
+**CRITICAL INSTRUCTION FOR ALL SESSIONS & TURNS**:
+Before taking any action, planning, modifying, or creating code on Bitanic:
+1. **Always read `.agent/` brain files**:
+   - `.agent/AGENT.md` (Operational manual & architecture)
+   - `.agent/SKILLS_INTEGRATION.md` (Automated skills runtime: laravel-testing-qc, ui-ux-pro-max, superpowers-lab, backend-dev-guidelines, security-audit)
+   - `.agent/ANTI_AI_SLOP_DOCTRINE.md` (Strict anti-slop visual and semantic design rules)
+   - `.agent/KNOWLEDGE.md` (Vocational curriculum, ATPH 4.0, Modbus, telemetry rules)
+   - `.agent/WORKFLOW_AND_SAFETY_GATES.md` (PO approval gate & non-negotiable workflow)
+2. **Never rely on ephemeral context**: Context windows get summarized or compacted, but `.agent/` is persistent on disk. Re-check it whenever in doubt.
+
+---
+
 ## 1. Project Purpose & Architecture
 
 **Bitanic** = Smart Precision Agriculture LMS & IoT Workstation for SMK Pertanian/ATPH 4.0.  
