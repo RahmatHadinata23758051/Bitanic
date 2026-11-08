@@ -75,7 +75,7 @@ class TrainerKitManagerController extends Controller
         $totalCount = $resolver->countTotal($targetSchoolId);
         $onlineCount = $resolver->countOnline($targetSchoolId);
 
-        return view('pages.kits.index', [
+        return view('pages.kits.trainer-kits', [
             'kits' => $kits,
             'schools' => $schools,
             'selectedSchoolId' => $targetSchoolId,
