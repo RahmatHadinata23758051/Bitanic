@@ -161,6 +161,72 @@ class IotMonitoringController extends Controller
             $healthScore = max(30, min(100, $score));
         }
 
+        // Summary counts for strip inspection
+        $normalCount = 0;
+        $warningCount = 0;
+        if ($hasTelemetry) {
+            if ($t['ph'] !== null) {
+                ($t['ph'] >= 6.0 && $t['ph'] <= 7.2) ? $normalCount++ : $warningCount++;
+            }
+            if ($t['humidity'] !== null) {
+                ($t['humidity'] >= 45.0 && $t['humidity'] <= 65.0) ? $normalCount++ : $warningCount++;
+            }
+            if ($t['ec'] !== null) {
+                ($t['ec'] >= 1000 && $t['ec'] <= 2200) ? $normalCount++ : $warningCount++;
+            }
+            if ($t['nitrogen'] !== null) {
+                ($t['nitrogen'] >= 40 && $t['nitrogen'] <= 120) ? $normalCount++ : $warningCount++;
+            }
+            if ($t['phosphorus'] !== null) {
+                ($t['phosphorus'] >= 25 && $t['phosphorus'] <= 60) ? $normalCount++ : $warningCount++;
+            }
+            if ($t['potassium'] !== null) {
+                ($t['potassium'] >= 100 && $t['potassium'] <= 200) ? $normalCount++ : $warningCount++;
+            }
+            if ($t['temperature'] !== null) {
+                ($t['temperature'] >= 22.0 && $t['temperature'] <= 29.0) ? $normalCount++ : $warningCount++;
+            }
+        }
+
+        $relaysState = (array) ($activeDevice?->relays_state ?? []);
+        $activeActuatorsCount = count(array_filter($relaysState, fn ($v) => (bool) $v));
+
+        $chartReadings = $activeDevice
+            ? TelemetryReading::where('device_id', $activeDevice->id)
+                ->latest('recorded_at')
+                ->take(30)
+                ->get()
+                ->reverse()
+                ->values()
+            : collect();
+
+        $chartData = [
+            'ph' => [
+                'values' => $chartReadings->map(fn ($r) => ['x' => $r->recorded_at?->toIso8601String(), 'y' => $r->ph !== null ? (float) $r->ph : null])->all(),
+            ],
+            'moisture' => [
+                'values' => $chartReadings->map(fn ($r) => ['x' => $r->recorded_at?->toIso8601String(), 'y' => $r->humidity !== null ? (float) $r->humidity : null])->all(),
+            ],
+            'humidity' => [
+                'values' => $chartReadings->map(fn ($r) => ['x' => $r->recorded_at?->toIso8601String(), 'y' => $r->humidity !== null ? (float) $r->humidity : null])->all(),
+            ],
+            'ec' => [
+                'values' => $chartReadings->map(fn ($r) => ['x' => $r->recorded_at?->toIso8601String(), 'y' => $r->ec !== null ? (float) $r->ec : null])->all(),
+            ],
+            'nitrogen' => [
+                'values' => $chartReadings->map(fn ($r) => ['x' => $r->recorded_at?->toIso8601String(), 'y' => $r->nitrogen !== null ? (float) $r->nitrogen : null])->all(),
+            ],
+            'phosphorus' => [
+                'values' => $chartReadings->map(fn ($r) => ['x' => $r->recorded_at?->toIso8601String(), 'y' => $r->phosphorus !== null ? (float) $r->phosphorus : null])->all(),
+            ],
+            'potassium' => [
+                'values' => $chartReadings->map(fn ($r) => ['x' => $r->recorded_at?->toIso8601String(), 'y' => $r->potassium !== null ? (float) $r->potassium : null])->all(),
+            ],
+            'temperature' => [
+                'values' => $chartReadings->map(fn ($r) => ['x' => $r->recorded_at?->toIso8601String(), 'y' => $r->temperature !== null ? (float) $r->temperature : null])->all(),
+            ],
+        ];
+
         return view('pages.iot.monitoring', [
             'activeDevice' => $activeDevice,
             'devices' => $allDevices,
@@ -169,6 +235,10 @@ class IotMonitoringController extends Controller
             'criticalAlertsCount' => count(array_filter($alerts, fn ($a) => $a['severity'] === 'critical')),
             'healthScore' => $healthScore,
             'recentReadings' => $recentReadings,
+            'normalParamsCount' => $normalCount,
+            'warningParamsCount' => $warningCount,
+            'activeActuatorsCount' => $activeActuatorsCount,
+            'chartData' => $chartData,
         ]);
     }
 
