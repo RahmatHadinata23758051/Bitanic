@@ -80,6 +80,33 @@ class DashboardController extends Controller
             ? $todaySchedule->activity_date->toDateString() === now()->toDateString()
             : false;
 
+        $todaySchedules = ActivitySchedule::query()
+            ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->whereDate('activity_date', now()->toDateString())
+            ->get(['id', 'device_id', 'title', 'start_time', 'end_time']);
+
+        $todaySchedulesCount = $todaySchedules->count();
+
+        $hourlyAllocations = [];
+        foreach ($todaySchedules as $sched) {
+            if (! $sched->device_id || ! $sched->start_time || ! $sched->end_time) {
+                continue;
+            }
+            $startHour = (int) substr($sched->start_time, 0, 2);
+            $endHour = (int) substr($sched->end_time, 0, 2);
+            $endMinute = (int) substr($sched->end_time, 3, 2);
+            $lastHour = $endMinute > 0 ? $endHour : max($startHour, $endHour - 1);
+
+            for ($h = $startHour; $h <= $lastHour; $h++) {
+                if ($h >= 6 && $h <= 17) {
+                    $hourlyAllocations[$sched->device_id][$h] = [
+                        'title' => $sched->title,
+                        'schedule_id' => $sched->id,
+                    ];
+                }
+            }
+        }
+
         // 3. Student reports count scoped by role
         $isSiswa = (bool) $user?->isSiswa();
         $pendingReportsCount = 0;
@@ -167,18 +194,27 @@ class DashboardController extends Controller
         }
         $affectedStationsCount = count($affectedStationCodes);
 
-        // 5. PRD FR-002 Student Attendance Percentage
-        $avgAttendance = UserProfile::query()
-            ->whereHas('user', function ($q) use ($targetSchoolId) {
-                $q->where('role', 'siswa');
-                if ($targetSchoolId) {
-                    $q->where('school_id', $targetSchoolId);
-                }
-            })
-            ->whereNotNull('attendance_percent')
-            ->avg('attendance_percent');
+        // 5. PRD FR-002 Student Attendance Percentage (role-scoped for privacy)
+        if ($isSiswa) {
+            $studentAttendance = $user->profile?->attendance_percent !== null
+                ? round((float) $user->profile->attendance_percent, 1)
+                : null;
+            $attendanceDisplayPercent = $studentAttendance;
+        } else {
+            $avgAttendance = UserProfile::query()
+                ->whereHas('user', function ($q) use ($targetSchoolId) {
+                    $q->where('role', 'siswa');
+                    if ($targetSchoolId) {
+                        $q->where('school_id', $targetSchoolId);
+                    }
+                })
+                ->whereNotNull('attendance_percent')
+                ->avg('attendance_percent');
 
-        $averageAttendance = $avgAttendance !== null ? round((float) $avgAttendance, 1) : null;
+            $attendanceDisplayPercent = $avgAttendance !== null ? round((float) $avgAttendance, 1) : null;
+        }
+
+        $averageAttendance = $attendanceDisplayPercent;
 
         return view('pages.dashboard.index', [
             'user' => $user,
@@ -188,6 +224,8 @@ class DashboardController extends Controller
             'totalKitsCount' => $totalKitsCount,
             'todaySchedule' => $todaySchedule,
             'isScheduleToday' => $isScheduleToday,
+            'todaySchedulesCount' => $todaySchedulesCount,
+            'hourlyAllocations' => $hourlyAllocations,
             'upcomingSchedules' => $upcomingSchedules,
             'pendingReportsCount' => $pendingReportsCount,
             'studentOwnReportsCount' => $studentOwnReportsCount,
@@ -197,6 +235,7 @@ class DashboardController extends Controller
             'criticalAlertsCount' => count($anomalies),
             'hasFreshHardwareTelemetry' => $hasFreshHardwareTelemetry,
             'averageAttendance' => $averageAttendance,
+            'attendanceDisplayPercent' => $attendanceDisplayPercent,
             'isSuperuser' => $isSuperuser,
             'schools' => $schools,
             'selectedSchoolId' => $selectedSchoolId,
