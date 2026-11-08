@@ -10,115 +10,33 @@
         $isSuperuser = $user?->isSuperuser();
         $isAdmin = in_array($user?->role ?? '', ['superuser', 'admin'], true);
 
-        // Page title per role
-        $pageTitle = match (true) {
-            $isGuest => 'Selamat datang di Bitanic',
-            $isSiswa => 'Dashboard Pembelajaran',
-            $isGuru => 'Dashboard Pengajaran',
-            $isAdmin => 'Dashboard',
-            default => 'Dashboard',
-        };
-
-        // Section titles per role
-        $heroIntro = match (true) {
-            $isGuest => 'Platform pembelajaran vokasi terintegrasi untuk SMK Pertanian 4.0 — menggabungkan kurikulum praktikum, jadwal kelas, IoT Trainer Kit, dan analitik agronomi dalam satu ekosistem.',
-            $isSiswa => 'Lacak progres praktikum, tugas LKS, dan jadwal kelas Anda.',
-            $isGuru => 'Kelola jadwal mengajar, tinjau LKS praktikan, dan pantau kesiapan lab.',
-            $isAdmin => 'Ringkasan operasional laboratorium dan akademik sekolah.',
-        };
-
-        $primaryCtaText = match (true) {
-            $isGuest => 'Jelajahi Platform',
-            $isSiswa => 'Lihat Modul Praktikum',
-            $isGuru => 'Buka Jadwal Mengajar',
-            $isAdmin => 'Kelola Armada Kit',
-            default => 'Mulai',
-        };
-
-        $primaryCtaUrl = match (true) {
-            $isGuest => '/modules',
-            $isSiswa => '/modules',
-            $isGuru => '/schedules',
-            $isAdmin => '/trainer-kits',
-            default => '/modules',
+        $dashboardIntro = match (true) {
+            $isGuest => 'Informasi pembelajaran vokasi, jadwal praktikum, dan perangkat IoT pertanian presisi.',
+            $isSiswa => 'Pantau tugas praktikum dan jadwal pembelajaran Anda.',
+            $isGuru => 'Ringkasan jadwal praktikum, laporan siswa, dan kesiapan laboratorium.',
+            default => 'Ringkasan aktivitas akademik dan kondisi laboratorium.',
         };
     @endphp
 
-    <!-- PAGE HERO: First Viewport -->
-    <header class="p-6 lg:p-8 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-        <div class="space-y-2">
-            @if($isGuest)
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        SMK PERTANIAN 4.0
-                    </span>
-                    <span class="text-sm text-slate-400">•</span>
-                    <span class="text-sm font-medium text-slate-600">Laboratorium IoT Agronomi & Hidroponik</span>
-                    <span class="text-sm text-slate-400">•</span>
-                    <time class="text-sm text-slate-500 font-mono">{{ now()->translatedFormat('l, d F Y') }}</time>
-                </div>
-            @else
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {{ $user->school?->name ?? 'Laboratorium' }}
-                    </span>
-                    <span class="text-sm text-slate-400">•</span>
-                    <span class="text-sm font-medium text-slate-600">{{ $isSiswa ? 'Siswa Praktikan' : ($isGuru ? 'Guru Pembimbing' : 'Admin Lab IoT') }}</span>
-                    <span class="text-sm text-slate-400">•</span>
-                    <time class="text-sm text-slate-500 font-mono">{{ now()->translatedFormat('l, d F Y') }}</time>
-                    @if($averageAttendance !== null && ($isGuru || $isSuperuser))
-                        <span class="text-sm text-slate-400">•</span>
-                        <span class="text-sm font-semibold text-slate-600 flex items-center gap-1 text-supporting">
-                            <i data-lucide="users" class="w-4 h-4 text-emerald-600"></i>
-                            <span>Kehadiran: {{ number_format($averageAttendance, 1) }}%</span>
-                        </span>
-                    @endif
-                </div>
-            @endif
-
-            <h1 class="text-page-title text-slate-900">{{ $pageTitle }}</h1>
-            <p class="text-body-lg text-slate-600 max-w-3xl">{{ $heroIntro }}</p>
+    <header class="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+            <h1 class="text-page-title text-slate-900">Dashboard</h1>
+            <p class="text-body text-slate-600 mt-1 max-w-2xl">{{ $dashboardIntro }}</p>
+            <time class="text-supporting text-slate-600 mt-2 block">{{ now()->translatedFormat('l, d F Y') }}</time>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 pt-2">
-            <a
-                href="{{ $primaryCtaUrl }}"
-                class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors"
-            >
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                <span>{{ $primaryCtaText }}</span>
-            </a>
-
-            @if($isSuperuser)
-                <label class="text-label text-slate-600" for="dashboard-school-filter">Sekolah</label>
-                <select id="dashboard-school-filter" name="school_id" form="dashboard-school-form"
-                        onchange="this.form.submit()"
-                        class="max-w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-700">
+        @if($isSuperuser)
+            <form id="dashboard-school-form" method="GET" action="{{ url('/') }}" class="w-full sm:w-auto sm:min-w-56">
+                <label class="text-label text-slate-700 block mb-1" for="dashboard-school-filter">Cakupan sekolah</label>
+                <select id="dashboard-school-filter" name="school_id" onchange="this.form.submit()"
+                        class="w-full sm:max-w-64 px-3 py-2 rounded-md bg-white border border-slate-300 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
                     <option value="">Semua Sekolah</option>
                     @foreach($schools as $school)
                         <option value="{{ $school->id }}" @selected($selectedSchoolId == $school->id)>{{ $school->name }}</option>
                     @endforeach
                 </select>
-                <form id="dashboard-school-form" method="GET" action="{{ url('/') }}" class="hidden"></form>
-            @endif
-
-            @if(!$isGuest)
-                <a
-                    href="{{ url('/iot-monitoring') }}{{ $isSuperuser && $selectedSchoolId ? '?school_id=' . $selectedSchoolId : '' }}"
-                    class="px-4 py-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-sm font-semibold flex items-center gap-2 transition-colors"
-                >
-                    <i data-lucide="gauge" class="w-4 h-4 text-slate-500"></i>
-                    <span>Stasiun Meja Praktik</span>
-                </a>
-                <a
-                    href="{{ url('/schedules') }}"
-                    class="px-4 py-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-sm font-semibold flex items-center gap-2 transition-colors"
-                >
-                    <i data-lucide="calendar" class="w-4 h-4 text-slate-500"></i>
-                    <span>Jadwal Lab</span>
-                </a>
-            @endif
-        </div>
+            </form>
+        @endif
     </header>
 
     @if($isGuest)
@@ -238,72 +156,75 @@
         <!-- AUTHENTICATED DASHBOARD: Role-Specific Workflows -->
 
         <!-- OPERATIONAL SUMMARY: Compact, Truthful -->
-        <section class="p-4 lg:p-5 rounded-xl bg-white border border-slate-200 shadow-sm" aria-labelledby="summary-heading">
+        <section class="py-4 px-5 rounded-xl bg-white border border-slate-200" aria-labelledby="summary-heading">
             <h2 id="summary-heading" class="sr-only">Ringkasan Operasional</h2>
-            <dl class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <dl class="grid grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-5">
                 <div class="space-y-1.5">
-                    <dt class="text-label text-slate-400 tracking-wide">Armada Trainer Kit</dt>
-                    <dd class="flex items-baseline gap-2">
-                        <span class="font-tabular text-2xl font-bold text-slate-900">{{ $onlineKitsCount }}</span>
-                        <span class="text-sm font-medium text-slate-500">/ {{ $totalKitsCount }} Meja Online</span>
-                    </dd>
-                    <dd class="text-supporting {{ $totalKitsCount === 0 ? 'text-slate-500' : ($onlineKitsCount === $totalKitsCount ? 'text-emerald-700' : 'text-amber-600') }}">
-                        {{ $totalKitsCount === 0 ? 'Belum Ada Meja Terdaftar' : ($onlineKitsCount === $totalKitsCount ? 'Semua Siap Pakai' : ($totalKitsCount - $onlineKitsCount) . ' Perlu Periksa') }}
-                    </dd>
-                </div>
+                <dt class="text-label text-slate-600">Meja Online</dt>
+                <dd class="flex items-baseline gap-1.5">
+                    <span class="font-tabular text-2xl font-semibold text-slate-900">{{ $onlineKitsCount }}</span>
+                    <span class="text-supporting text-slate-600">/ {{ $totalKitsCount }}</span>
+                </dd>
+                <dd class="text-supporting {{ $totalKitsCount === 0 ? 'text-slate-600' : ($onlineKitsCount === $totalKitsCount ? 'text-emerald-700' : 'text-amber-700') }}">
+                    {{ $totalKitsCount === 0 ? 'Belum ada meja terdaftar' : ($onlineKitsCount === $totalKitsCount ? 'Armada siap pakai' : ($totalKitsCount - $onlineKitsCount) . ' tidak terhubung') }}
+                </dd>
+            </div>
 
-                <div class="space-y-1.5">
-                    <dt class="text-label text-slate-400 tracking-wide">Jadwal Terdekat</dt>
-                    <dd class="font-semibold text-sm text-slate-900 line-clamp-1">
-                        {{ $todaySchedule?->title ?? 'Tidak ada jadwal berikutnya' }}
-                    </dd>
-                    <dd class="text-supporting text-slate-500 font-mono">
-                        @if($todaySchedule)
-                            {{ $todaySchedule->activity_date?->format('d/m/Y') }} · {{ substr($todaySchedule->start_time ?? '', 0, 5) }}–{{ substr($todaySchedule->end_time ?? '', 0, 5) }} WIB
-                            @if($todaySchedule->lead_teacher)
-                                • {{ $todaySchedule->lead_teacher->name }}
-                            @endif
-                        @else
-                            Belum ada jadwal terdaftar
-                        @endif
-                    </dd>
-                </div>
-
-                <div class="space-y-1.5">
-                    <dt class="text-label text-slate-400 tracking-wide">
-                        @if($isSiswa)
-                            LKS Praktikum Saya
-                        @else
-                            LKS Menunggu Review
-                        @endif
-                    </dt>
-                    <dd class="flex items-baseline gap-2">
-                        <span class="font-tabular text-2xl font-bold {{ $isSiswa ? 'text-indigo-700' : 'text-amber-600' }}">{{ $isSiswa ? $studentOwnReportsCount : $pendingReportsCount }}</span>
-                        <span class="text-sm font-medium text-slate-500">
-                            {{ $isSiswa ? 'Laporan Saya' : 'Laporan Praktikan' }}
-                        </span>
-                    </dd>
-                    @if($isSiswa && $studentReportsNeedingRevisionCount)
-                        <dd class="text-supporting text-rose-600">{{ $studentReportsNeedingRevisionCount }} perlu revisi</dd>
+            <div class="space-y-1.5">
+                <dt class="text-label text-slate-600">Jadwal Terdekat</dt>
+                <dd class="text-sm font-semibold text-slate-900 line-clamp-1">
+                    {{ $todaySchedule?->title ?? 'Tidak ada jadwal berikutnya' }}
+                </dd>
+                <dd class="text-supporting text-slate-600">
+                    @if($todaySchedule)
+                        {{ $todaySchedule->activity_date?->format('d M Y') }} · {{ substr($todaySchedule->start_time ?? '', 0, 5) }}–{{ substr($todaySchedule->end_time ?? '', 0, 5) }} WIB
+                    @else
+                        Belum ada jadwal terdaftar
                     @endif
-                </div>
+                </dd>
+            </div>
 
-                <div class="space-y-1.5">
-                    <dt class="text-label text-slate-400 tracking-wide">Peringatan Anomali</dt>
-                    <dd class="flex items-baseline gap-2">
-                        <span class="font-tabular text-2xl font-bold {{ count($anomalies) > 0 ? 'text-rose-600' : ($hasFreshHardwareTelemetry ? 'text-emerald-700' : 'text-slate-500') }}">
-                            {{ $affectedStationsCount }}
-                        </span>
-                        <span class="text-sm font-medium text-slate-500">Meja Terdampak</span>
+            <div class="space-y-1.5">
+                <dt class="text-label text-slate-600">
+                    @if($isSiswa)
+                        LKS Saya
+                    @else
+                        LKS Menunggu Review
+                    @endif
+                </dt>
+                <dd class="flex items-baseline gap-1.5">
+                    <span class="font-tabular text-2xl font-semibold {{ $isSiswa && $studentReportsNeedingRevisionCount ? 'text-indigo-700' : ($isSiswa ? 'text-slate-900' : ($pendingReportsCount > 0 ? 'text-amber-700' : 'text-slate-900')) }}">{{ $isSiswa ? $studentOwnReportsCount : $pendingReportsCount }}</span>
+                    <span class="text-supporting text-slate-600">{{ $isSiswa ? 'laporan terkumpul' : 'laporan praktikan' }}</span>
+                </dd>
+                @if($isSiswa && $studentReportsNeedingRevisionCount)
+                    <dd class="text-supporting text-rose-700">{{ $studentReportsNeedingRevisionCount }} perlu revisi</dd>
+                @endif
+            </div>
+
+            <div class="space-y-1.5">
+                <dt class="text-label text-slate-600">Peringatan Anomali</dt>
+                <dd class="flex items-baseline gap-1.5">
+                    <span class="font-tabular text-2xl font-semibold {{ count($anomalies) > 0 ? 'text-rose-700' : 'text-slate-900' }}">{{ $affectedStationsCount }}</span>
+                    <span class="text-supporting text-slate-600">meja terdampak</span>
+                </dd>
+                <dd class="text-supporting {{ count($anomalies) > 0 ? 'text-rose-700' : 'text-slate-600' }}">
+                    @if($hasFreshHardwareTelemetry)
+                        {{ count($anomalies) }} parameter melewati ambang pada data terbaru
+                    @else
+                        Belum ada data hardware segar untuk diperiksa
+                    @endif
+                </dd>
+            </div>
+
+            @if($averageAttendance !== null && ($isGuru || $isSuperuser))
+                <div class="space-y-1.5 col-span-2 lg:col-span-1">
+                    <dt class="text-label text-slate-600">Rata-rata Kehadiran Siswa</dt>
+                    <dd class="flex items-baseline gap-1.5">
+                        <span class="font-tabular text-2xl font-semibold text-slate-900">{{ number_format($averageAttendance, 1) }}<span class="text-supporting text-slate-600">%</span></span>
                     </dd>
-                    <dd class="text-supporting text-slate-500">
-                        @if($hasFreshHardwareTelemetry)
-                            <span class="font-semibold text-slate-700">{{ count($anomalies) }}</span> parameter melewati ambang pada data terbaru
-                        @else
-                            Belum ada data hardware segar untuk diperiksa
-                        @endif
-                    </dd>
+                    <dd class="text-supporting text-slate-600">Rata-rata seluruh siswa pada cakupan sekolah</dd>
                 </div>
+            @endif
             </dl>
         </section>
 
@@ -327,15 +248,15 @@
                         <div class="p-4 rounded-lg border border-slate-200 bg-slate-50 flex items-start justify-between gap-4">
                             <div class="space-y-1.5 min-w-0">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-indigo-100 text-indigo-800 font-mono shrink-0">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-indigo-100 text-indigo-800 shrink-0">
                                         {{ $sched->classroom?->name ?? $sched->studentGroup?->name ?? 'Kelas' }}
                                     </span>
                                     <span class="text-sm font-semibold text-slate-900 truncate">{{ $sched->title }}</span>
                                 </div>
                                 <p class="text-supporting text-slate-600 truncate">{{ $sched->agenda ?? 'Praktikum sensor tanah presisi' }}</p>
-                                <div class="flex items-center gap-3 text-supporting text-slate-500 font-mono">
-                                    <span><i data-lucide="calendar" class="w-3.5 h-3.5 inline mr-1"></i>{{ $sched->activity_date ? $sched->activity_date->format('d/m/Y') : '-' }}</span>
-                                    <span><i data-lucide="clock" class="w-3.5 h-3.5 inline mr-1"></i>{{ substr($sched->start_time ?? '', 0, 5) }} - {{ substr($sched->end_time ?? '', 0, 5) }}</span>
+                                <div class="flex items-center gap-3 text-supporting text-slate-500">
+                                    <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i>{{ $sched->activity_date ? $sched->activity_date->format('d/m/Y') : '-' }}</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i>{{ substr($sched->start_time ?? '', 0, 5) }} - {{ substr($sched->end_time ?? '', 0, 5) }}</span>
                                 </div>
                             </div>
                             <span class="shrink-0 px-3 py-1 rounded-md text-xs font-semibold {{ $sched->status === 'in_progress' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700' }}">
@@ -343,10 +264,8 @@
                             </span>
                         </div>
                     @empty
-                        <div class="py-8 text-center space-y-2">
-                            <div class="w-10 h-10 rounded-full bg-slate-100 mx-auto flex items-center justify-center">
-                                <i data-lucide="calendar" class="w-5 h-5 text-slate-400"></i>
-                            </div>
+                        <div class="py-6 text-center space-y-1.5">
+                            <i data-lucide="calendar" class="w-5 h-5 text-slate-400 mx-auto"></i>
                             <p class="text-supporting font-semibold text-slate-600">Belum Ada Jadwal Praktikum</p>
                             <p class="text-supporting text-slate-500">Jadwal akan muncul di sini setelah ditambahkan oleh guru atau admin.</p>
                         </div>
@@ -395,11 +314,9 @@
                             </li>
                         </ul>
                     @else
-                        <div class="py-8 text-center space-y-2">
-                            <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center">
-                                <i data-lucide="file-check" class="w-5 h-5"></i>
-                            </div>
-                            <p class="text-supporting font-semibold text-slate-800">Belum Ada LKS Praktikum</p>
+                        <div class="py-5 text-center space-y-1.5">
+                            <i data-lucide="file-check" class="w-5 h-5 text-indigo-400 mx-auto"></i>
+                            <p class="text-supporting font-semibold text-slate-700">Belum Ada LKS Praktikum</p>
                             <p class="text-supporting text-slate-500">Mulai praktikum untuk menghasilkan laporan.</p>
                         </div>
                     @endif
@@ -415,16 +332,15 @@
                             </li>
                         </ul>
                     @else
-                        <div class="py-6 text-center space-y-2">
+                        <div class="py-4 text-center space-y-1.5">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 mx-auto"></i>
                             <p class="text-supporting text-slate-600">Belum ada laporan LKS yang menunggu penilaian.</p>
                         </div>
                     @endif
                 @else
-                    <div class="py-8 text-center space-y-2">
-                        <div class="w-10 h-10 rounded-full bg-slate-100 mx-auto flex items-center justify-center">
-                            <i data-lucide="help-circle" class="w-5 h-5 text-slate-400"></i>
-                        </div>
-                        <p class="text-supporting font-semibold text-slate-800">Data Tidak Tersedia</p>
+                    <div class="py-5 text-center space-y-1.5">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-slate-400 mx-auto"></i>
+                        <p class="text-supporting font-semibold text-slate-700">Data Tidak Tersedia</p>
                         <p class="text-supporting text-slate-500">Login sebagai siswa atau guru untuk melihat tugas akademik.</p>
                     </div>
                 @endif
@@ -434,30 +350,30 @@
         <!-- LOWER: Trainer Kit Fleet (Desktop) + Anomalies -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Trainer Kit Fleet Table -->
-            <section class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4 lg:col-span-2 min-w-0" aria-labelledby="fleet-heading">
-                <div class="flex items-center justify-between">
+            <section class="p-5 rounded-xl bg-white border border-slate-200 space-y-4 lg:col-span-2 min-w-0" aria-labelledby="fleet-heading">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                         <h3 id="fleet-heading" class="text-section-title text-slate-900">Status Meja Praktikum IoT (Hardware Fleet)</h3>
                         <p class="text-supporting text-slate-500">Kondisi telemetri terkini pada masing-masing kit meja siswa</p>
                     </div>
-                    <a href="{{ url('/trainer-kits') }}" class="text-sm font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1">
+                    <a href="{{ url('/trainer-kits') }}" class="text-sm font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 shrink-0">
                         <span>Kelola Armada Kit</span>
                         <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                     </a>
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm min-w-[680px]" role="table">
+                    <table class="w-full text-sm min-w-[800px]" role="table">
                         <thead>
-                            <tr class="text-left text-label text-slate-400 tracking-wider border-b border-slate-200">
-                                <th class="pb-3">Meja</th>
-                                <th class="pb-3">Status</th>
-                                <th class="pb-3 text-center">pH</th>
-                                <th class="pb-3 text-center">Lengas</th>
-                                <th class="pb-3 text-center">EC</th>
-                                <th class="pb-3">Terakhir</th>
-                                <th class="pb-3">Sumber</th>
-                                <th class="pb-3 text-right"></th>
+                            <tr class="text-left text-label text-slate-500 tracking-wider border-b border-slate-200">
+                                <th class="pb-3 pr-3 w-40 min-w-[140px]">Meja</th>
+                                <th class="pb-3 pr-3 w-28 min-w-[100px] text-center">Status</th>
+                                <th class="pb-3 pr-3 w-20 min-w-[72px] text-right">pH</th>
+                                <th class="pb-3 pr-3 w-24 min-w-[84px] text-right">Lengas (%)</th>
+                                <th class="pb-3 pr-3 w-24 min-w-[84px] text-right">EC (µS/cm)</th>
+                                <th class="pb-3 pr-3 w-36 min-w-[120px]">Terakhir</th>
+                                <th class="pb-3 pr-3 w-24 min-w-[80px] text-center">Sumber</th>
+                                <th class="pb-3 w-36 min-w-[112px] text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -467,66 +383,58 @@
                                     $isOnline = (bool) ($kit->is_online ?? false);
                                 @endphp
                                 <tr class="hover:bg-slate-50/50 transition-colors">
-                                    <td class="py-3">
+                                    <td class="py-3 pr-3">
                                         <div>
-                                            <div class="flex items-center gap-2 flex-wrap">
-                                                <span class="font-mono text-xs font-bold text-slate-900">{{ $kit->code }}</span>
-                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono {{ $isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">
-                                                    {{ $kit->status ?? 'offline' }}
-                                                </span>
-                                                @if($isSuperuser && $kit->school)
-                                                    <span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-sans border border-slate-200">
-                                                        {{ $kit->school->name }}
-                                                    </span>
-                                                @endif
-                                            </div>
-                                            <p class="text-supporting text-slate-600 font-medium mt-1">{{ $kit->bench_location ?? $kit->name }}</p>
+                                            <span class="font-mono text-xs font-semibold text-slate-900">{{ $kit->code }}</span>
+                                            <p class="text-supporting text-slate-600 font-medium mt-0.5 truncate">{{ $kit->bench_location ?? $kit->name }}</p>
+                                            @if($isSuperuser && $kit->school)
+                                                <p class="text-supporting text-slate-500 mt-0.5 truncate max-w-[200px]">{{ $kit->school->name }}</p>
+                                            @endif
                                         </div>
                                     </td>
-                                    <td class="py-3">
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono {{ $isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">
+                                    <td class="py-3 pr-3 text-center">
+                                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase font-mono {{ $isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' }}">
+                                            <span class="w-1.5 h-1.5 rounded-full {{ $isOnline ? 'bg-emerald-600' : 'bg-slate-400' }}" aria-hidden="true"></span>
                                             {{ $isOnline ? 'Online' : 'Offline' }}
                                         </span>
                                     </td>
-                                    <td class="py-3 text-center font-mono text-xs font-bold {{ $latest && (float)$latest->ph < 5.5 ? 'text-rose-600' : 'text-slate-800' }}">
+                                    <td class="py-3 pr-3 text-right font-mono text-xs font-semibold {{ $latest && (float)$latest->ph < 5.5 ? 'text-rose-600' : 'text-slate-900' }}">
                                         {{ $latest && $latest->ph !== null ? number_format((float)$latest->ph, 2) : '—' }}
                                     </td>
-                                    <td class="py-3 text-center font-mono text-xs font-bold {{ $latest && (float)$latest->humidity < 25 ? 'text-rose-600' : 'text-slate-800' }}">
-                                        {{ $latest && $latest->humidity !== null ? number_format((float)$latest->humidity, 1) . '%' : '—' }}
+                                    <td class="py-3 pr-3 text-right font-mono text-xs font-semibold {{ $latest && (float)$latest->humidity < 25 ? 'text-rose-600' : 'text-slate-900' }}">
+                                        {{ $latest && $latest->humidity !== null ? number_format((float)$latest->humidity, 1) : '—' }}
                                     </td>
-                                    <td class="py-3 text-center font-mono text-xs font-bold text-slate-800">
+                                    <td class="py-3 pr-3 text-right font-mono text-xs font-semibold text-slate-900">
                                         {{ $latest && $latest->ec !== null ? number_format((float)$latest->ec, 0) : '—' }}
                                     </td>
-                                    <td class="py-3 text-supporting text-slate-400 font-mono">
+                                    <td class="py-3 pr-3 text-supporting text-slate-500">
                                         {{ $latest?->recorded_at ? $latest->recorded_at->diffForHumans() : 'Belum Ada Transmisi Data' }}
                                     </td>
-                                    <td class="py-3">
+                                    <td class="py-3 pr-3 text-center">
                                         @if($latest?->provenance)
-                                            <span class="px-2 py-0.5 rounded text-[9px] font-bold font-mono uppercase {{ $latest->provenance === 'hardware' ? 'bg-emerald-50 text-emerald-700' : ($latest->provenance === 'simulation' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-600') }}">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium {{ $latest->provenance === 'hardware' ? 'bg-emerald-50 text-emerald-700' : ($latest->provenance === 'simulation' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600') }}">
                                                 {{ $latest->provenance === 'hardware' ? 'Hardware' : ($latest->provenance === 'simulation' ? 'Simulasi' : 'Fixture') }}
                                             </span>
                                         @else
-                                            <span class="text-supporting text-slate-400">—</span>
+                                            <span class="text-slate-400">—</span>
                                         @endif
                                     </td>
                                     <td class="py-3 text-right">
                                         <a
                                             href="{{ url('/iot-monitoring?device_id=' . $kit->id) }}"
-                                            class="px-3 py-1.5 rounded bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold flex items-center gap-1 transition-colors justify-end"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold transition-colors"
+                                            aria-label="Lihat detail stasiun meja {{ $kit->code }}"
                                         >
-                                            <span>Stasiun Meja</span>
+                                            <span>Stasiun</span>
                                             <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                                         </a>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="py-10 text-center space-y-1">
-                                        <div class="w-12 h-12 rounded-full bg-slate-100 mx-auto flex items-center justify-center">
-                                            <i data-lucide="cpu" class="w-6 h-6 text-slate-400"></i>
-                                        </div>
-                                        <p class="text-supporting font-semibold text-slate-600">Belum Ada Meja Praktikum IoT Terdaftar</p>
-                                        <p class="text-supporting text-slate-500">Stasiun meja praktikum SMK akan tampil di sini setelah didaftarkan.</p>
+                                    <td colspan="8" class="py-8 text-center space-y-1">
+                                        <p class="text-supporting font-medium text-slate-600">Belum Ada Meja Praktikum IoT Terdaftar</p>
+                                        <p class="text-supporting text-slate-500">Stasiun meja praktikum akan tampil di sini setelah didaftarkan.</p>
                                     </td>
                                 </tr>
                             @endforelse
@@ -555,44 +463,36 @@
 
                 <div class="space-y-3">
                     @forelse($anomalies as $ano)
-                        <div class="p-4 rounded-lg border {{ $ano['severity'] === 'critical' ? 'border-rose-200 bg-rose-50/60' : 'border-amber-200 bg-amber-50/60' }} space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="font-mono text-xs font-bold text-slate-900">{{ $ano['device'] }} — {{ $ano['bench'] }}</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono {{ $ano['severity'] === 'critical' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800' }}">
+                        <div class="p-3.5 rounded-lg border {{ $ano['severity'] === 'critical' ? 'border-rose-200 bg-rose-50/60' : 'border-amber-200 bg-amber-50/60' }} space-y-1.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-mono text-xs font-semibold text-slate-900 truncate">{{ $ano['device'] }} — {{ $ano['bench'] }}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono shrink-0 {{ $ano['severity'] === 'critical' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800' }}">
                                     {{ $ano['parameter'] }}: {{ $ano['value'] }}
                                 </span>
                             </div>
-                            <p class="text-supporting text-slate-700 font-medium">{{ $ano['message'] }}</p>
-                            <div class="text-supporting text-slate-600 flex items-start gap-2 pt-2 border-t border-slate-200/60">
-                                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                            <p class="text-supporting text-slate-700">{{ $ano['message'] }}</p>
+                            <div class="text-supporting text-slate-600 flex items-start gap-1.5">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5"></i>
                                 <span><strong>Rekomendasi:</strong> {{ $ano['action'] }}</span>
                             </div>
                         </div>
                     @empty
-                        <div class="py-10 text-center space-y-2">
+                        <div class="py-6 text-center space-y-1.5">
                             @if($totalKitsCount === 0)
-                                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-600 mx-auto flex items-center justify-center">
-                                    <i data-lucide="info" class="w-6 h-6"></i>
-                                </div>
-                                <p class="text-supporting font-semibold text-slate-800">Belum Ada Data Pemantauan</p>
+                                <i data-lucide="info" class="w-5 h-5 text-slate-400 mx-auto"></i>
+                                <p class="text-supporting font-semibold text-slate-700">Belum Ada Data Pemantauan</p>
                                 <p class="text-supporting text-slate-500 max-w-md mx-auto">Belum ada meja praktikum terdaftar. Data anomali akan muncul setelah armada dikonfigurasi dan telemetri hardware diterima.</p>
                             @elseif($onlineKitsCount === 0)
-                                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-600 mx-auto flex items-center justify-center">
-                                    <i data-lucide="wifi-off" class="w-6 h-6"></i>
-                                </div>
-                                <p class="text-supporting font-semibold text-slate-800">Data Pemantauan Tidak Tersedia</p>
+                                <i data-lucide="wifi-off" class="w-5 h-5 text-slate-400 mx-auto"></i>
+                                <p class="text-supporting font-semibold text-slate-700">Data Pemantauan Tidak Tersedia</p>
                                 <p class="text-supporting text-slate-500 max-w-md mx-auto">Semua meja praktikum sedang offline. Tidak ada telemetri segar untuk dievaluasi.</p>
                             @elseif(!$hasFreshHardwareTelemetry)
-                                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-600 mx-auto flex items-center justify-center">
-                                    <i data-lucide="alert-circle" class="w-6 h-6"></i>
-                                </div>
-                                <p class="text-supporting font-semibold text-slate-800">Data Pemantauan Tidak Tersedia</p>
+                                <i data-lucide="alert-circle" class="w-5 h-5 text-slate-400 mx-auto"></i>
+                                <p class="text-supporting font-semibold text-slate-700">Data Pemantauan Tidak Tersedia</p>
                                 <p class="text-supporting text-slate-500 max-w-md mx-auto">Belum ada pengukuran hardware terbaru yang dapat digunakan untuk memeriksa anomali.</p>
                             @else
-                                <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center">
-                                    <i data-lucide="check" class="w-6 h-6"></i>
-                                </div>
-                                <p class="text-supporting font-semibold text-slate-800">Tidak Ada Anomali Terdeteksi</p>
+                                <i data-lucide="check" class="w-5 h-5 text-emerald-500 mx-auto"></i>
+                                <p class="text-supporting font-semibold text-slate-700">Tidak Ada Anomali Terdeteksi</p>
                                 <p class="text-supporting text-slate-500 max-w-md mx-auto">Tidak ada defisiensi unsur hara makro atau anomali kelembaban tanah pada data hardware terbaru.</p>
                             @endif
                         </div>
