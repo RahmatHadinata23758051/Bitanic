@@ -13,13 +13,13 @@
         chartInstance: null,
 
         parametersMeta: {
-            ph: { label: 'pH Tanah', unit: 'pH', min: 0, max: 14, idealMin: 6.0, idealMax: 7.2, color: '#16a34a' },
-            moisture: { label: 'Kadar Lengas (VWC)', unit: '%', min: 0, max: 100, idealMin: 45, idealMax: 65, color: '#0284c7' },
-            ec: { label: 'EC Nutrisi', unit: 'µS/cm', min: 0, max: 3000, idealMin: 1200, idealMax: 2000, color: '#d97706' },
-            nitrogen: { label: 'Nitrogen (N)', unit: 'mg/kg', min: 0, max: 200, idealMin: 40, idealMax: 80, color: '#059669' },
-            phosphorus: { label: 'Fosfor (P)', unit: 'mg/kg', min: 0, max: 100, idealMin: 20, idealMax: 50, color: '#ca8a04' },
-            potassium: { label: 'Kalium (K)', unit: 'mg/kg', min: 0, max: 250, idealMin: 100, idealMax: 180, color: '#7c3aed' },
-            temperature: { label: 'Suhu Tanah', unit: '°C', min: 10, max: 45, idealMin: 24, idealMax: 30, color: '#ea580c' },
+            ph: { label: 'pH', unit: 'pH', min: 0, max: 14, idealMin: 6.0, idealMax: 7.2, color: '#16a34a' },
+            moisture: { label: 'Lengas', unit: '%', min: 0, max: 100, idealMin: 45, idealMax: 65, color: '#0284c7' },
+            ec: { label: 'EC', unit: 'µS/cm', min: 0, max: 3000, idealMin: 1000, idealMax: 2200, color: '#d97706' },
+            nitrogen: { label: 'Nitrogen (N)', unit: 'mg/kg', min: 0, max: 200, idealMin: 40, idealMax: 120, color: '#059669' },
+            phosphorus: { label: 'Fosfor (P)', unit: 'mg/kg', min: 0, max: 100, idealMin: 25, idealMax: 60, color: '#ca8a04' },
+            potassium: { label: 'Kalium (K)', unit: 'mg/kg', min: 0, max: 300, idealMin: 100, idealMax: 200, color: '#7c3aed' },
+            temperature: { label: 'Suhu', unit: '°C', min: 10, max: 45, idealMin: 22, idealMax: 29, color: '#ea580c' },
         },
 
         getParamData(key) {
@@ -51,6 +51,11 @@
                 const m = this.getParamData('moisture');
                 const t = this.getParamData('temperature');
                 return [...m, ...t].some(pt => pt && pt.y !== null);
+            }
+            if (this.activeMode === 'ph_ec') {
+                const ph = this.getParamData('ph');
+                const ec = this.getParamData('ec');
+                return [...ph, ...ec].some(pt => pt && pt.y !== null);
             }
             return false;
         },
@@ -170,6 +175,22 @@
                     { title: { text: 'Lengas (%)', style: { fontSize: '11px', fontFamily: 'JetBrains Mono' } }, labels: { style: { fontFamily: 'JetBrains Mono', fontSize: '11px' } } },
                     { opposite: true, title: { text: 'Suhu (°C)', style: { fontSize: '11px', fontFamily: 'JetBrains Mono' } }, labels: { style: { fontFamily: 'JetBrains Mono', fontSize: '11px' } } }
                 ];
+            } else if (this.activeMode === 'ph_ec') {
+                const phPoints = this.getParamData('ph');
+                const ecPoints = this.getParamData('ec');
+
+                const refPoints = phPoints.length > 0 ? phPoints : ecPoints;
+                categories = refPoints.map(pt => this.formatTimestamp(pt.x));
+
+                series = [
+                    { name: 'pH Tanah', data: phPoints.map(pt => pt.y) },
+                    { name: 'EC Nutrisi (µS/cm)', data: ecPoints.map(pt => pt.y) }
+                ];
+
+                yaxis = [
+                    { title: { text: 'pH', style: { fontSize: '11px', fontFamily: 'JetBrains Mono' } }, min: 0, max: 14, labels: { style: { fontFamily: 'JetBrains Mono', fontSize: '11px' } } },
+                    { opposite: true, title: { text: 'µS/cm', style: { fontSize: '11px', fontFamily: 'JetBrains Mono' } }, labels: { style: { fontFamily: 'JetBrains Mono', fontSize: '11px' } } }
+                ];
             }
 
             return {
@@ -177,7 +198,7 @@
                     type: 'area',
                     height: 280,
                     toolbar: { show: false },
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     zoom: { enabled: false },
                     animations: { speed: 400 }
                 },
@@ -197,7 +218,7 @@
                 },
                 colors: this.activeMode === 'single'
                     ? [this.parametersMeta[this.activeParam]?.color || '#16a34a']
-                    : (this.activeMode === 'npk' ? ['#059669', '#ca8a04', '#7c3aed'] : ['#0284c7', '#ea580c']),
+                    : (this.activeMode === 'npk' ? ['#059669', '#ca8a04', '#7c3aed'] : (this.activeMode === 'ph_ec' ? ['#16a34a', '#d97706'] : ['#0284c7', '#ea580c'])),
                 dataLabels: { enabled: false },
                 grid: {
                     borderColor: '#f1f5f9',
@@ -272,6 +293,14 @@
                     class="px-2.5 py-1 rounded-md text-[11px] transition-all"
                 >
                     Lengas vs Suhu
+                </button>
+                <button
+                    type="button"
+                    @click="switchMode('ph_ec')"
+                    :class="activeMode === 'ph_ec' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-slate-600 font-medium'"
+                    class="px-2.5 py-1 rounded-md text-[11px] transition-all"
+                >
+                    pH vs EC
                 </button>
             </div>
 
