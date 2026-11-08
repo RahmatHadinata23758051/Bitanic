@@ -6,10 +6,8 @@ use App\Models\ActivitySchedule;
 use App\Models\Device;
 use App\Models\School;
 use App\Models\StudentReport;
-use App\Models\TelemetryReading;
 use App\Models\UserProfile;
 use App\Services\Hardware\DeviceAvailabilityResolver;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -63,7 +61,7 @@ class DashboardController extends Controller
                     'fixture' => 'Fixture / Data Uji',
                     default => 'Sumber Tidak Diketahui',
                 }
-                : null;
+            : null;
         }
 
         // 2. Practicum schedule for today & upcoming
@@ -74,7 +72,6 @@ class DashboardController extends Controller
             ->orderBy('start_time')
             ->take(4)
             ->get();
-
 
         $todaySchedule = $upcomingSchedules->first(fn ($s) => $s->activity_date && $s->activity_date->toDateString() === now()->toDateString())
             ?? $upcomingSchedules->first();
@@ -105,6 +102,7 @@ class DashboardController extends Controller
         // 4. Evaluate system-wide anomalies (gated to live/fresh telemetry only)
         $anomalies = [];
         $affectedStationCodes = [];
+        $hasFreshHardwareTelemetry = false;
 
         foreach ($devices as $dev) {
             $latest = $dev->latestReading;
@@ -121,6 +119,8 @@ class DashboardController extends Controller
             if (! $isOnline || ! $isFresh || ! $isHardware) {
                 continue;
             }
+
+            $hasFreshHardwareTelemetry = true;
 
             if ($latest->ph !== null && (float) $latest->ph < 5.5) {
                 $anomalies[] = [
@@ -141,7 +141,7 @@ class DashboardController extends Controller
                     'device' => $dev->code,
                     'bench' => $dev->bench_location ?? $dev->name,
                     'parameter' => 'Kadar Lengas',
-                    'value' => number_format((float) $latest->humidity, 1) . '%',
+                    'value' => number_format((float) $latest->humidity, 1).'%',
                     'severity' => 'critical',
                     'message' => 'Tanah mendekati titik layu permanen (< 25%).',
                     'action' => 'Aktifkan pompa irigasi tetes.',
@@ -155,7 +155,7 @@ class DashboardController extends Controller
                     'device' => $dev->code,
                     'bench' => $dev->bench_location ?? $dev->name,
                     'parameter' => 'EC Salinitas',
-                    'value' => number_format((float) $latest->ec, 0) . ' µS/cm',
+                    'value' => number_format((float) $latest->ec, 0).' µS/cm',
                     'severity' => 'warning',
                     'message' => 'Salinitas garam pupuk tinggi (> 2200 µS/cm).',
                     'action' => 'Lakukan pembilasan air murni (leaching).',
@@ -195,6 +195,7 @@ class DashboardController extends Controller
             'anomalies' => $anomalies,
             'affectedStationsCount' => $affectedStationsCount,
             'criticalAlertsCount' => count($anomalies),
+            'hasFreshHardwareTelemetry' => $hasFreshHardwareTelemetry,
             'averageAttendance' => $averageAttendance,
             'isSuperuser' => $isSuperuser,
             'schools' => $schools,
