@@ -204,7 +204,7 @@
     <!-- Header: Title & Time Range -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2">
-            <i data-lucide="activity" class="w-4 h-4 text-emerald-600"></i>
+            <i data-lucide="line-chart" class="w-4 h-4 text-emerald-600"></i>
             <h3 class="text-sm font-semibold text-slate-800">Tren telemetri lahan</h3>
         </div>
 
