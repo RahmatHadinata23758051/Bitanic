@@ -134,7 +134,7 @@ class AgronomyAnalyticsTenancyTest extends TestCase
     {
         $response = $this->get('/analytics');
         $response->assertOk();
-        $response->assertViewIs('pages.analytics.index');
+        $response->assertViewIs('pages.analytics.agronomy-analytics');
         $response->assertSee('TK-ANA-A1');
     }
 
