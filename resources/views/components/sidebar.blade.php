@@ -45,14 +45,14 @@
     ></div>
 
     <!-- Brand Header -->
-    <div class="h-16 px-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+    <div class="h-14 px-4 border-b border-slate-200 flex items-center justify-between shrink-0">
         <a href="{{ url('/') }}" class="flex items-center gap-3" aria-label="Bitanic - Kembali ke dashboard">
-            <div class="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-sm shrink-0">
-                <i data-lucide="sprout" class="w-5 h-5"></i>
-            </div>
+            <span class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0">
+                <i data-lucide="sprout" class="w-4 h-4 text-white" aria-hidden="true"></i>
+            </span>
             <div class="min-w-0">
                 <div class="flex items-center gap-2">
-                    <span class="text-base font-bold tracking-tight text-slate-900 font-sans truncate">BITANIC</span>
+                    <span class="text-base font-bold tracking-tight text-slate-900">BITANIC</span>
                     <span class="px-2 py-0.5 text-[10px] font-medium rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 whitespace-nowrap">
                         SMK 4.0
                     </span>
@@ -73,24 +73,6 @@
 
     <!-- Navigation Links Container -->
     <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5" role="list" aria-label="Menu navigasi">
-        <!-- Role Status Chip (authenticated users only) -->
-        @if(! $isGuest)
-            <div class="px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between" role="status" aria-live="polite">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="w-2.5 h-2.5 rounded-full shrink-0 {{ in_array($role, ['superuser', 'admin'], true) ? 'bg-amber-500' : ($role === 'guru' ? 'bg-indigo-500' : 'bg-emerald-500') }}" aria-hidden="true"></div>
-                    <div class="min-w-0">
-                        <span class="text-label text-slate-400 tracking-wide block">Peran</span>
-                        <span class="text-sm font-semibold text-slate-800 truncate block">
-                            {{ $role === 'guru' ? 'Guru Pembimbing' : (in_array($role, ['superuser', 'admin'], true) ? 'Admin Lab IoT' : 'Siswa Praktikan') }}
-                        </span>
-                    </div>
-                </div>
-                <span class="text-supporting px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600 truncate shrink-0 max-w-36">
-                    {{ $user->email }}
-                </span>
-            </div>
-        @endif
-
         <!-- Section: Pusat Kendali & Telemetri (public) -->
         <div class="space-y-1" role="listitem">
             <p class="px-3 text-[11px] font-semibold text-slate-400 tracking-wider" aria-hidden="true">Telemetri & Workstation</p>

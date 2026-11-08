@@ -41,7 +41,7 @@
         @include('components.sidebar')
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-w-0 lg:pl-72 font-ui">
+        <div class="flex-1 flex flex-col min-w-0 lg:pl-72">
             <!-- Mobile Navigation Bar (compact viewports only) -->
             <header
                 x-show="isCompact"
@@ -61,7 +61,7 @@
                 </button>
 
                 <div class="flex items-center gap-2">
-                    <span class="text-base font-bold tracking-tight text-slate-900">BITANIC</span>
+                    <span class="text-sm font-semibold tracking-tight text-slate-900">BITANIC</span>
                     <span class="text-xs text-slate-500">Lab Presisi Agritech</span>
                 </div>
 
