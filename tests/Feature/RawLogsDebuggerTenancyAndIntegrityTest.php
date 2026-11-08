@@ -124,7 +124,7 @@ class RawLogsDebuggerTenancyAndIntegrityTest extends TestCase
     {
         $response = $this->get('/raw-logs');
         $response->assertOk();
-        $response->assertViewIs('pages.rawlogs.index');
+        $response->assertViewIs('pages.rawlogs.raw-logs');
         $response->assertSee('TK-RAW-A1');
     }
 
