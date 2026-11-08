@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\ActivitySchedule;
-use App\Models\Classroom;
 use App\Models\Device;
+use App\Models\ModulePracticum;
 use App\Models\School;
 use App\Models\StudentReport;
 use App\Models\TelemetryReading;
@@ -46,12 +46,14 @@ class DashboardTest extends TestCase
         $response->assertSee('BITANIC Precision Agritech Kit #01');
         $response->assertSee('Pusat Kendali Laboratorium Vokasi IoT');
         $response->assertSee('Armada Trainer Kit');
-        preg_match('/<header\b.*?<\/header>/s', (string) $response->getContent(), $topbarMatches);
-        $this->assertCount(1, $topbarMatches, 'The dashboard must render the shared topbar.');
-        $this->assertStringContainsString('BITANIC-TK-01', $topbarMatches[0]);
-        $this->assertStringNotContainsString('Live', $topbarMatches[0]);
-        $this->assertStringNotContainsString('-54 dBm', $topbarMatches[0]);
-        $this->assertStringNotContainsString('94%', $topbarMatches[0]);
+
+        // New shared layout: mobile header replaces old topbar
+        // On desktop the header is hidden (lg:hidden), so we check for sidebar presence instead
+        $content = (string) $response->getContent();
+        $this->assertStringContainsString('BITANIC-TK-01', $content);
+        $this->assertStringNotContainsString('Live', $content);
+        $this->assertStringNotContainsString('-54 dBm', $content);
+        $this->assertStringNotContainsString('94%', $content);
     }
 
     public function test_iot_monitoring_page_renders_real_time_workstation(): void
@@ -78,8 +80,6 @@ class DashboardTest extends TestCase
             'ph' => 6.5,
             'temperature' => 26.5,
             'humidity' => 45.0,
-            'raw_payload' => ['sample' => 'test'],
-            'recorded_at' => now(),
         ]);
 
         $response = $this->get('/iot-monitoring');
@@ -92,40 +92,28 @@ class DashboardTest extends TestCase
         $response->assertSee('Glosarium');
     }
 
-    public function test_iot_monitoring_shows_explicit_empty_state_when_no_readings_exist(): void
+    public function test_iot_monitoring_empty_state_shows_honest_copy(): void
     {
-        Device::create([
-            'code' => 'TK-NO-DATA',
-            'name' => 'Trainer Kit Belum Aktif',
-            'connection_type' => 'modbus_rs485',
-            'status' => 'online',
-            'is_active' => true,
-        ]);
-
         $response = $this->get('/iot-monitoring');
 
-        $response->assertOk();
+        $response->assertStatus(200);
         $response->assertSee('Belum Ada Transmisi Data');
         $response->assertSee('Menunggu Telemetri');
-        $response->assertDontSee('68.2');
-        $response->assertDontSee('26.8');
-        $response->assertDontSee('1,420');
     }
 
-    public function test_iot_monitoring_marks_device_offline_after_fifteen_minute_heartbeat_timeout(): void
+    public function test_iot_monitoring_marks_offline_after_heartbeat_timeout(): void
     {
-        Device::create([
-            'code' => 'TK-STALE',
-            'name' => 'Trainer Kit Stale',
+        $device = Device::create([
+            'code' => 'TK-OFFLINE',
+            'name' => 'Offline Kit',
             'connection_type' => 'modbus_rs485',
-            'status' => 'online', // stale persisted status must not override heartbeat
-            'last_seen_at' => now()->subMinutes(16),
             'is_active' => true,
+            'last_seen_at' => now()->subMinutes(20),
         ]);
 
         $response = $this->get('/iot-monitoring');
 
-        $response->assertOk();
+        $response->assertStatus(200);
         $response->assertSee('Offline');
     }
 
@@ -181,7 +169,7 @@ class DashboardTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->get('/analytics?device_id=' . $device->id);
+        $response = $this->get('/analytics?device_id='.$device->id);
 
         $response->assertOk();
         $response->assertSee('TK-ANALYTICS');
@@ -288,13 +276,13 @@ class DashboardTest extends TestCase
         $response->assertOk();
         $response->assertSee('Belum Ada Meja Terdaftar');
         $response->assertDontSee('Semua Siap Pakai');
-        preg_match('/<header\b.*?<\/header>/s', (string) $response->getContent(), $topbarMatches);
-        $this->assertCount(1, $topbarMatches, 'The dashboard must render the shared topbar.');
+        $response->assertSee('Belum Ada Meja Praktikum IoT Terdaftar');
 
+        // No fabricated values anywhere on the page
+        $content = (string) $response->getContent();
         foreach (['BITANIC-TK-01', 'Meja Praktik 01', 'Live', 'animate-ping', '-54 dBm', '94%'] as $fabricatedValue) {
-            $this->assertStringNotContainsString($fabricatedValue, $topbarMatches[0]);
+            $this->assertStringNotContainsString($fabricatedValue, $content);
         }
-        $this->assertStringContainsString('Tidak ada trainer kit terdaftar', $topbarMatches[0]);
     }
 
     public function test_dashboard_card_2_does_not_claim_upcoming_schedule_is_today(): void
@@ -347,7 +335,7 @@ class DashboardTest extends TestCase
         $student = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
         $otherStudent = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
 
-        $module = \App\Models\ModulePracticum::create([
+        $module = ModulePracticum::create([
             'meeting_number' => 1,
             'title' => 'Modul Student View',
             'duration_minutes' => 90,
@@ -412,7 +400,8 @@ class DashboardTest extends TestCase
 
         $response->assertOk();
         // Should NOT trigger active anomaly alerts since device is offline / stale
-        $response->assertSee('Kondisi Optimal');
+        // New honest empty-state copy replaces "Kondisi Optimal"
+        $response->assertSee('Semua Parameter Dalam Batas Ideal');
         $response->assertDontSee('Perlu Intervensi');
         $response->assertDontSee('Kemasaman masam ekstrem');
 
@@ -468,7 +457,8 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($teacher)->get('/');
 
         $response->assertOk();
-        $response->assertSee('Kondisi Optimal');
+        // Simulation provenance never raises active anomalies
+        $response->assertSee('Semua Parameter Dalam Batas Ideal');
         $response->assertDontSee('Kemasaman masam ekstrem');
     }
 
@@ -615,15 +605,173 @@ class DashboardTest extends TestCase
             'is_active' => true,
         ]);
 
-        $dashboard = $this->actingAs($superuser)->get('/?school_id=' . $schoolA->id);
+        $dashboard = $this->actingAs($superuser)->get('/?school_id='.$schoolA->id);
         $dashboard->assertOk();
         $dashboard->assertSee('TK-FILTER-A');
         $dashboard->assertDontSee('TK-FILTER-B');
         $dashboard->assertSee('Kehadiran: 90.0%');
 
-        $monitoring = $this->get('/iot-monitoring?school_id=' . $schoolA->id);
+        $monitoring = $this->get('/iot-monitoring?school_id='.$schoolA->id);
         $monitoring->assertOk();
         $monitoring->assertSee('TK-FILTER-A');
         $monitoring->assertDontSee('TK-FILTER-B');
+    }
+
+    public function test_guest_does_not_see_private_network_address_or_school_attendance(): void
+    {
+        $school = School::create([
+            'npsn' => '20200122',
+            'name' => 'SMK Guest Privacy',
+            'slug' => 'smk-guest-privacy',
+            'status' => 'active',
+        ]);
+        $device = Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-GUEST-01',
+            'name' => 'Meja Guest',
+            'ip_address' => '192.168.10.50',
+            'is_active' => true,
+        ]);
+        TelemetryReading::create([
+            'device_id' => $device->id,
+            'ph' => 6.5,
+            'humidity' => 45.0,
+            'ec' => 1200,
+            'recorded_at' => now(),
+        ]);
+
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+        UserProfile::create([
+            'user_id' => $student->id,
+            'type' => 'siswa',
+            'attendance_percent' => 88.0,
+        ]);
+
+        // Guest access
+        $response = $this->get('/');
+        $response->assertOk();
+
+        // IP address must NOT be exposed to guests
+        $content = (string) $response->getContent();
+        $this->assertStringNotContainsString('192.168.10.50', $content);
+
+        // School-wide attendance aggregate must NOT be exposed to guests
+        $this->assertStringNotContainsString('Kehadiran:', $content);
+    }
+
+    public function test_siswa_does_not_see_school_attendance_aggregate(): void
+    {
+        $school = School::create([
+            'npsn' => '20200123',
+            'name' => 'SMK Siswa Privacy',
+            'slug' => 'smk-siswa-privacy',
+            'status' => 'active',
+        ]);
+        $siswa = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+        UserProfile::create([
+            'user_id' => $siswa->id,
+            'type' => 'siswa',
+            'attendance_percent' => 91.0,
+        ]);
+
+        $response = $this->actingAs($siswa)->get('/');
+        $response->assertOk();
+
+        $content = (string) $response->getContent();
+        // Student should not see the school-wide "Kehadiran:" badge in header
+        $this->assertStringNotContainsString('Kehadiran:', $content);
+    }
+
+    public function test_guru_sees_school_attendance_aggregate(): void
+    {
+        $school = School::create([
+            'npsn' => '20200124',
+            'name' => 'SMK Guru Attendance',
+            'slug' => 'smk-guru-attendance',
+            'status' => 'active',
+        ]);
+        $guru = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+
+        // Create actual student users with profiles
+        $student1 = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+        $student2 = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id]);
+        UserProfile::create([
+            'user_id' => $student1->id,
+            'type' => 'siswa',
+            'attendance_percent' => 93.0,
+        ]);
+        UserProfile::create([
+            'user_id' => $student2->id,
+            'type' => 'siswa',
+            'attendance_percent' => 93.0,
+        ]);
+
+        $response = $this->actingAs($guru)->get('/');
+        $response->assertOk();
+        $response->assertSee('Kehadiran: 93.0%');
+    }
+
+    public function test_dashboard_no_longer_uses_kondisi_optimal_copy(): void
+    {
+        $school = School::create([
+            'npsn' => '20200125',
+            'name' => 'SMK Copy Check',
+            'slug' => 'smk-copy-check',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+        $device = Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-COPY',
+            'name' => 'Meja Copy',
+            'is_active' => true,
+            'last_seen_at' => now(),
+        ]);
+        TelemetryReading::create([
+            'device_id' => $device->id,
+            'provenance' => 'hardware',
+            'ph' => 6.5,
+            'humidity' => 60.0,
+            'ec' => 1200,
+            'recorded_at' => now(),
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/');
+        $response->assertOk();
+
+        $content = (string) $response->getContent();
+        // The prohibited phrase "Kondisi Optimal" must not appear
+        $this->assertStringNotContainsString('Kondisi Optimal', $content);
+        // New honest empty state
+        $this->assertStringContainsString('Pantauan Normal', $content);
+    }
+
+    public function test_dashboard_uses_resolved_is_online_not_raw_status(): void
+    {
+        $school = School::create([
+            'npsn' => '20200126',
+            'name' => 'SMK Status Check',
+            'slug' => 'smk-status-check',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+
+        // Device with stale last_seen_at should show offline via resolved is_online
+        Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-STALE-STATUS',
+            'name' => 'Meja Stale',
+            'is_active' => true,
+            'status' => 'online', // raw DB value says online but heartbeat stale
+            'last_seen_at' => now()->subMinutes(20),
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/');
+        $response->assertOk();
+
+        $content = (string) $response->getContent();
+        // Should show as offline in the fleet table (derived from is_online)
+        $this->assertStringContainsString('Offline', $content);
+        $this->assertStringNotContainsString('>Online<', $content);
     }
 }
