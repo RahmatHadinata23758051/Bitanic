@@ -195,3 +195,11 @@ ONE PAGE → IMPLEMENT → TEST → SCREENSHOT → PO REVIEW → APPROVAL → NE
 - **No open PRs**
 - **Screenshots**: Previously generated QA PNGs deleted (were untracked artifacts)
 - **Next action**: Google Antigravity onboarding + PO-directed work (not automatic redesign)
+
+---
+
+## 16. Execution & Safety Policy (Auto-Approve & Deletion Gate)
+
+- **Auto-Approve Non-Destructive Actions**: All non-destructive operations (reading, file creation, code editing, running tests, linting, asset compilation, commits, browser testing) proceed automatically without manual prompts.
+- **Strict Prohibition on Unconfirmed Deletion**: Never delete, remove, drop, truncate, or wipe files, directories, git branches, or database tables (e.g. `rm`, `del`, `Remove-Item`, `git branch -D`, `git reset --hard`, `DROP TABLE`, `TRUNCATE`) WITHOUT explicit user confirmation. Always prompt the user before any destructive deletion action.
+- **Auto-Save**: Editor auto-save is enabled (`files.autoSave: afterDelay`, 1000ms).
