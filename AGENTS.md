@@ -88,6 +88,8 @@ Never touch `bitanic_db` (development) from tests.
 
 ## 5. Git & Commit Rules
 
+- **Mandatory One-File-Per-Commit Discipline**: Every commit must contain changes from exactly ONE tracked file. Never combine changes from multiple files into a single commit.
+- **Explicit staging**: Use `git add <specific-file>` only. `git add .` and `git add -A` are strictly prohibited.
 - **Atomic micro-commits**: one logical change = one commit (Conventional: `feat|fix|refactor|style|chore(scope): message`)
 - **No AI attribution**: no `Co-Authored-By`, no Claude footers in commit messages or PR descriptions
 - **Clean history**: bisect-friendly, focused per-module
