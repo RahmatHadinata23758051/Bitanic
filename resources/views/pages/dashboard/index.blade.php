@@ -140,11 +140,11 @@
                     <div class="space-y-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-100 text-indigo-800 font-mono shrink-0">
-                                {{ $sched->class_grade ?? 'XI ATPH' }}
+                                {{ $sched->classroom?->name ?? $sched->studentGroup?->name ?? 'Kelas' }}
                             </span>
                             <span class="text-xs font-bold text-slate-900 truncate">{{ $sched->title }}</span>
                         </div>
-                        <p class="text-xs text-slate-600 truncate">{{ $sched->description ?? 'Praktikum sensor tanah presisi' }}</p>
+                        <p class="text-xs text-slate-600 truncate">{{ $sched->agenda ?? 'Praktikum sensor tanah presisi' }}</p>
                         <div class="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
                             <span><i data-lucide="calendar" class="w-3 h-3 inline mr-1"></i>{{ $sched->activity_date ? $sched->activity_date->format('d/m/Y') : '-' }}</span>
                             <span><i data-lucide="clock" class="w-3 h-3 inline mr-1"></i>{{ substr($sched->start_time ?? '', 0, 5) }} - {{ substr($sched->end_time ?? '', 0, 5) }}</span>
@@ -193,7 +193,7 @@
                     @forelse($devices as $kit)
                         @php
                             $latest = $kit->latestReading;
-                            $isOnline = $kit->status === 'online';
+                            $isOnline = (bool) ($kit->is_online ?? false);
                         @endphp
                         <tr class="hover:bg-slate-50/50 transition-colors">
                             <td class="py-3">
