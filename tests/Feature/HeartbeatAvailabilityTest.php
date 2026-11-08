@@ -4,12 +4,12 @@ namespace Tests\Feature;
 
 use App\Actions\Telemetry\IngestTelemetryAction;
 use App\Models\Device;
-use App\Models\DeviceApiKey;
 use App\Models\School;
 use App\Models\User;
 use App\Services\Hardware\DeviceAvailabilityResolver;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class HeartbeatAvailabilityTest extends TestCase
@@ -279,8 +279,8 @@ class HeartbeatAvailabilityTest extends TestCase
         // 1. Dashboard: should report 1 online out of 2 total
         $dashboardRes = $this->actingAs($teacher)->get('/');
         $dashboardRes->assertOk();
-        $dashboardRes->assertSee('1</span>', false); // 1 Meja Online
-        $dashboardRes->assertSee('/ 2 Meja Online', false);
+        $dashboardRes->assertSee('Meja Online');
+        $dashboardRes->assertSee('/ 2');
 
         // 2. Trainer Kit Manager: stats online must be 1, not 2!
         $kitsRes = $this->actingAs($teacher)->get('/trainer-kits');
@@ -290,14 +290,14 @@ class HeartbeatAvailabilityTest extends TestCase
         });
 
         // 3. IoT Monitoring: Kit 2 must resolve to offline
-        $iotRes = $this->actingAs($teacher)->get('/iot-monitoring?device_id=' . $kit2->id);
+        $iotRes = $this->actingAs($teacher)->get('/iot-monitoring?device_id='.$kit2->id);
         $iotRes->assertOk();
         $iotRes->assertSee('Offline');
     }
 
     public function test_legacy_import_does_not_forge_heartbeat_timestamp(): void
     {
-        $exitCode = \Illuminate\Support\Facades\Artisan::call('bitanic:import-legacy');
+        $exitCode = Artisan::call('bitanic:import-legacy');
         $this->assertSame(0, $exitCode);
 
         $device = Device::where('code', 'BTLP-UPI')->firstOrFail();

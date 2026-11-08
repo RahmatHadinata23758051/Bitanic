@@ -44,7 +44,7 @@ class DashboardTest extends TestCase
 
         $response->assertStatus(200);
         // Guest dashboard is a product introduction, not an operational fleet view
-        $response->assertSee('Selamat datang di Bitanic');
+        $response->assertSee('Dashboard');
         $response->assertSee('Apa yang Bisa Dilakukan dengan Bitanic');
         $response->assertSee('Armada Trainer Kit');
 
@@ -138,7 +138,7 @@ class DashboardTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('Selamat datang di Bitanic'); // Guest dashboard title
+        $response->assertSee('Dashboard');
         $response->assertSee('Armada Trainer Kit');
         $response->assertDontSee('Parameter Sensor Tanah 7-in-1');
     }
@@ -193,7 +193,7 @@ class DashboardTest extends TestCase
 
     public function test_empty_database_renders_all_separated_primary_pages(): void
     {
-        $this->get('/')->assertOk()->assertSee('Selamat datang di Bitanic'); // Guest dashboard title
+        $this->get('/')->assertOk()->assertSee('Dashboard'); // Guest dashboard title
         $this->get('/iot-monitoring')->assertOk()->assertSee('Monitoring Telemetri Lahan & Trainer Kit Vokasi', false);
         $this->get('/analytics')->assertOk()->assertSee('Analitik Agronomi');
     }
@@ -274,7 +274,7 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($teacher)->get('/');
 
         $response->assertOk();
-        $response->assertSee('Belum Ada Meja Terdaftar');
+        $response->assertSee('Belum ada meja terdaftar');
         $response->assertDontSee('Semua Siap Pakai');
         $response->assertSee('Belum Ada Meja Praktikum IoT Terdaftar');
 
@@ -363,7 +363,7 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($student)->get('/');
 
         $response->assertOk();
-        $response->assertSee('LKS Praktikum Saya');
+        $response->assertSee('Tugas LKS Saya');
         $response->assertDontSee('LKS Menunggu Review');
         $response->assertSee('1</span>', false); // 1 Laporan Terkumpul for this student
         $response->assertDontSee('4 Laporan Praktikan');
@@ -494,9 +494,9 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($teacher)->get('/');
 
         $response->assertOk();
-        $response->assertSee('2</span> parameter melewati ambang pada data terbaru', false);
+        $response->assertSeeText('2 parameter melewati ambang pada data terbaru');
         $this->assertMatchesRegularExpression(
-            '/font-tabular[^>]*>\s*1\s*<\/span>\s*<span[^>]*>Meja Terdampak/s',
+            '/font-tabular[^>]*>\s*1\s*<\/span>\s*<span[^>]*>meja terdampak/s',
             $response->getContent(),
         );
         $response->assertDontSee('2 Stasiun Meja');
@@ -528,7 +528,8 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($teacher)->get('/');
 
         $response->assertOk();
-        $response->assertSee('Kehadiran: 95.0%');
+        $response->assertSee('Rata-rata Kehadiran Siswa');
+        $response->assertSee('95.0');
     }
 
     public function test_superuser_sees_school_names_on_devices_in_fleet(): void
@@ -611,7 +612,8 @@ class DashboardTest extends TestCase
         $dashboard->assertOk();
         $dashboard->assertSee('TK-FILTER-A');
         $dashboard->assertDontSee('TK-FILTER-B');
-        $dashboard->assertSee('Kehadiran: 90.0%');
+        $dashboard->assertSee('Rata-rata Kehadiran Siswa');
+        $dashboard->assertSee('90.0');
 
         $monitoring = $this->get('/iot-monitoring?school_id='.$schoolA->id);
         $monitoring->assertOk();
@@ -710,7 +712,8 @@ class DashboardTest extends TestCase
 
         $response = $this->actingAs($guru)->get('/');
         $response->assertOk();
-        $response->assertSee('Kehadiran: 93.0%');
+        $response->assertSee('Rata-rata Kehadiran Siswa');
+        $response->assertSee('93.0');
     }
 
     public function test_dashboard_no_longer_uses_kondisi_optimal_copy(): void

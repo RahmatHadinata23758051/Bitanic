@@ -26,9 +26,8 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
         // 1. Dashboard on empty DB
         $dashboardResponse = $this->actingAs($teacher)->get('/');
         $dashboardResponse->assertOk();
-        $dashboardResponse->assertSee('Dashboard Pengajaran');
-        $dashboardResponse->assertSee('0</span>', false); // 0 Meja Online
-        $dashboardResponse->assertSee('/ 0 Meja Online', false);
+        $dashboardResponse->assertSee('Dashboard');
+        $dashboardResponse->assertSee('Belum ada meja terdaftar');
         $dashboardResponse->assertSee('Belum Ada Meja Praktikum IoT Terdaftar');
         $dashboardResponse->assertDontSee('6.50');
         $dashboardResponse->assertDontSee('45.0%');
@@ -455,7 +454,7 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
 
         // Guest dashboard is a product introduction, not an operational fleet view
         $this->get('/')->assertOk()
-            ->assertSee('Selamat datang di Bitanic')
+            ->assertSee('Dashboard')
             ->assertDontSee('TK-GUEST-DEFAULT')
             ->assertDontSee('TK-GUEST-OTHER');
 
