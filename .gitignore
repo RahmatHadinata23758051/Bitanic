@@ -68,6 +68,7 @@ Thumbs.db
 Desktop.ini
 .idea/
 .vscode/
+.playwright-mcp/
 *.suo
 *.user
 *.userosscache
