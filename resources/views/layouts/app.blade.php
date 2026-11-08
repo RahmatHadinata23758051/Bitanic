@@ -17,9 +17,10 @@
     @stack('styles')
 </head>
 <body
-    class="h-full font-sans text-slate-800 antialiased selection:bg-emerald-100 selection:text-emerald-900"
+    class="h-full font-sans text-slate-800 antialiased selection:bg-emerald-100 selection:text-emerald-900 bg-slate-50"
     x-data="{
         sidebarOpen: false,
+        sidebarCollapsed: false,
         aiDrawerOpen: false,
         isCompact: false,
         init() {
@@ -30,6 +31,14 @@
             };
             sync(mq);
             mq.addEventListener('change', sync);
+            const saved = localStorage.getItem('bitanic_sidebar_collapsed');
+            if (saved !== null) {
+                this.sidebarCollapsed = saved === 'true';
+            }
+        },
+        toggleSidebarCollapse() {
+            this.sidebarCollapsed = ! this.sidebarCollapsed;
+            localStorage.setItem('bitanic_sidebar_collapsed', this.sidebarCollapsed ? 'true' : 'false');
         }
     }"
     @keydown.escape.window="sidebarOpen = false"
@@ -41,7 +50,10 @@
         @include('components.sidebar')
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-w-0 lg:pl-72">
+        <div
+            class="flex-1 flex flex-col min-w-0 transition-[padding] duration-200 ease-in-out"
+            :class="sidebarCollapsed ? 'lg:pl-28' : 'lg:pl-72'"
+        >
             <!-- Mobile Navigation Bar (compact viewports only) -->
             <header
                 x-show="isCompact"
