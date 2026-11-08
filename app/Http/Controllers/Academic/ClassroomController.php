@@ -28,7 +28,7 @@ class ClassroomController extends Controller
             ->orderBy('name')
             ->paginate(20);
 
-        return view('pages.classrooms.index', [
+        return view('pages.classrooms.classroom-management', [
             'classrooms' => $classrooms,
             'teachers' => User::where('school_id', $schoolId)->where('role', 'guru')->orderBy('name')->get(),
             'devices' => Device::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get(),
