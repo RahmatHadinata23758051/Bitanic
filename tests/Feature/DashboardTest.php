@@ -43,14 +43,14 @@ class DashboardTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('BITANIC Precision Agritech Kit #01');
-        $response->assertSee('Pusat Kendali Laboratorium Vokasi IoT');
+        // Guest dashboard is a product introduction, not an operational fleet view
+        $response->assertSee('Selamat datang di Bitanic');
+        $response->assertSee('Apa yang Bisa Dilakukan dengan Bitanic');
         $response->assertSee('Armada Trainer Kit');
 
         // New shared layout: mobile header replaces old topbar
         // On desktop the header is hidden (lg:hidden), so we check for sidebar presence instead
         $content = (string) $response->getContent();
-        $this->assertStringContainsString('BITANIC-TK-01', $content);
         $this->assertStringNotContainsString('Live', $content);
         $this->assertStringNotContainsString('-54 dBm', $content);
         $this->assertStringNotContainsString('94%', $content);
@@ -138,7 +138,7 @@ class DashboardTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('Pusat Kendali Laboratorium Vokasi IoT');
+        $response->assertSee('Selamat datang di Bitanic'); // Guest dashboard title
         $response->assertSee('Armada Trainer Kit');
         $response->assertDontSee('Parameter Sensor Tanah 7-in-1');
     }
@@ -193,7 +193,7 @@ class DashboardTest extends TestCase
 
     public function test_empty_database_renders_all_separated_primary_pages(): void
     {
-        $this->get('/')->assertOk()->assertSee('Pusat Kendali Laboratorium Vokasi IoT');
+        $this->get('/')->assertOk()->assertSee('Selamat datang di Bitanic'); // Guest dashboard title
         $this->get('/iot-monitoring')->assertOk()->assertSee('Monitoring Telemetri Lahan & Trainer Kit Vokasi', false);
         $this->get('/analytics')->assertOk()->assertSee('Analitik Agronomi');
     }
@@ -400,8 +400,9 @@ class DashboardTest extends TestCase
 
         $response->assertOk();
         // Should NOT trigger active anomaly alerts since device is offline / stale
-        // New honest empty-state copy replaces "Kondisi Optimal"
-        $response->assertSee('Semua Parameter Dalam Batas Ideal');
+        // Honest state: offline fleet means monitoring data is unavailable, not "normal"
+        $response->assertSee('Data Pemantauan Tidak Tersedia');
+        $response->assertSee('Semua meja praktikum sedang offline');
         $response->assertDontSee('Perlu Intervensi');
         $response->assertDontSee('Kemasaman masam ekstrem');
 
@@ -457,8 +458,9 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($teacher)->get('/');
 
         $response->assertOk();
-        // Simulation provenance never raises active anomalies
-        $response->assertSee('Semua Parameter Dalam Batas Ideal');
+        // Simulation telemetry is not verified hardware data; no normality claim is made
+        $response->assertSee('Data Pemantauan Tidak Tersedia');
+        $response->assertDontSee('Pantauan Normal');
         $response->assertDontSee('Kemasaman masam ekstrem');
     }
 
@@ -742,8 +744,8 @@ class DashboardTest extends TestCase
         $content = (string) $response->getContent();
         // The prohibited phrase "Kondisi Optimal" must not appear
         $this->assertStringNotContainsString('Kondisi Optimal', $content);
-        // New honest empty state
-        $this->assertStringContainsString('Pantauan Normal', $content);
+        // Verified hardware telemetry with no breach: state only what was actually checked
+        $this->assertStringContainsString('Tidak Ada Anomali Terdeteksi', $content);
     }
 
     public function test_dashboard_uses_resolved_is_online_not_raw_status(): void

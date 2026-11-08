@@ -8,7 +8,6 @@ use App\Models\DeviceApiKey;
 use App\Models\School;
 use App\Models\TelemetryReading;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -27,7 +26,7 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
         // 1. Dashboard on empty DB
         $dashboardResponse = $this->actingAs($teacher)->get('/');
         $dashboardResponse->assertOk();
-        $dashboardResponse->assertSee('Pusat Kendali Laboratorium Vokasi IoT');
+        $dashboardResponse->assertSee('Dashboard Pengajaran');
         $dashboardResponse->assertSee('0</span>', false); // 0 Meja Online
         $dashboardResponse->assertSee('/ 0 Meja Online', false);
         $dashboardResponse->assertSee('Belum Ada Meja Praktikum IoT Terdaftar');
@@ -59,7 +58,7 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
             'status' => 'offline',
         ]);
 
-        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id=' . $device->id);
+        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id='.$device->id);
 
         $response->assertOk();
         $response->assertSee('TK-DISABLED');
@@ -206,7 +205,7 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
         $dashRes->assertSee('Simulasi');
 
         // 2. Monitoring displays simulation badge
-        $iotRes = $this->actingAs($teacher)->get('/iot-monitoring?device_id=' . $device->id);
+        $iotRes = $this->actingAs($teacher)->get('/iot-monitoring?device_id='.$device->id);
         $iotRes->assertOk();
         $iotRes->assertSee('Simulasi');
 
@@ -236,7 +235,7 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
         $dashRes->assertSee('TK-NO-READINGS');
         $dashRes->assertSee('Belum Ada Transmisi Data');
 
-        $iotRes = $this->actingAs($teacher)->get('/iot-monitoring?device_id=' . $device->id);
+        $iotRes = $this->actingAs($teacher)->get('/iot-monitoring?device_id='.$device->id);
         $iotRes->assertOk();
         $iotRes->assertSee('Belum Ada Transmisi Data');
         $iotRes->assertDontSee('Streaming Modbus Aktif');
@@ -266,7 +265,7 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
             'recorded_at' => now(),
         ]);
 
-        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id=' . $device->id);
+        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id='.$device->id);
         $response->assertOk();
         $response->assertDontSee('Streaming Modbus Aktif');
         $response->assertSee('Simulasi');
@@ -292,7 +291,7 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
             'recorded_at' => now(),
         ]);
 
-        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id=' . $device->id);
+        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id='.$device->id);
         $response->assertOk();
         $response->assertSee('Streaming Modbus Aktif');
         $response->assertSee('Hardware');
@@ -407,7 +406,7 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id=' . $device->id);
+        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id='.$device->id);
         $response->assertOk();
         $response->assertSee('Asal Data');
     }
@@ -454,10 +453,13 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
             ]);
         }
 
+        // Guest dashboard is a product introduction, not an operational fleet view
         $this->get('/')->assertOk()
-            ->assertSee('TK-GUEST-DEFAULT')
+            ->assertSee('Selamat datang di Bitanic')
+            ->assertDontSee('TK-GUEST-DEFAULT')
             ->assertDontSee('TK-GUEST-OTHER');
 
+        // IoT Monitoring and Telemetry History still scope to default school
         $this->get('/iot-monitoring')->assertOk()
             ->assertSee('TK-GUEST-DEFAULT')
             ->assertDontSee('TK-GUEST-OTHER');
