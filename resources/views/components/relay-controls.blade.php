@@ -6,11 +6,12 @@
         'mistingFan' => false,
         'growLight' => false,
     ],
-    'canControl' => true
+    'canControl' => true,
+    'isOnline' => false,
 ])
 
 <div
-    class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4"
+    class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4 flex flex-col justify-between"
     x-data="{
         relays: {{ json_encode($relays) }},
         loadingKey: null,
@@ -50,19 +51,17 @@
     }"
 >
     <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                <i data-lucide="power" class="w-4 h-4"></i>
+    <div>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i data-lucide="power" class="w-4 h-4 text-slate-700"></i>
+                <h4 class="text-xs font-bold text-slate-900">Aktuator trainer kit</h4>
             </div>
-            <div>
-                <h4 class="text-xs font-bold text-slate-900">Aktuator Trainer Kit 4-Kanal</h4>
-                <p class="text-[10px] text-slate-500">Kontrol Relai Otomasi Irigasi & Fertigasi Meja Praktik</p>
-            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold uppercase">
+                {{ $canControl ? ($isOnline ? 'Tersambung' : 'Standby') : 'Mode Monitor' }}
+            </span>
         </div>
-        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold uppercase">
-            {{ $canControl ? 'Aktif Terhubung' : 'Mode Monitor' }}
-        </span>
+        <p class="text-[11px] text-slate-400 mt-0.5">Relay otomasi irigasi dan fertigasi, 4 kanal.</p>
     </div>
 
     <!-- Hardware Feedback / Unconfirmed Alert -->
@@ -78,86 +77,147 @@
         <button type="button" @click="errorMessage = ''" class="text-amber-500 hover:text-amber-800 text-xs font-bold">✕</button>
     </div>
 
-    <!-- Actuators Grid -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <!-- Relay 1: Pompa Irigasi Tetes -->
+    <!-- Actuators Stack (4 Rows) -->
+    <div class="space-y-2">
+        <!-- Row 1: Pompa Irigasi -->
         <div
+            @if($canControl) data-relay-clickable="true" @endif
             @click="toggleRelay('irrigationPump')"
-            :class="relays.irrigationPump ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'"
-            class="p-3.5 rounded-lg border {{ $canControl ? 'cursor-pointer hover:border-emerald-400' : 'cursor-not-allowed opacity-80' }} transition-all flex flex-col justify-between space-y-3"
+            class="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/60 {{ $canControl ? 'cursor-pointer hover:bg-slate-100/80 transition-colors' : 'cursor-not-allowed opacity-75' }}"
         >
-            <div class="flex items-center justify-between">
-                <i data-lucide="droplets" :class="relays.irrigationPump ? 'text-emerald-600' : 'text-slate-400'" class="w-4 h-4"></i>
+            <div class="flex items-center gap-3">
+                <div class="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-600">
+                    <i data-lucide="droplets" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-800 block">Pompa irigasi</span>
+                    <span class="text-[10px] text-slate-400">Drip substrat</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
                 <span
-                    :class="relays.irrigationPump ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'"
-                    class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded font-mono"
+                    class="text-[10px] font-mono font-bold"
+                    :class="relays.irrigationPump ? 'text-emerald-700' : 'text-slate-400'"
                     x-text="relays.irrigationPump ? 'ON' : 'OFF'"
-                ></span>
-            </div>
-            <div>
-                <span class="text-xs font-bold text-slate-800 block">Pompa Irigasi</span>
-                <span class="text-[10px] text-slate-500">Drip Substrat</span>
+                >OFF</span>
+                <div
+                    class="w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5"
+                    :class="relays.irrigationPump ? 'bg-emerald-600' : 'bg-slate-200'"
+                >
+                    <div
+                        class="w-4 h-4 rounded-full bg-white shadow-2xs transition-transform transform"
+                        :class="relays.irrigationPump ? 'translate-x-4' : 'translate-x-0'"
+                    ></div>
+                </div>
             </div>
         </div>
 
-        <!-- Relay 2: Valve Solenoid Fertigasi -->
+        <!-- Row 2: Valve Fertigasi -->
         <div
+            @if($canControl) data-relay-clickable="true" @endif
             @click="toggleRelay('fertigationValve')"
-            :class="relays.fertigationValve ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'"
-            class="p-3.5 rounded-lg border {{ $canControl ? 'cursor-pointer hover:border-emerald-400' : 'cursor-not-allowed opacity-80' }} transition-all flex flex-col justify-between space-y-3"
+            class="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/60 {{ $canControl ? 'cursor-pointer hover:bg-slate-100/80 transition-colors' : 'cursor-not-allowed opacity-75' }}"
         >
-            <div class="flex items-center justify-between">
-                <i data-lucide="flask-conical" :class="relays.fertigationValve ? 'text-emerald-600' : 'text-slate-400'" class="w-4 h-4"></i>
+            <div class="flex items-center gap-3">
+                <div class="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-600">
+                    <i data-lucide="flask-conical" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-800 block">Valve fertigasi</span>
+                    <span class="text-[10px] text-slate-400">Injeksi AB-Mix</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
                 <span
-                    :class="relays.fertigationValve ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'"
-                    class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded font-mono"
+                    class="text-[10px] font-mono font-bold"
+                    :class="relays.fertigationValve ? 'text-emerald-700' : 'text-slate-400'"
                     x-text="relays.fertigationValve ? 'ON' : 'OFF'"
-                ></span>
-            </div>
-            <div>
-                <span class="text-xs font-bold text-slate-800 block">Valve Fertigasi</span>
-                <span class="text-[10px] text-slate-500">AB-Mix Injeksi</span>
+                >OFF</span>
+                <div
+                    class="w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5"
+                    :class="relays.fertigationValve ? 'bg-emerald-600' : 'bg-slate-200'"
+                >
+                    <div
+                        class="w-4 h-4 rounded-full bg-white shadow-2xs transition-transform transform"
+                        :class="relays.fertigationValve ? 'translate-x-4' : 'translate-x-0'"
+                    ></div>
+                </div>
             </div>
         </div>
 
-        <!-- Relay 3: Kipas Misting -->
+        <!-- Row 3: Kipas Misting -->
         <div
+            @if($canControl) data-relay-clickable="true" @endif
             @click="toggleRelay('mistingFan')"
-            :class="relays.mistingFan ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'"
-            class="p-3.5 rounded-lg border {{ $canControl ? 'cursor-pointer hover:border-emerald-400' : 'cursor-not-allowed opacity-80' }} transition-all flex flex-col justify-between space-y-3"
+            class="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/60 {{ $canControl ? 'cursor-pointer hover:bg-slate-100/80 transition-colors' : 'cursor-not-allowed opacity-75' }}"
         >
-            <div class="flex items-center justify-between">
-                <i data-lucide="fan" :class="relays.mistingFan ? 'text-emerald-600' : 'text-slate-400'" class="w-4 h-4"></i>
-                <span
-                    :class="relays.mistingFan ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'"
-                    class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded font-mono"
-                    x-text="relays.mistingFan ? 'ON' : 'OFF'"
-                ></span>
+            <div class="flex items-center gap-3">
+                <div class="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-600">
+                    <i data-lucide="wind" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-800 block">Kipas misting</span>
+                    <span class="text-[10px] text-slate-400">Iklim mikro</span>
+                </div>
             </div>
-            <div>
-                <span class="text-xs font-bold text-slate-800 block">Kipas Misting</span>
-                <span class="text-[10px] text-slate-500">Iklim Mikro</span>
+            <div class="flex items-center gap-2">
+                <span
+                    class="text-[10px] font-mono font-bold"
+                    :class="relays.mistingFan ? 'text-emerald-700' : 'text-slate-400'"
+                    x-text="relays.mistingFan ? 'ON' : 'OFF'"
+                >OFF</span>
+                <div
+                    class="w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5"
+                    :class="relays.mistingFan ? 'bg-emerald-600' : 'bg-slate-200'"
+                >
+                    <div
+                        class="w-4 h-4 rounded-full bg-white shadow-2xs transition-transform transform"
+                        :class="relays.mistingFan ? 'translate-x-4' : 'translate-x-0'"
+                    ></div>
+                </div>
             </div>
         </div>
 
-        <!-- Relay 4: Grow Light Spektrum -->
+        <!-- Row 4: Grow Light -->
         <div
+            @if($canControl) data-relay-clickable="true" @endif
             @click="toggleRelay('growLight')"
-            :class="relays.growLight ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'"
-            class="p-3.5 rounded-lg border {{ $canControl ? 'cursor-pointer hover:border-emerald-400' : 'cursor-not-allowed opacity-80' }} transition-all flex flex-col justify-between space-y-3"
+            class="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/60 {{ $canControl ? 'cursor-pointer hover:bg-slate-100/80 transition-colors' : 'cursor-not-allowed opacity-75' }}"
         >
-            <div class="flex items-center justify-between">
-                <i data-lucide="sun" :class="relays.growLight ? 'text-emerald-600' : 'text-slate-400'" class="w-4 h-4"></i>
-                <span
-                    :class="relays.growLight ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'"
-                    class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded font-mono"
-                    x-text="relays.growLight ? 'ON' : 'OFF'"
-                ></span>
+            <div class="flex items-center gap-3">
+                <div class="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-600">
+                    <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-800 block">Grow light</span>
+                    <span class="text-[10px] text-slate-400">Fotosintesis</span>
+                </div>
             </div>
-            <div>
-                <span class="text-xs font-bold text-slate-800 block">Grow Light</span>
-                <span class="text-[10px] text-slate-500">Fotosintesis</span>
+            <div class="flex items-center gap-2">
+                <span
+                    class="text-[10px] font-mono font-bold"
+                    :class="relays.growLight ? 'text-emerald-700' : 'text-slate-400'"
+                    x-text="relays.growLight ? 'ON' : 'OFF'"
+                >OFF</span>
+                <div
+                    class="w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5"
+                    :class="relays.growLight ? 'bg-emerald-600' : 'bg-slate-200'"
+                >
+                    <div
+                        class="w-4 h-4 rounded-full bg-white shadow-2xs transition-transform transform"
+                        :class="relays.growLight ? 'translate-x-4' : 'translate-x-0'"
+                    ></div>
+                </div>
             </div>
         </div>
+    </div>
+
+    <!-- Footnote / Offline Note -->
+    <div class="pt-2 border-t border-slate-100 text-[11px] text-slate-400">
+        @if(!$isOnline || !$canControl)
+            <span>Kit sedang offline. Kontrol relay aktif kembali setelah kit terhubung.</span>
+        @else
+            <span>Mode kontrol aman. Perubahan status memerlukan konfirmasi ACK dari perangkat keras.</span>
+        @endif
     </div>
 </div>
