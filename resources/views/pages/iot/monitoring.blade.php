@@ -192,7 +192,7 @@
                     :idealMax="7.2"
                     :status="$phStatus"
                     :statusLabel="$phLabel"
-                    icon="activity"
+                    icon="ph"
                     sublabel="Aktivitas ion H⁺"
                     definition="Derajat kemasaman tanah yang menentukan kelarutan ion hara bagi penyerapan perakaran tanaman."
                     importance="Mengatur ketersediaan hara makro dan menjaga aktivitas mikroorganisme tanah yang menguntungkan."
