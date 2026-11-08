@@ -216,7 +216,7 @@ class DashboardController extends Controller
 
         $averageAttendance = $attendanceDisplayPercent;
 
-        return view('pages.dashboard.index', [
+        return view('pages.dashboard.dashboard', [
             'user' => $user,
             'devices' => $devices,
             'activeDevice' => $devices->first(),
