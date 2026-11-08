@@ -168,7 +168,7 @@
                 <img
                     src="{{ asset('logo-dark.png') }}"
                     alt="Bitanic"
-                    class="h-7 w-auto max-w-[145px] object-contain"
+                    class="h-9 w-auto max-w-[145px] object-contain"
                 />
             </a>
             <p class="text-[11px] text-slate-500 font-medium tracking-tight mt-1 truncate">
