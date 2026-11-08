@@ -141,9 +141,10 @@
 >
     <!-- Brand Header Area (Clean Centered Logo Composition, No Background Panel) -->
     <div class="p-3 border-b border-slate-100 shrink-0 relative">
-        <!-- Desktop Collapse Button -->
+        <!-- Desktop Collapse Button (Shown only when expanded) -->
         <button
             type="button"
+            x-show="!sidebarCollapsed"
             @click="toggleSidebarCollapse()"
             class="hidden lg:flex absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             title="Ciutkan navigasi"
