@@ -54,15 +54,6 @@
             }
         },
 
-        getFootnote() {
-            if (this.activeTab === 'npk') {
-                return 'Satuan mg/kg. Evaluasi dinamika ketersediaan hara makro primer N-P-K.';
-            }
-            const meta = this.parametersMeta[this.activeTab];
-            if (!meta) return '';
-            return `Satuan ${meta.unit}. Rentang ideal ${meta.idealMin}–${meta.idealMax} ${meta.unit}.`;
-        },
-
         initChart() {
             const el = document.getElementById('{{ $chartId }}');
             if (!el || typeof ApexCharts === 'undefined') return;
@@ -212,12 +203,9 @@
 >
     <!-- Header: Title & Time Range -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-        <div>
-            <div class="flex items-center gap-2">
-                <i data-lucide="activity" class="w-4 h-4 text-emerald-600"></i>
-                <h3 class="text-sm font-bold text-slate-800">Tren telemetri lahan</h3>
-            </div>
-            <p class="text-xs text-slate-400 mt-0.5">Inspeksi dinamika unsur kimiawi dan fisik tanah.</p>
+        <div class="flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-emerald-600"></i>
+            <h3 class="text-sm font-semibold text-slate-800">Tren telemetri lahan</h3>
         </div>
 
         <!-- Time Range Selector -->
@@ -304,7 +292,4 @@
 
         <div x-show="hasData()" id="{{ $chartId }}" class="w-full h-[260px]"></div>
     </div>
-
-    <!-- Footnote -->
-    <div class="pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-sans" x-text="getFootnote()"></div>
 </div>
