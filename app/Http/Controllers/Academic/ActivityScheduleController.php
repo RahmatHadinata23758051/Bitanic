@@ -61,7 +61,7 @@ class ActivityScheduleController extends Controller
             ->unique()
             ->toArray();
 
-        return view('pages.schedules.index', [
+        return view('pages.schedules.activity-schedules', [
             'schedules' => $schedules,
             'devices' => $devices,
             'classrooms' => $classrooms,
