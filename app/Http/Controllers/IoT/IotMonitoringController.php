@@ -161,7 +161,7 @@ class IotMonitoringController extends Controller
             $healthScore = max(30, min(100, $score));
         }
 
-        return view('pages.iot.index', [
+        return view('pages.iot.monitoring', [
             'activeDevice' => $activeDevice,
             'devices' => $allDevices,
             'telemetry' => $t,
