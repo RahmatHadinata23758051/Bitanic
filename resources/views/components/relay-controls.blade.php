@@ -51,17 +51,14 @@
     }"
 >
     <!-- Header -->
-    <div>
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <i data-lucide="power" class="w-4 h-4 text-slate-700"></i>
-                <h4 class="text-xs font-bold text-slate-900">Aktuator trainer kit</h4>
-            </div>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold uppercase">
-                {{ $canControl ? ($isOnline ? 'Tersambung' : 'Standby') : 'Mode Monitor' }}
-            </span>
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <i data-lucide="power" class="w-4 h-4 text-slate-700"></i>
+            <h4 class="text-xs font-semibold text-slate-900">Aktuator trainer kit</h4>
         </div>
-        <p class="text-[11px] text-slate-400 mt-0.5">Relay otomasi irigasi dan fertigasi, 4 kanal.</p>
+        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold uppercase">
+            {{ $canControl ? ($isOnline ? 'Tersambung' : 'Standby') : 'Mode Monitor' }}
+        </span>
     </div>
 
     <!-- Hardware Feedback / Unconfirmed Alert -->
@@ -89,10 +86,7 @@
                 <div class="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-600">
                     <i data-lucide="droplets" class="w-3.5 h-3.5"></i>
                 </div>
-                <div>
-                    <span class="text-xs font-bold text-slate-800 block">Pompa irigasi</span>
-                    <span class="text-[10px] text-slate-400">Drip substrat</span>
-                </div>
+                <span class="text-xs font-medium text-slate-800">Pompa irigasi</span>
             </div>
             <div class="flex items-center gap-2">
                 <span
@@ -122,10 +116,7 @@
                 <div class="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-600">
                     <i data-lucide="flask-conical" class="w-3.5 h-3.5"></i>
                 </div>
-                <div>
-                    <span class="text-xs font-bold text-slate-800 block">Valve fertigasi</span>
-                    <span class="text-[10px] text-slate-400">Injeksi AB-Mix</span>
-                </div>
+                <span class="text-xs font-medium text-slate-800">Valve fertigasi</span>
             </div>
             <div class="flex items-center gap-2">
                 <span
@@ -155,10 +146,7 @@
                 <div class="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-600">
                     <i data-lucide="wind" class="w-3.5 h-3.5"></i>
                 </div>
-                <div>
-                    <span class="text-xs font-bold text-slate-800 block">Kipas misting</span>
-                    <span class="text-[10px] text-slate-400">Iklim mikro</span>
-                </div>
+                <span class="text-xs font-medium text-slate-800">Kipas misting</span>
             </div>
             <div class="flex items-center gap-2">
                 <span
@@ -188,10 +176,7 @@
                 <div class="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-600">
                     <i data-lucide="sun" class="w-3.5 h-3.5"></i>
                 </div>
-                <div>
-                    <span class="text-xs font-bold text-slate-800 block">Grow light</span>
-                    <span class="text-[10px] text-slate-400">Fotosintesis</span>
-                </div>
+                <span class="text-xs font-medium text-slate-800">Grow light</span>
             </div>
             <div class="flex items-center gap-2">
                 <span
@@ -215,9 +200,9 @@
     <!-- Footnote / Offline Note -->
     <div class="pt-2 border-t border-slate-100 text-[11px] text-slate-400">
         @if(!$isOnline || !$canControl)
-            <span>Kit sedang offline. Kontrol relay aktif kembali setelah kit terhubung.</span>
+            <span>Kit offline. Kontrol aktif setelah kit terhubung.</span>
         @else
-            <span>Mode kontrol aman. Perubahan status memerlukan konfirmasi ACK dari perangkat keras.</span>
+            <span>Mode kontrol aman. Memerlukan konfirmasi ACK hardware.</span>
         @endif
     </div>
 </div>
