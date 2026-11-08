@@ -83,7 +83,7 @@ class PracticumReportController extends Controller
         $modules = ModulePracticum::orderBy('meeting_number')->get();
         $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
 
-        return view('pages.reports.index', [
+        return view('pages.reports.practicum-reports', [
             'user' => $user,
             'reports' => $reports,
             'modules' => $modules,
