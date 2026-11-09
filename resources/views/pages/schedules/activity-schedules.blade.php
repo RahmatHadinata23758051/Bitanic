@@ -2,39 +2,53 @@
 
 @section('content')
 <div class="space-y-6" x-data="{ showModal: false }">
-    <!-- Header Banner & Action Bar -->
-    <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <!-- Unboxed Header & Action Bar matching approved Monitoring IoT & Analytics -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="space-y-1">
-            <div class="flex items-center gap-2">
-                <span class="px-2.5 py-0.5 text-xs font-bold uppercase rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
-                    Laboratorium IoT Agritech
-                </span>
-                <span class="text-xs text-slate-400">•</span>
-                <span class="text-xs font-semibold text-slate-600">SMK Pertanian ATPH 4.0</span>
-            </div>
-            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-                Manajemen Jadwal Praktikum &amp; Alokasi Meja Trainer Kit
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight font-sans">
+                Jadwal Praktikum
             </h1>
-            <p class="text-xs sm:text-sm text-slate-600 max-w-3xl leading-relaxed">
-                Pengaturan jadwal giliran sesi laboratorium kelas, pencegahan tabrakan alokasi meja trainer kit, dan penugasan modul ajar.
+            <p class="text-xs text-slate-500">
+                Pengaturan sesi pembelajaran dan penggunaan Trainer Kit
             </p>
         </div>
 
-        <div class="flex items-center gap-3 shrink-0">
-            <button
-                type="button"
-                @click="showModal = true"
-                class="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-2"
-            >
-                <i data-lucide="plus" class="w-4 h-4"></i>
-                <span>Tambah Jadwal Sesi</span>
-            </button>
+        <div class="flex items-center gap-3 shrink-0 flex-wrap">
+            @if(!empty($isSuperuser) && $schools->isNotEmpty())
+                <form method="GET" action="{{ route('schedules.index') }}" class="flex items-center gap-2">
+                    <label for="school_id" class="text-xs font-semibold text-slate-600">Sekolah:</label>
+                    <select
+                        id="school_id"
+                        name="school_id"
+                        onchange="this.form.submit()"
+                        class="px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs cursor-pointer"
+                    >
+                        <option value="">Semua Sekolah</option>
+                        @foreach($schools as $school)
+                            <option value="{{ $school->id }}" {{ (string) $selectedSchoolId === (string) $school->id ? 'selected' : '' }}>
+                                {{ $school->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+            @endif
+
+            @if($canManageSchedules)
+                <button
+                    type="button"
+                    @click="showModal = true"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors"
+                >
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>Tambah Jadwal</span>
+                </button>
+            @endif
         </div>
     </div>
 
     <!-- Alert Success -->
     @if(session('success'))
-        <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between">
+        <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0"></i>
                 <span class="font-medium">{{ session('success') }}</span>
@@ -44,7 +58,7 @@
 
     <!-- Alert Error / Validation -->
     @if($errors->any())
-        <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+        <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
             <div class="flex items-center gap-2 font-bold">
                 <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0"></i>
                 <span>Gagal Menyimpan Jadwal:</span>
@@ -57,148 +71,256 @@
         </div>
     @endif
 
-    <!-- Trainer Kit Workstations Status Grid (Meja Praktik 1-6) -->
-    <div class="space-y-3">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Status Ketersediaan Meja Trainer Kit Hari Ini ({{ \Carbon\Carbon::parse($todayDate)->isoFormat('dddd, D MMMM Y') }})
-            </h3>
+    <!-- Contextual Summary Strip -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+            <div class="text-[11px] font-medium text-slate-500">Total Sesi Terjadwal</div>
+            <div class="text-xl font-bold text-slate-900 font-tabular mt-0.5">
+                {{ $schedules->count() }} <span class="text-xs font-normal text-slate-500">Sesi</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Semua sesi terdaftar</div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            @foreach($devices as $kit)
-                @php
-                    $isBookedToday = in_array($kit->id, $bookedDevicesToday);
-                @endphp
-                <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-slate-100 text-slate-700">
-                                {{ $kit->code }}
-                            </span>
-                            @if($isBookedToday)
-                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
-                                    Terjadwal
-                                </span>
-                            @else
-                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    Siap Pakai
-                                </span>
-                            @endif
-                        </div>
-                        <h4 class="text-xs font-bold text-slate-900 line-clamp-1">{{ $kit->name }}</h4>
-                        <p class="text-[11px] text-slate-500 line-clamp-1">{{ $kit->note ?? 'Stasiun laboratorium aktif' }}</p>
-                    </div>
+        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+            <div class="text-[11px] font-medium text-slate-500">Sesi Hari Ini</div>
+            <div class="text-xl font-bold text-slate-900 font-tabular mt-0.5">
+                {{ $schedules->filter(fn($s) => $s->activity_date && $s->activity_date->isToday())->count() }} <span class="text-xs font-normal text-slate-500">Sesi</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">{{ \Carbon\Carbon::parse($todayDate)->locale('id')->isoFormat('dddd, D MMM') }}</div>
+        </div>
 
-                    <div class="w-8 h-8 rounded-lg {{ $isBookedToday ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700' }} flex items-center justify-center shrink-0">
-                        <i data-lucide="cpu" class="w-4 h-4"></i>
-                    </div>
-                </div>
-            @endforeach
+        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+            <div class="text-[11px] font-medium text-slate-500">Stasiun Trainer Kit</div>
+            <div class="text-xl font-bold text-slate-900 font-tabular mt-0.5">
+                {{ $devices->count() }} <span class="text-xs font-normal text-slate-500">Stasiun</span>
+            </div>
+            <div class="text-[10px] {{ $onlineDevicesCount > 0 ? 'text-emerald-700 font-medium' : 'text-slate-400' }} mt-0.5">
+                {{ $onlineDevicesCount }} online saat ini
+            </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+            <div class="text-[11px] font-medium text-slate-500">Meja Terjadwal Hari Ini</div>
+            <div class="text-xl font-bold font-tabular mt-0.5 {{ count($bookedDevicesToday) > 0 ? 'text-amber-700' : 'text-slate-700' }}">
+                {{ count($bookedDevicesToday) }} <span class="text-xs font-normal text-slate-500">Meja</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">{{ $devices->count() - count($bookedDevicesToday) }} meja tanpa jadwal hari ini</div>
         </div>
     </div>
 
-    <!-- Practicum Schedules Table -->
-    <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Daftar Sesi Praktikum Laboratorium Terjadwal ({{ $schedules->count() }} Sesi)
-            </h3>
+    <!-- Station Availability Section -->
+    <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">Ketersediaan Stasiun Trainer Kit</h2>
+                <p class="text-[11px] text-slate-500">Status koneksi sensor dan alokasi sesi hari ini</p>
+            </div>
+            <div class="flex items-center gap-3 text-[10px] text-slate-500">
+                <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Sensor Online</span>
+                <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-300"></span> Sensor Offline</span>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
+        @if($devices->isEmpty())
+            <div class="py-6 text-center text-slate-400">
+                <p class="text-xs font-medium">Belum ada stasiun Trainer Kit yang terdaftar di sekolah ini.</p>
+            </div>
+        @else
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                @foreach($devices as $kit)
+                    @php
+                        $st = $deviceStatuses[$kit->id] ?? ['is_online' => false, 'is_booked_today' => false];
+                        $isOnline = $st['is_online'];
+                        $isBookedToday = $st['is_booked_today'];
+                    @endphp
+                    <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-[11px] font-bold text-slate-900 font-mono">{{ $kit->code }}</span>
+                            <span class="inline-flex items-center gap-1 text-[10px] {{ $isOnline ? 'text-emerald-700' : 'text-slate-400' }}" title="{{ $isOnline ? 'Sensor online (heartbeat aktif)' : 'Sensor offline (tidak ada transmisi segar)' }}">
+                                <span class="w-1.5 h-1.5 rounded-full {{ $isOnline ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-300' }}"></span>
+                                <span class="text-[9px]">{{ $isOnline ? 'Online' : 'Offline' }}</span>
+                            </span>
+                        </div>
+                        <div class="text-[11px] text-slate-600 truncate font-medium" title="{{ $kit->name }}">
+                            {{ $kit->name }}
+                        </div>
+                        <div>
+                            @if($isBookedToday)
+                                <span class="inline-flex items-center gap-1 text-[9px] font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded-md">
+                                    <span class="w-1 h-1 rounded-full bg-amber-500"></span>Terjadwal
+                                </span>
+                            @else
+                                <span class="inline-flex items-center text-[9px] font-medium text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded-md">
+                                    Tersedia
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
+    <!-- Practicum Schedules Table (Primary Content) -->
+    <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">Daftar Sesi Praktikum Laboratorium</h2>
+                <p class="text-[11px] text-slate-500">Jadwal pemakaian stasiun kerja dan modul ajar praktikum ATPH</p>
+            </div>
+            <div class="text-[11px] text-slate-500 font-medium">
+                Total: <span class="font-semibold text-slate-800 font-tabular">{{ $schedules->count() }}</span> sesi
+            </div>
+        </div>
+
+        <div class="overflow-x-auto -mx-4 sm:mx-0">
             <table class="w-full text-left text-xs">
                 <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50 text-slate-500 font-mono text-[11px] uppercase">
-                        <th class="py-3 px-3">Tanggal</th>
-                        <th class="py-3 px-3">Waktu Sesi</th>
-                        <th class="py-3 px-3">Judul Sesi / Kelas</th>
-                        <th class="py-3 px-3">Alokasi Meja</th>
-                        <th class="py-3 px-3">Agenda Pembelajaran</th>
-                        <th class="py-3 px-3 text-center">Aksi</th>
+                    <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-600 text-[11px] font-semibold">
+                        <th class="py-2.5 px-3">Tanggal</th>
+                        <th class="py-2.5 px-3">Waktu (WIB)</th>
+                        <th class="py-2.5 px-3">Modul Praktikum</th>
+                        <th class="py-2.5 px-3">Kelas &amp; Kelompok</th>
+                        <th class="py-2.5 px-3">Alokasi Meja</th>
+                        <th class="py-2.5 px-3">Status Sesi</th>
+                        @if($canManageSchedules)
+                            <th class="py-2.5 px-3 text-center">Aksi</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($schedules as $sched)
                         @php
                             $isToday = $sched->activity_date && $sched->activity_date->isToday();
-                            $isPast = $sched->activity_date && $sched->activity_date->isPast() && !$isToday;
+                            $dateStr = $sched->activity_date ? $sched->activity_date->format('Y-m-d') : null;
+                            $now = now();
+                            $sessionStatus = 'upcoming'; // upcoming, ongoing, completed
+                            if ($dateStr) {
+                                try {
+                                    $sessionStart = \Carbon\Carbon::parse($dateStr . ' ' . $sched->start_time);
+                                    $sessionEnd = \Carbon\Carbon::parse($dateStr . ' ' . $sched->end_time);
+                                    if ($now->greaterThan($sessionEnd)) {
+                                        $sessionStatus = 'completed';
+                                    } elseif ($now->greaterThanOrEqualTo($sessionStart) && $now->lessThanOrEqualTo($sessionEnd)) {
+                                        $sessionStatus = 'ongoing';
+                                    } else {
+                                        $sessionStatus = 'upcoming';
+                                    }
+                                } catch (\Throwable $e) {
+                                    $sessionStatus = 'upcoming';
+                                }
+                            }
                         @endphp
-                        <tr class="hover:bg-slate-50/80 transition-colors {{ $isToday ? 'bg-emerald-50/30' : '' }}">
+                        <tr class="hover:bg-slate-50/80 transition-colors {{ $isToday ? 'bg-emerald-50/20' : '' }}">
                             <!-- Tanggal -->
-                            <td class="py-3 px-3 whitespace-nowrap font-mono text-xs">
-                                <span class="font-bold {{ $isToday ? 'text-emerald-800' : 'text-slate-800' }}">
-                                    {{ $sched->activity_date ? $sched->activity_date->format('d M Y') : '-' }}
+                            <td class="py-3 px-3 whitespace-nowrap">
+                                <span class="font-semibold {{ $isToday ? 'text-emerald-800' : 'text-slate-800' }}">
+                                    {{ $sched->activity_date ? $sched->activity_date->locale('id')->isoFormat('ddd, D MMM Y') : '—' }}
                                 </span>
                                 @if($isToday)
-                                    <span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-emerald-100 text-emerald-800">
+                                    <span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-800">
                                         Hari Ini
                                     </span>
                                 @endif
                             </td>
 
                             <!-- Waktu -->
-                            <td class="py-3 px-3 whitespace-nowrap font-mono text-[11px] text-slate-600">
-                                {{ substr($sched->start_time, 0, 5) }} - {{ substr($sched->end_time, 0, 5) }} WIB
+                            <td class="py-3 px-3 whitespace-nowrap font-tabular text-slate-700 font-medium">
+                                {{ substr($sched->start_time, 0, 5) }} – {{ substr($sched->end_time, 0, 5) }} WIB
                             </td>
 
-                            <!-- Judul Kelas -->
-                            <td class="py-3 px-3 font-medium text-slate-900 whitespace-nowrap">
-                                <div>{{ $sched->title }}</div>
-                                @if($sched->classroom)
-                                    <span class="text-[10px] font-semibold text-slate-500">{{ $sched->classroom->name }}</span>
-                                @endif
-                                @if($sched->studentGroup)
-                                    <span class="text-[10px] text-slate-500">· {{ $sched->studentGroup->name }}</span>
-                                @endif
+                            <!-- Modul Praktikum -->
+                            <td class="py-3 px-3">
                                 @if($sched->modulePracticum)
-                                    <span class="block text-[10px] font-medium text-emerald-700">{{ $sched->modulePracticum->meeting_number }}. {{ $sched->modulePracticum->title }}</span>
+                                    <div class="font-medium text-slate-900 line-clamp-1">
+                                        Modul {{ $sched->modulePracticum->meeting_number }}: {{ $sched->modulePracticum->title }}
+                                    </div>
+                                    <div class="text-[10px] text-slate-500">{{ $sched->title }}</div>
+                                @else
+                                    <div class="font-medium text-slate-900 line-clamp-1">{{ $sched->title }}</div>
+                                    <div class="text-[10px] text-slate-400 italic">Praktikum Mandiri (Tanpa Modul)</div>
+                                @endif
+                            </td>
+
+                            <!-- Kelas & Kelompok -->
+                            <td class="py-3 px-3 whitespace-nowrap">
+                                @if($sched->classroom)
+                                    <div class="font-medium text-slate-900">{{ $sched->classroom->name }}</div>
+                                    @if($sched->studentGroup)
+                                        <div class="text-[10px] text-slate-500">{{ $sched->studentGroup->name }}</div>
+                                    @endif
+                                @else
+                                    <span class="text-slate-400 italic text-[11px]">Umum / Belum Ditentukan</span>
                                 @endif
                             </td>
 
                             <!-- Alokasi Meja -->
                             <td class="py-3 px-3 whitespace-nowrap">
                                 @if($sched->device)
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                                        {{ $sched->device->code }} — {{ $sched->device->name }}
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-800 border border-slate-200">
+                                        <span class="font-mono font-bold">{{ $sched->device->code }}</span>
+                                        <span class="text-slate-400">·</span>
+                                        <span class="truncate max-w-[120px]">{{ $sched->device->name }}</span>
                                     </span>
                                 @else
                                     <span class="text-slate-400 italic text-[11px]">Belum Dialokasikan</span>
                                 @endif
                             </td>
 
-                            <!-- Agenda -->
-                            <td class="py-3 px-3 text-slate-600 max-w-xs truncate text-[11px]">
-                                {{ $sched->agenda ?? '-' }}
+                            <!-- Status Sesi -->
+                            <td class="py-3 px-3 whitespace-nowrap">
+                                @if($sessionStatus === 'ongoing')
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Sedang Berlangsung
+                                    </span>
+                                @elseif($sessionStatus === 'completed')
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                        Selesai
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>Mendatang
+                                    </span>
+                                @endif
                             </td>
 
                             <!-- Aksi -->
-                            <td class="py-3 px-3 text-center whitespace-nowrap">
-                                <form method="POST" action="{{ route('schedules.destroy', $sched->id) }}" onsubmit="return confirm('Hapus jadwal sesi praktikum ini?');" class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button
-                                        type="submit"
-                                        class="p-1 rounded text-slate-400 hover:text-rose-600 transition-colors"
-                                        title="Hapus Jadwal"
-                                    >
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
-                                </form>
-                            </td>
+                            @if($canManageSchedules)
+                                <td class="py-3 px-3 text-center whitespace-nowrap">
+                                    <form method="POST" action="{{ route('schedules.destroy', $sched->id) }}" onsubmit="return confirm('Hapus jadwal sesi praktikum ini?');" class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button
+                                            type="submit"
+                                            class="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                            title="Hapus Jadwal"
+                                        >
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-10 text-center text-slate-400">
-                                <i data-lucide="calendar" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
-                                <p class="text-xs font-semibold">Belum ada jadwal praktikum yang dibuat.</p>
-                                <button
-                                    type="button"
-                                    @click="showModal = true"
-                                    class="mt-2 text-xs font-bold text-emerald-700 hover:underline"
-                                >
-                                    + Buat Jadwal Praktikum Pertama
-                                </button>
+                            <td colspan="{{ $canManageSchedules ? 7 : 6 }}" class="py-12 text-center text-slate-400">
+                                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                                    <i data-lucide="calendar" class="w-6 h-6"></i>
+                                </div>
+                                <h3 class="text-sm font-semibold text-slate-700">Belum ada jadwal praktikum</h3>
+                                <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                                    Belum ada sesi praktikum laboratorium yang dijadwalkan untuk sekolah ini.
+                                </p>
+                                @if($canManageSchedules)
+                                    <button
+                                        type="button"
+                                        @click="showModal = true"
+                                        class="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors"
+                                    >
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                        <span>Tambah Jadwal</span>
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                     @endforelse
@@ -263,7 +385,7 @@
                     @csrf
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
                             Judul Sesi / Kelas Praktikum <span class="text-rose-500">*</span>
                         </label>
                         <input
@@ -271,18 +393,18 @@
                             name="title"
                             required
                             placeholder="Contoh: Praktikum Sensor pH — Kelas XII ATPH 1"
-                            class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none"
+                            class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none"
                         />
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
                                 Kelas Praktikum
                             </label>
                             <select
                                 name="classroom_id"
-                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
+                                class="w-full text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:border-emerald-600 outline-none"
                             >
                                 <option value="">-- Pilih Kelas (Opsional) --</option>
                                 @foreach($classrooms ?? [] as $cls)
@@ -292,12 +414,12 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
                                 Kelompok Praktikum
                             </label>
                             <select
                                 name="student_group_id"
-                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
+                                class="w-full text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:border-emerald-600 outline-none"
                             >
                                 <option value="">-- Pilih Kelompok (Opsional) --</option>
                                 @foreach($studentGroups ?? [] as $grp)
@@ -309,12 +431,12 @@
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
                                 Modul Praktikum
                             </label>
                             <select
                                 name="module_practicum_id"
-                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
+                                class="w-full text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:border-emerald-600 outline-none"
                             >
                                 <option value="">-- Pilih Modul (Opsional) --</option>
                                 @foreach($modules ?? [] as $mod)
@@ -324,12 +446,12 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
                                 Alokasi Meja Trainer Kit
                             </label>
                             <select
                                 name="device_id"
-                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white focus:border-emerald-600 outline-none"
+                                class="w-full text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:border-emerald-600 outline-none"
                             >
                                 <option value="">-- Pilih Stasiun Trainer Kit (Opsional) --</option>
                                 @foreach($devices as $kit)
@@ -343,7 +465,7 @@
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
                                 Tanggal <span class="text-rose-500">*</span>
                             </label>
                             <input
@@ -351,12 +473,12 @@
                                 name="activity_date"
                                 required
                                 value="{{ date('Y-m-d') }}"
-                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-emerald-600 outline-none font-mono"
+                                class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 outline-none font-mono"
                             />
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
                                 Jam Mulai <span class="text-rose-500">*</span>
                             </label>
                             <input
@@ -365,12 +487,12 @@
                                 required
                                 placeholder="08:00"
                                 value="08:00"
-                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-emerald-600 outline-none font-mono"
+                                class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 outline-none font-mono"
                             />
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
                                 Jam Selesai <span class="text-rose-500">*</span>
                             </label>
                             <input
@@ -379,20 +501,20 @@
                                 required
                                 placeholder="10:30"
                                 value="10:30"
-                                class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-emerald-600 outline-none font-mono"
+                                class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 outline-none font-mono"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
                             Agenda Pembelajaran &amp; Instruksi Guru
                         </label>
                         <textarea
                             name="agenda"
                             rows="2"
                             placeholder="Materi kalibrasi elektroda kaca, pencatatan buffer, dan tugas LKS pertemuan 4..."
-                            class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-emerald-600 outline-none"
+                            class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:border-emerald-600 outline-none"
                         ></textarea>
                     </div>
 
@@ -400,13 +522,13 @@
                         <button
                             type="button"
                             @click="showModal = false"
-                            class="px-4 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                            class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                         >
                             Batal
                         </button>
                         <button
                             type="submit"
-                            class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors"
+                            class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors"
                         >
                             Simpan Jadwal Sesi
                         </button>

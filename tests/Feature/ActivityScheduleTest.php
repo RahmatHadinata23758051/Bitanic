@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Schedule\CreateScheduleAction;
 use App\Models\ActivitySchedule;
 use App\Models\Classroom;
 use App\Models\Device;
@@ -11,6 +12,7 @@ use App\Models\StudentGroup;
 use App\Models\User;
 use Database\Seeders\TrainerKitSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class ActivityScheduleTest extends TestCase
@@ -28,9 +30,29 @@ class ActivityScheduleTest extends TestCase
         $response = $this->get(route('schedules.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('Manajemen Jadwal Praktikum &amp; Alokasi Meja Trainer Kit', false);
+        $response->assertSee('Jadwal Praktikum');
+        $response->assertSee('Pengaturan sesi pembelajaran dan penggunaan Trainer Kit');
         $response->assertSee('TK-01');
         $response->assertSee('Meja Praktik 1');
+    }
+
+    public function test_guest_and_student_cannot_create_schedule(): void
+    {
+        $kit = Device::where('code', 'TK-01')->firstOrFail();
+        $payload = [
+            'title' => 'Sesi Terlarang',
+            'device_id' => $kit->id,
+            'activity_date' => now()->addDay()->toDateString(),
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+        ];
+
+        // Guest is redirected to login
+        $this->post(route('schedules.store'), $payload)->assertRedirect('/login');
+
+        // Student receives 403 Forbidden
+        $student = User::factory()->create(['role' => 'siswa']);
+        $this->actingAs($student)->post(route('schedules.store'), $payload)->assertStatus(403);
     }
 
     public function test_guest_schedule_page_uses_default_school_without_exposing_other_schools(): void
@@ -495,7 +517,7 @@ class ActivityScheduleTest extends TestCase
             'name' => 'XII ATPH Concurrency Test',
         ]);
 
-        $action = app(\App\Actions\Schedule\CreateScheduleAction::class);
+        $action = app(CreateScheduleAction::class);
         $date = now()->addDays(10)->toDateString();
 
         // Transaction 1 succeeds
@@ -511,7 +533,7 @@ class ActivityScheduleTest extends TestCase
         $this->assertNotNull($firstSchedule->id);
 
         // Transaction 2 attempting same classroom and kit overlap is rejected by collision check
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
         $action->execute([
             'title' => 'Sesi Kedua Tabrakan Overlap',
             'classroom_id' => $classroom->id,

@@ -11,6 +11,7 @@ use App\Models\ModulePracticum;
 use App\Models\School;
 use App\Models\StudentGroup;
 use App\Models\User;
+use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,33 +22,37 @@ class ActivityScheduleController extends Controller
     /**
      * Display practicum schedules timeline and trainer kit bench allocations.
      */
-    public function index(Request $request): View
+    public function index(Request $request, DeviceAvailabilityResolver $availabilityResolver): View
     {
-        $schoolId = $request->user()?->school_id;
-        $isSuperuser = (bool) $request->user()?->isSuperuser();
+        $user = $request->user();
+        $schoolId = $user?->school_id;
+        $isSuperuser = (bool) $user?->isSuperuser();
 
-        if ($request->user() && ! $isSuperuser && ! $schoolId) {
+        if ($user && ! $isSuperuser && ! $schoolId) {
             abort(403, 'Akses jadwal praktikum memerlukan asosiasi sekolah yang valid.');
         }
 
+        $selectedSchoolId = $request->query('school_id');
+        $schools = $isSuperuser ? School::orderBy('name')->get() : collect();
+
         $targetSchoolId = $isSuperuser
-            ? null
+            ? ($selectedSchoolId ? (int) $selectedSchoolId : null)
             : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
 
         $schedules = ActivitySchedule::with(['device', 'participants.user', 'classroom', 'studentGroup', 'modulePracticum'])
-            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('activity_date', 'asc')
             ->orderBy('start_time', 'asc')
             ->get();
 
         $devices = Device::where('is_active', true)
-            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('code')
             ->get();
-        $classrooms = Classroom::when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
+        $classrooms = Classroom::when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('name')
             ->get();
-        $studentGroups = StudentGroup::when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
+        $studentGroups = StudentGroup::when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('name')
             ->get();
         $modules = ModulePracticum::orderBy('meeting_number')->get();
@@ -55,11 +60,26 @@ class ActivityScheduleController extends Controller
         // Status kit ketersediaan hari ini
         $today = now()->toDateString();
         $bookedDevicesToday = ActivitySchedule::where('activity_date', $today)
-            ->when(! $isSuperuser, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->pluck('device_id')
             ->filter()
             ->unique()
             ->toArray();
+
+        $onlineDevicesCount = 0;
+        $deviceStatuses = [];
+        foreach ($devices as $kit) {
+            $isOnline = $availabilityResolver->isOnline($kit);
+            if ($isOnline) {
+                $onlineDevicesCount++;
+            }
+            $deviceStatuses[$kit->id] = [
+                'is_online' => $isOnline,
+                'is_booked_today' => in_array($kit->id, $bookedDevicesToday, true),
+            ];
+        }
+
+        $canManageSchedules = (bool) ($user && in_array($user->role, ['guru', 'superuser', 'admin'], true));
 
         return view('pages.schedules.activity-schedules', [
             'schedules' => $schedules,
@@ -68,7 +88,13 @@ class ActivityScheduleController extends Controller
             'studentGroups' => $studentGroups,
             'modules' => $modules,
             'bookedDevicesToday' => $bookedDevicesToday,
+            'deviceStatuses' => $deviceStatuses,
+            'onlineDevicesCount' => $onlineDevicesCount,
             'todayDate' => $today,
+            'isSuperuser' => $isSuperuser,
+            'schools' => $schools,
+            'selectedSchoolId' => $selectedSchoolId,
+            'canManageSchedules' => $canManageSchedules,
         ]);
     }
 
