@@ -11,6 +11,7 @@
             <p class="text-sm text-slate-500 mt-1">
                 Pengelolaan dan diagnostik perangkat laboratorium IoT
             </p>
+            <span class="sr-only">Manajemen Armada Trainer Kit IoT</span>
         </div>
 
         <div class="flex items-center gap-2.5 flex-wrap">
