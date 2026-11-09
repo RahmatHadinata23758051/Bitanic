@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -11,20 +12,30 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('Seeding Bitanic database from legacy dataset...');
+        $this->command->info('Seeding Bitanic vocational LMS master data...');
+
+        $this->call([
+            SubscriptionPlanSeeder::class,
+            VocationalLmsSeeder::class,
+            ModulePracticumSeeder::class,
+        ]);
 
         if (app()->environment('production')) {
-            if (\App\Models\User::exists()) {
+            if (User::exists()) {
                 $this->command->warn('Production environment dengan data pengguna aktif terdeteksi. Seeder legacy dilewati demi melindungi integritas produksi.');
+
                 return;
             }
         }
 
         $params = [];
-        if (!app()->environment('production')) {
+        if (! app()->environment('production')) {
             $params['--dev-passwords'] = true;
         }
 
-        $this->command->call('bitanic:import-legacy', $params);
+        $legacyDump = dirname(base_path()).DIRECTORY_SEPARATOR.'dump_upiedge.sql';
+        if (file_exists($legacyDump)) {
+            $this->command->call('bitanic:import-legacy', $params);
+        }
     }
 }

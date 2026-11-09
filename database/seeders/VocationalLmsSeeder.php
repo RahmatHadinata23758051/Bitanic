@@ -22,6 +22,7 @@ class VocationalLmsSeeder extends Seeder
         SchoolSetting::updateOrCreate(
             ['id' => 1],
             [
+                'school_id' => 1,
                 'school_name' => 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
                 'academic_year' => '2026/2027',
                 'semester' => 'Ganjil',
@@ -198,6 +199,7 @@ class VocationalLmsSeeder extends Seeder
 
         $deviceModels = [];
         foreach ($kits as $kitData) {
+            $kitData['school_id'] = 1;
             $device = Device::updateOrCreate(['code' => $kitData['code']], $kitData);
             $deviceModels[$device->code] = $device;
         }
@@ -245,7 +247,14 @@ class VocationalLmsSeeder extends Seeder
         foreach ($teachers as $t) {
             $user = User::updateOrCreate(
                 ['email' => $t['email']],
-                ['name' => $t['name'], 'password' => $passwordHash, 'role' => 'guru']
+                [
+                    'school_id' => 1,
+                    'name' => $t['name'],
+                    'password' => $passwordHash,
+                    'role' => 'guru',
+                    'email_verified_at' => now(),
+                    'must_change_password' => false,
+                ]
             );
             UserProfile::updateOrCreate(
                 ['user_id' => $user->id],
@@ -263,7 +272,14 @@ class VocationalLmsSeeder extends Seeder
             if ($t['alias_email']) {
                 $alias = User::updateOrCreate(
                     ['email' => $t['alias_email']],
-                    ['name' => $t['name'], 'password' => $passwordHash, 'role' => 'guru']
+                    [
+                        'school_id' => 1,
+                        'name' => $t['name'],
+                        'password' => $passwordHash,
+                        'role' => 'guru',
+                        'email_verified_at' => now(),
+                        'must_change_password' => false,
+                    ]
                 );
                 UserProfile::updateOrCreate(
                     ['user_id' => $alias->id],
@@ -391,7 +407,14 @@ class VocationalLmsSeeder extends Seeder
         foreach ($students as $s) {
             $user = User::updateOrCreate(
                 ['email' => $s['email']],
-                ['name' => $s['name'], 'password' => $passwordHash, 'role' => 'siswa']
+                [
+                    'school_id' => 1,
+                    'name' => $s['name'],
+                    'password' => $passwordHash,
+                    'role' => 'siswa',
+                    'email_verified_at' => now(),
+                    'must_change_password' => false,
+                ]
             );
             UserProfile::updateOrCreate(
                 ['user_id' => $user->id],
@@ -411,7 +434,14 @@ class VocationalLmsSeeder extends Seeder
             if ($s['alias_email']) {
                 $alias = User::updateOrCreate(
                     ['email' => $s['alias_email']],
-                    ['name' => $s['name'], 'password' => $passwordHash, 'role' => 'siswa']
+                    [
+                        'school_id' => 1,
+                        'name' => $s['name'],
+                        'password' => $passwordHash,
+                        'role' => 'siswa',
+                        'email_verified_at' => now(),
+                        'must_change_password' => false,
+                    ]
                 );
                 UserProfile::updateOrCreate(
                     ['user_id' => $alias->id],
@@ -430,10 +460,17 @@ class VocationalLmsSeeder extends Seeder
             }
         }
 
-        // C. Admin Lab
+        // C. Admin Lab & Superuser
         $admin = User::updateOrCreate(
             ['email' => 'admin@smk.id'],
-            ['name' => 'M. Fikri Nurhakim, S.Kom.', 'password' => $passwordHash, 'role' => 'admin']
+            [
+                'school_id' => 1,
+                'name' => 'M. Fikri Nurhakim, S.Kom.',
+                'password' => $passwordHash,
+                'role' => 'admin',
+                'email_verified_at' => now(),
+                'must_change_password' => false,
+            ]
         );
         UserProfile::updateOrCreate(
             ['user_id' => $admin->id],
@@ -444,6 +481,53 @@ class VocationalLmsSeeder extends Seeder
                 'specialization' => 'Embedded Systems & RS485 Automation',
                 'phone' => '0821-9988-7766',
                 'trainer_certified' => true,
+            ]
+        );
+
+        $superuser = User::updateOrCreate(
+            ['email' => 'superuser@bitanic.id'],
+            [
+                'school_id' => 1,
+                'name' => 'Super Administrator Bitanic',
+                'password' => $passwordHash,
+                'role' => 'superuser',
+                'email_verified_at' => now(),
+                'must_change_password' => false,
+            ]
+        );
+        UserProfile::updateOrCreate(
+            ['user_id' => $superuser->id],
+            [
+                'type' => 'guru',
+                'identifier_number' => 'SUPER-001',
+                'department' => 'Administrator Sistem & Cloud IoT',
+                'specialization' => 'Superuser Administrator',
+                'phone' => '0812-0000-0001',
+                'trainer_certified' => true,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'superuser@smk.id'],
+            [
+                'school_id' => 1,
+                'name' => 'Super Administrator SMK',
+                'password' => $passwordHash,
+                'role' => 'superuser',
+                'email_verified_at' => now(),
+                'must_change_password' => false,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'admin@bitanic.id'],
+            [
+                'school_id' => 1,
+                'name' => 'Administrator Bitanic',
+                'password' => $passwordHash,
+                'role' => 'admin',
+                'email_verified_at' => now(),
+                'must_change_password' => false,
             ]
         );
 
@@ -583,6 +667,7 @@ class VocationalLmsSeeder extends Seeder
         ];
 
         foreach ($auditLogs as $audit) {
+            $audit['school_id'] = 1;
             AuditLog::create($audit);
         }
     }
