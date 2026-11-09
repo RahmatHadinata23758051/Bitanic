@@ -146,8 +146,16 @@
                     @forelse($students as $s)
                         @php
                             $profile = $s->profile;
-                            $grade = $profile?->average_grade !== null ? (float) $profile->average_grade : null;
-                            $pred = $profile?->competency_predicative ?? ($grade !== null ? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D'))) : null);
+                            $gradedReports = $s->relationLoaded('studentReports')
+                                ? $s->studentReports->where('status', 'graded')->whereNotNull('final_grade')
+                                : collect();
+                            $hasGradedReports = $gradedReports->isNotEmpty();
+                            $grade = $hasGradedReports
+                                ? (float) $gradedReports->avg('final_grade')
+                                : ($profile?->average_grade !== null ? (float) $profile->average_grade : null);
+                            $pred = $grade !== null
+                                ? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D')))
+                                : ($profile?->competency_predicative ?? null);
                         @endphp
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="py-3.5 px-3">

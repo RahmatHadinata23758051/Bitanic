@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\ModulePracticum;
 use App\Models\School;
+use App\Models\StudentReport;
 use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -259,5 +261,68 @@ class CompetencyAssessmentTenantTest extends TestCase
         $this->assertStringContainsString("'=cmd|", $content);
         $this->assertStringContainsString("'+628123456789", $content);
         $this->assertStringContainsString("'@XII ATPH 1", $content);
+    }
+
+    public function test_assessment_calculates_verified_average_from_graded_student_reports(): void
+    {
+        $school = School::create([
+            'npsn' => '20200310',
+            'name' => 'SMK Rapor Terverifikasi',
+            'slug' => 'smk-rapor-terverifikasi',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id, 'name' => 'Siswa Riset']);
+
+        UserProfile::create([
+            'user_id' => $student->id,
+            'type' => 'siswa',
+            'class_grade' => 'X ATPH 1',
+            // Profile has an unverified or old grade of 70.0
+            'average_grade' => 70.0,
+            'competency_predicative' => 'B',
+        ]);
+
+        $module1 = ModulePracticum::create([
+            'meeting_number' => 1,
+            'title' => 'Modul 1 Test',
+        ]);
+        $module2 = ModulePracticum::create([
+            'meeting_number' => 2,
+            'title' => 'Modul 2 Test',
+        ]);
+
+        // Create 2 graded student reports with grades 90.0 and 100.0 => average 95.0 (Predikat A)
+        StudentReport::create([
+            'user_id' => $student->id,
+            'module_id' => $module1->id,
+            'lks_answers' => ['q1' => 'ans1'],
+            'status' => 'graded',
+            'final_grade' => 90.0,
+            'graded_by' => $teacher->id,
+            'graded_at' => now(),
+        ]);
+        StudentReport::create([
+            'user_id' => $student->id,
+            'module_id' => $module2->id,
+            'lks_answers' => ['q1' => 'ans2'],
+            'status' => 'graded',
+            'final_grade' => 100.0,
+            'graded_by' => $teacher->id,
+            'graded_at' => now(),
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/assessment');
+        $response->assertOk();
+        $response->assertSee('Siswa Riset');
+        // Verified average is 95.0, not the stale profile grade of 70.0
+        $response->assertSee('95.0');
+        $response->assertDontSee('70.0');
+
+        $export = $this->actingAs($teacher)->get('/assessment/export');
+        $export->assertOk();
+        $exportContent = $export->streamedContent();
+        $this->assertStringContainsString('95.0', $exportContent);
+        $this->assertStringNotContainsString('70.0', $exportContent);
     }
 }

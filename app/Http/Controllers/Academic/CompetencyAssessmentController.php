@@ -79,20 +79,40 @@ class CompetencyAssessmentController extends Controller
                     }
                 });
             })
-            ->with(['profile.classroom', 'profile.studentGroup'])
+            ->with(['profile.classroom', 'profile.studentGroup', 'studentReports'])
             ->get();
 
-        $gradedStudents = $allStudents->filter(fn ($s) => $s->profile?->average_grade !== null);
-        $avgScore = $gradedStudents->isNotEmpty()
-            ? (float) $gradedStudents->avg(fn ($s) => $s->profile->average_grade)
+        $resolveStudentGrade = function ($student): ?float {
+            $gradedReports = $student->relationLoaded('studentReports')
+                ? $student->studentReports->where('status', 'graded')->whereNotNull('final_grade')
+                : collect();
+
+            if ($gradedReports->isNotEmpty()) {
+                return (float) $gradedReports->avg('final_grade');
+            }
+
+            return $student->profile?->average_grade !== null ? (float) $student->profile->average_grade : null;
+        };
+
+        $resolvePredicate = function (?float $grade, $profile): ?string {
+            if ($grade !== null) {
+                return $grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D'));
+            }
+
+            return $profile?->competency_predicative ?? null;
+        };
+
+        $gradedScores = $allStudents->map(fn ($s) => $resolveStudentGrade($s))->filter(fn ($g) => $g !== null);
+        $avgScore = $gradedScores->isNotEmpty()
+            ? (float) $gradedScores->avg()
             : null;
 
         $stats = [
             'total_students' => $allStudents->count(),
             'certified' => $allStudents->filter(fn ($s) => (bool) $s->profile?->trainer_certified)->count(),
-            'pred_a' => $allStudents->filter(fn ($s) => $s->profile?->competency_predicative === 'A')->count(),
-            'pred_b' => $allStudents->filter(fn ($s) => $s->profile?->competency_predicative === 'B')->count(),
-            'pred_c' => $allStudents->filter(fn ($s) => $s->profile?->competency_predicative === 'C')->count(),
+            'pred_a' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s), $s->profile) === 'A')->count(),
+            'pred_b' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s), $s->profile) === 'B')->count(),
+            'pred_c' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s), $s->profile) === 'C')->count(),
             'avg_score' => $avgScore,
         ];
 
@@ -146,7 +166,7 @@ class CompetencyAssessmentController extends Controller
         $classFilter = $request->query('class');
 
         $query = User::where('role', 'siswa')
-            ->with(['profile.classroom', 'profile.studentGroup'])
+            ->with(['profile.classroom', 'profile.studentGroup', 'studentReports'])
             ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->when($isStudent, fn ($q) => $q->where('id', $user->id))
             ->orderBy('name');
@@ -180,8 +200,15 @@ class CompetencyAssessmentController extends Controller
             $query->chunk(100, function ($students) use ($handle) {
                 foreach ($students as $student) {
                     $profile = $student->profile;
-                    $grade = $profile?->average_grade !== null ? (float) $profile->average_grade : null;
-                    $pred = $profile?->competency_predicative ?? ($grade !== null ? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D'))) : '—');
+                    $gradedReports = $student->relationLoaded('studentReports')
+                        ? $student->studentReports->where('status', 'graded')->whereNotNull('final_grade')
+                        : collect();
+                    $grade = $gradedReports->isNotEmpty()
+                        ? (float) $gradedReports->avg('final_grade')
+                        : ($profile?->average_grade !== null ? (float) $profile->average_grade : null);
+                    $pred = $grade !== null
+                        ? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D')))
+                        : ($profile?->competency_predicative ?? '—');
 
                     fputcsv($handle, [
                         $this->sanitizeCsvCell($student->name),
