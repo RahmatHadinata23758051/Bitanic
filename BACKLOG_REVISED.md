@@ -1,12 +1,12 @@
 # Bitanic — Revised Implementation Backlog & Work Order
 ## Multi-School Ready Vocational LMS & IoT Workstation
 
-- **Version**: 1.3.0
+- **Version**: 1.4.0
 - **Date**: 2026-11-10
-- **Status**: Full system acceptance & multi-tenant verification complete at HEAD `c23aa8c`. 403 SQLite tests / 2,471 assertions pass; PostgreSQL 17.6 integration and concurrency tests pass; complete 5-role authorization matrix and fail-closed multi-school IDOR protections verified in `RbacAndMultiTenantAcceptanceTest`. Target architecture baseline v1.0 locked in `docs/architecture/BITANIC_ARCHITECTURE_BASELINE_V1.md`.
+- **Status**: Final Acceptance Correction, RBAC Boundary Verification, and Real Browser E2E Validation complete. 408 SQLite tests / 2,505 assertions pass; PostgreSQL 17.6 integration and concurrency tests pass; 5/5 real browser E2E journeys pass (Playwright Chromium); Gradebook provenance enforced with honest missing state; RBAC legacy admin privilege inheritance audited and tested. Target architecture baseline v1.0 locked in `docs/architecture/BITANIC_ARCHITECTURE_BASELINE_V1.md`.
 - **Product Direction**: Single-School MVP with Multi-School Ready Architecture
 - **Methodology**: TDD, dependency-first delivery, task-isolated implementation, evidence-based QC.
-- **Reconciled application HEAD**: `c23aa8c` (`bitanic-app`, 2026-11-10); full RBAC and multi-tenant acceptance test suite committed locally; dual-driver test gates passed with 0 failures; Vite production asset build succeeded; baseline reference assets untouched.
+- **Reconciled application HEAD**: Latest `main` (`bitanic-app`, 2026-11-10); full RBAC boundary verification, gradebook provenance fix, and browser E2E test suite committed; dual-driver test gates passed with 0 failures; Vite production asset build succeeded; baseline reference assets untouched.
 - **Canonical file**: `C:\Users\user\Nata\MAKERINDO\Bitanic\BACKLOG_REVISED.md`; a synchronized tracked snapshot is maintained at `bitanic-app/BACKLOG_REVISED.md` because the canonical file is outside the Git worktree.  
 - **Status vocabulary**: `DONE` = acceptance verified; `PARTIAL` = implementation exists but acceptance/coverage remains; `TODO` = no verified implementation; `BLOCKED` = requires an external decision, approval, or hardware prerequisite. `DEFERRED` is used only as a scheduling qualifier, not as a replacement status.
 
@@ -558,6 +558,44 @@ Comprehensive acceptance and multi-tenant isolation testing executed against loc
   - `DEVICE-LIFECYCLE-01`: **PARTIAL / BLOCKED on physical ACK** — Software calibration and simulation-only reboot verified; physical actuation downlink remains blocked.
   - `SCHOOL-LICENSE-01`: **DEFERRED** — 1 School = 1 License contract documented in Architecture Baseline v1.0; commercial licensing deferred by PO directive.
   - `PAYMENT-01`: **HOLD** — Midtrans SaaS routes retired under `LEGACY-01`; no financial transactions executed in vocational MVP.
+
+### 2.13 — Final Acceptance Correction, RBAC Boundary Audit & Real Browser E2E Validation (2026-11-10)
+
+Addressed the three outstanding Product Owner acceptance issues with full test evidence:
+
+1. **Gradebook Provenance (P1 Resolution)**:
+   - Audited `CompetencyAssessmentController` and views.
+   - Removed misleading current-grade fallbacks to `user_profiles.average_grade` and `competency_predicative`.
+   - If zero graded `StudentReport` records exist for a student, renders honest missing-grade `—` state.
+   - Historical profile grade columns in the database are fully preserved without destructive data deletion.
+   - Ensured dashboard statistics, assessment gradebook view, predicate assignments, and CSV exports completely agree on verified report data.
+   - Verified via `CompetencyAssessmentTenantTest` (11 tests, 57 assertions, including positive and negative regression tests for students with profile grades but 0 graded LKS). (Commit `60dd9d0`).
+
+2. **RBAC Boundary Verification & Legacy Admin Privilege Audit**:
+   - Audited `EnsureUserHasRole` and all superuser-permitting routes against Architecture Baseline v1.0.
+   - Documented exact behavior: `EnsureUserHasRole` line 32 expands `superuser` to include `admin`, and `User::isSuperuser()` returns `true` for `admin`.
+   - Identified and documented permission gaps: legacy admin inherits superuser capabilities (accessing `/settings`, `/trainer-kits/{device}/api-key/rotate` for own school, and viewing cross-school `?school_id=` query parameters).
+   - Verified that multi-tenant boundary checks remain fail-closed: cross-school mutations (`kits.api-key.rotate`, `kits.reboot`, `kits.calibration`) strictly reject legacy admin with HTTP 403.
+   - Implemented automated verification suite `RbacBoundaryVerificationTest` (4 tests, 24 assertions). (Commit `fe9e441`).
+
+3. **Real Browser E2E Interaction Test Suite (Playwright Headless Chromium)**:
+   - Configured dedicated isolated testing environment `.env.browser_e2e` (`database/database_browser_e2e.sqlite`, `SESSION_DRIVER=file`, port 8008, `APP_ENV=browser_e2e`).
+   - Created fixture automation command `SetupBrowserE2eFixturesCommand` (`php artisan bitanic:setup-browser-e2e`).
+   - Created and executed complete real browser test suite `tests/Browser/e2e_playwright_test.py` across 5 representative user workflows:
+     - **Journey 1: Guest Public Workflow** — Dashboard, IoT Monitoring, Module Catalog, /assessment authentication rejection & login redirect (PASS).
+     - **Journey 2: Siswa Workflow** — Authentication, module viewing, LKS tab reveal & submission with observation notes, reports hub inspection, honest unassessed gradebook state, logout (PASS).
+     - **Journey 3: Guru Workflow** — Authentication, classroom management, scheduling & conflict prevention, assessment gradebook verification, verified CSV export (`text/csv`), media tanam directory, user directory search, logout (PASS).
+     - **Journey 4: Legacy Admin Workflow** — Authentication, school settings & audit trail inspection, trainer kit fleet management table, logout (PASS).
+     - **Journey 5: Superuser Workflow** — Authentication, multi-school global dashboard, raw Modbus RS485 debugger stream, logout (PASS).
+   - Result: **5/5 PASS (All journeys executed and verified in real headless Chromium browser)**.
+
+4. **Quality Gates at Completion**:
+   - SQLite Full Suite: **408 passed, 0 failures, 5 skipped (2,505 assertions)**.
+   - PostgreSQL 17.6 Test Suite: **10 passed (81 assertions)** on isolated `bitanic_test`.
+   - Real Browser E2E Suite: **5/5 PASS** (Playwright Chromium).
+   - Laravel Pint: PASS.
+   - Vite Production Build: PASS (93.12 kB CSS, 1,875.93 kB JS).
+   - Baseline Assets: `upi-edge/` and `dump_upiedge.sql` 100% clean and untouched.
 
 ### 2.8 — Newly Recorded Follow-up Tasks
 

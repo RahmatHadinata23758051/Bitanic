@@ -74,12 +74,12 @@ The following gaps exist between the current codebase and the locked Architectur
 
 | # | Architecture Dimension | Target Locked Baseline v1.0 | Current Implementation State | Gap Severity | Action / Resolution Path |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **G-01** | **School Admin Role Separation** | Dedicated `admin_sekolah` role strictly scoped to their tenant. Cannot access global platform settings or other schools. | The role `admin` currently inherits `superuser` permissions in `EnsureUserHasRole.php`. | **High (Architecture Debt)** | Deferred to `ARCH-RBAC-01`. Requires migration to split platform `superuser` from tenant `admin_sekolah` without breaking existing seeders. |
+| **G-01** | **School Admin Role Separation** | Dedicated `admin_sekolah` role strictly scoped to their tenant. Cannot access global platform settings or other schools. | **Audited at HEAD `fe9e441` in `RbacBoundaryVerificationTest`**: `EnsureUserHasRole` line 32 expands `superuser` to `['superuser', 'admin']` and `User::isSuperuser()` returns `true` for `admin`. Consequently, legacy admin inherits superuser capabilities (accessing `/settings`, `/trainer-kits/{device}/api-key/rotate`, and cross-school `?school_id=` query parameters). However, cross-school mutations (`kits.api-key.rotate`, `kits.reboot`, `kits.calibration`) are strictly fail-closed with HTTP 403. | **High (Architecture Debt)** | Quantified and covered with regression tests in `RbacBoundaryVerificationTest`. Full split to dedicated `admin_sekolah` deferred to `ARCH-RBAC-01` per PO directive. |
 | **G-02** | **Trainer Kit Master Catalog** | Global physical hardware inventory with serial numbers, MAC addresses, batch production records, and school assignment lifecycle. | Devices exist directly in `devices` table linked via `school_id`. No global master serial repository exists. | **Medium (Commercial Scope)** | Deferred to `DATA-MASTER-01` and future hardware inventory release. |
 | **G-03** | **School License & Warranty Model** | 1 School = 1 Commercial License, 1-Year Hardware Warranty, automated expiration reminders, grace periods. | No licensing or warranty tables exist. School tenancy is controlled via `status = 'active'` flag on `schools`. | **Deferred (Commercial)** | Explicitly deferred by PO directive. Midtrans SaaS routes retired under `LEGACY-01`. |
 | **G-04** | **Hardware Downlink & Physical Actuator ACK** | Bidirectional Modbus/RS485 transport over lab gateway with cryptographically verified frame delivery and hardware ACK for relay/reboot. | Soft-reboot and calibration are software-only simulations. UI explicitly flags them as simulated. Physical actuation is fail-closed. | **Accepted Constraint (Hardware Safe)** | Fully compliant with Hardware Safety Gate. Remains simulation-only until ESP32 firmware audit is conducted. |
 | **G-05** | **Multi-School Selector Scope** | School switcher on dashboard and fleet view must be restricted strictly to Superusers. | **Resolved at HEAD `345eb73` & verified in `RbacAndMultiTenantAcceptanceTest`**: only superusers can filter/switch schools. | **Closed (Verified)** | Covered by automated test matrix. |
-| **G-06** | **Gradebook Provenance** | Rapor Kompetensi gradebook must calculate final averages from verified student reports, ignoring stale user profile caches. | **Resolved at HEAD `75a828b` & verified in `RbacAndMultiTenantAcceptanceTest`**: dynamic weighted calculation from graded reports. | **Closed (Verified)** | Covered by automated test matrix. |
+| **G-06** | **Gradebook Provenance** | Rapor Kompetensi gradebook must calculate final averages from verified student reports, ignoring stale user profile caches. | **Resolved at HEAD `60dd9d0` & verified in `CompetencyAssessmentTenantTest`**: removed all unverified profile fallbacks from controller and views; displays honest `—` state when zero graded reports exist; database profile columns preserved; CSV export and gradebook views agree. | **Closed (Verified)** | Covered by automated unit, feature, and regression test matrix. |
 
 ---
 
@@ -88,7 +88,7 @@ The following gaps exist between the current codebase and the locked Architectur
 1. **Academic Evaluation Policy**:
    - Kurikulum Merdeka ATPH 4.0 defines 12 core practicum modules. Modules are teacher-driven; no artificial sequential lock is imposed unless configured by the school.
    - Grading Rubric uses a 4-scale competency model (1: Belum Kompeten [60%], 2: Cukup Kompeten [75%], 3: Kompeten [85%], 4: Sangat Kompeten [100%]).
-   - Final certification exams and competency certificates remain out of scope for MVP.
+   - Rapor Kompetensi and CSV export reflect only verified, graded `StudentReport` records. Students without graded reports show an honest unassessed state (`—`). Historical profile data is preserved without destructive data loss.
 2. **Hardware & Modbus Transport Policy**:
    - Bitanic Trainer Kits (`BITANIC-TK-01` .. `TK-06`) utilize 7-in-1 Modbus RS485 soil sensors and 4-channel actuator relay boards.
    - Ingress requires an authenticated `X-Device-Key` hashed with SHA-256 (`btk_...`).
@@ -102,7 +102,7 @@ The following gaps exist between the current codebase and the locked Architectur
 ```
 [ Bitanic v1.0 Single-School MVP ] (Current Foundation)
                │
-               ├─► [ ARCH-RBAC-01 ]: Migration of `admin` to dedicated `Admin Sekolah` role
+               ├─► [ ARCH-RBAC-01 ]: Migration of `admin` to dedicated `Admin Sekolah` role (resolving G-01)
                ├─► [ DATA-MASTER-01 ]: Centralized Hardware Serial Master & Batch Factory Provisioning
                ├─► [ SCHOOL-LICENSE-01 ]: B2B School Licensing Engine & Warranty Tracker
                ├─► [ BR-400..403 ]: Lab Gateway Agent (MQTT/Modbus-TCP) with Positive Hardware ACK
@@ -113,11 +113,18 @@ The following gaps exist between the current codebase and the locked Architectur
 
 ## 6. Verification & Quality Gates
 
-This architecture baseline is backed by exhaustive automated test evidence:
-- **Feature & Acceptance Tests**: 403 passed, 0 failures, 5 skipped (2,471 assertions) on SQLite.
+This architecture baseline is backed by exhaustive automated and end-to-end evidence:
+- **Unit & Feature Suite**: 408 passed, 0 failures, 5 skipped (2,505 assertions) on SQLite in-memory (`php artisan test`).
 - **Role & Tenancy E2E Acceptance Suite**: `tests/Feature/RbacAndMultiTenantAcceptanceTest.php` (8 tests, 147 assertions) verifying all 5 roles, cross-school IDOR rejection, academic lifecycles, and hardware safeguards.
+- **RBAC Boundary Verification**: `tests/Feature/RbacBoundaryVerificationTest.php` (4 tests, 24 assertions) auditing legacy admin privilege inheritance and cross-school boundary enforcement against Architecture Baseline v1.0.
+- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 5 end-to-end user journeys:
+  1. *Guest*: Dashboard, IoT monitoring, module catalog, /assessment authentication gate (PASS).
+  2. *Siswa*: Authentication, module viewing, LKS submission, own reports hub, honest unassessed gradebook state, logout (PASS).
+  3. *Guru*: Authentication, classroom management, scheduling, gradebook review, verified CSV export, media tanam, directory search, logout (PASS).
+  4. *Admin*: Authentication, school settings & audit trail inspection, trainer kit fleet management, logout (PASS).
+  5. *Superuser*: Authentication, multi-school global dashboard, raw Modbus RS485 debugger stream, logout (PASS).
 - **PostgreSQL 17.6 Concurrency & Locking**: `PostgresIntegrationAndConcurrencyTest` (9 tests, 69 assertions) and `PostgresScheduleConcurrencyRaceTest` (1 test, 12 assertions) on isolated `bitanic_test`.
-- **Code Style & Formatting**: Laravel Pint passed.
+- **Code Style & Formatting**: Laravel Pint passed on all newly added and modified files.
 - **Frontend Assets**: Vite production build succeeded (93 kB CSS, 1.87 MB JS).
 - **Baseline Immutability**: `upi-edge/` and `dump_upiedge.sql` preserved with zero modifications.
 
