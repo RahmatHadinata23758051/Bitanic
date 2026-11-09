@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Device;
+use App\Models\School;
 use App\Models\TelemetryReading;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,18 +12,35 @@ class TelemetryHistoryTest extends TestCase
 {
     use RefreshDatabase;
 
+    private School $school;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->school = School::query()->where('status', 'active')->orderBy('id')->first() ?? School::create([
+            'npsn' => '30300001',
+            'name' => 'SMK Negeri 1 Pertanian Merdeka',
+            'slug' => 'smk-negeri-1-pertanian-merdeka',
+            'status' => 'active',
+        ]);
+        $this->school->update(['status' => 'active']);
+    }
+
     public function test_history_page_renders_successfully_with_anomaly_hub_and_table(): void
     {
         $device = Device::create([
+            'school_id' => $this->school->id,
             'code' => 'KIT-01',
             'name' => 'Meja Praktik 1',
             'connection_type' => 'wifi',
             'is_active' => true,
         ]);
 
-        // Reading with critical low pH (anomaly)
+        // Reading with critical low pH (anomaly, hardware provenance, fresh recorded_at)
         TelemetryReading::create([
             'device_id' => $device->id,
+            'provenance' => 'hardware',
             'ph' => 4.8,
             'ec' => 1400.0,
             'humidity' => 60.0,
@@ -32,22 +50,24 @@ class TelemetryHistoryTest extends TestCase
             'potassium' => 120.0,
             'raw_payload' => ['sample' => 'test'],
             'threshold_flags' => ['PH_LOW'],
-            'recorded_at' => now(),
+            'recorded_at' => now()->subMinutes(2),
         ]);
 
         $response = $this->get(route('telemetry.history'));
 
         $response->assertStatus(200);
-        $response->assertSee('Riwayat Data Sensor &amp; Pusat Peringatan Anomali', false);
-        $response->assertSee('Pusat Peringatan Deviasi Agronomi (Anomaly Alert Hub)');
-        $response->assertSee('Tingkat Keasaman Masam Kritis');
-        $response->assertSee('Aplikasikan 50-80 gram kapur dolomit');
+        $response->assertSee('Riwayat Telemetri');
+        $response->assertSee('Arsip pengukuran sensor dan penelusuran deviasi');
+        $response->assertSee('Peringatan Deviasi Aktif');
+        $response->assertSee('Tingkat Keasaman Masam');
+        $response->assertSee('kapur dolomit');
         $response->assertSee('KIT-01');
     }
 
     public function test_history_filters_by_device_and_anomaly_status(): void
     {
         $deviceA = Device::create([
+            'school_id' => $this->school->id,
             'code' => 'KIT-01',
             'name' => 'Meja Praktik 1',
             'connection_type' => 'wifi',
@@ -55,6 +75,7 @@ class TelemetryHistoryTest extends TestCase
         ]);
 
         $deviceB = Device::create([
+            'school_id' => $this->school->id,
             'code' => 'KIT-02',
             'name' => 'Meja Praktik 2',
             'connection_type' => 'wifi',
@@ -64,6 +85,7 @@ class TelemetryHistoryTest extends TestCase
         // Device A: Normal reading
         TelemetryReading::create([
             'device_id' => $deviceA->id,
+            'provenance' => 'hardware',
             'ph' => 6.5,
             'ec' => 1500.0,
             'humidity' => 65.0,
@@ -79,6 +101,7 @@ class TelemetryHistoryTest extends TestCase
         // Device B: Anomaly reading
         TelemetryReading::create([
             'device_id' => $deviceB->id,
+            'provenance' => 'hardware',
             'ph' => 4.2,
             'ec' => 2800.0,
             'humidity' => 35.0,
@@ -102,9 +125,55 @@ class TelemetryHistoryTest extends TestCase
         $responseDevA->assertSee('KIT-01');
     }
 
+    public function test_history_filters_by_provenance(): void
+    {
+        $device = Device::create([
+            'school_id' => $this->school->id,
+            'code' => 'KIT-PROV',
+            'name' => 'Meja Praktik Provenance',
+            'connection_type' => 'wifi',
+            'is_active' => true,
+        ]);
+
+        TelemetryReading::create([
+            'device_id' => $device->id,
+            'provenance' => 'hardware',
+            'ph' => 6.5,
+            'ec' => 1200.0,
+            'humidity' => 60.0,
+            'temperature' => 25.0,
+            'nitrogen' => 50.0,
+            'phosphorus' => 30.0,
+            'potassium' => 120.0,
+            'recorded_at' => now()->subHours(3),
+        ]);
+
+        TelemetryReading::create([
+            'device_id' => $device->id,
+            'provenance' => 'simulation',
+            'ph' => 6.2,
+            'ec' => 1100.0,
+            'humidity' => 58.0,
+            'temperature' => 24.5,
+            'nitrogen' => 48.0,
+            'phosphorus' => 28.0,
+            'potassium' => 115.0,
+            'recorded_at' => now()->subHours(1),
+        ]);
+
+        $resHardware = $this->get(route('telemetry.history', ['provenance' => 'hardware']));
+        $resHardware->assertOk();
+        $resHardware->assertSee('Hardware');
+
+        $resSim = $this->get(route('telemetry.history', ['provenance' => 'simulation']));
+        $resSim->assertOk();
+        $resSim->assertSee('Simulasi');
+    }
+
     public function test_export_csv_streams_valid_csv_file(): void
     {
         $device = Device::create([
+            'school_id' => $this->school->id,
             'code' => 'KIT-01',
             'name' => 'Meja Praktik 1',
             'connection_type' => 'wifi',
@@ -113,6 +182,7 @@ class TelemetryHistoryTest extends TestCase
 
         TelemetryReading::create([
             'device_id' => $device->id,
+            'provenance' => 'hardware',
             'ph' => 6.2,
             'ec' => 1300.0,
             'humidity' => 68.0,
@@ -133,6 +203,8 @@ class TelemetryHistoryTest extends TestCase
         $content = $response->streamedContent();
         $this->assertStringContainsString('Waktu Pengukuran (WIB)', $content);
         $this->assertStringContainsString('pH Tanah', $content);
+        $this->assertStringContainsString('Asal Data', $content);
+        $this->assertStringContainsString('Status Kondisi', $content);
         $this->assertStringContainsString('KIT-01', $content);
         $this->assertStringContainsString('6.20', $content);
     }

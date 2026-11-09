@@ -55,8 +55,8 @@ class AnomalyAlertEvaluator
             'parameter' => 'Fosfor (P)',
             'min' => 15.0,
             'max' => 80.0,
-            'ideal_min' => 20.0,
-            'ideal_max' => 50.0,
+            'ideal_min' => 25.0,
+            'ideal_max' => 60.0,
             'unit' => 'mg/kg',
         ],
         'potassium' => [
@@ -64,41 +64,63 @@ class AnomalyAlertEvaluator
             'min' => 50.0,
             'max' => 250.0,
             'ideal_min' => 100.0,
-            'ideal_max' => 180.0,
+            'ideal_max' => 200.0,
             'unit' => 'mg/kg',
         ],
     ];
 
+    protected AgronomicThresholdResolver $thresholdResolver;
+
+    public function __construct(?AgronomicThresholdResolver $thresholdResolver = null)
+    {
+        $this->thresholdResolver = $thresholdResolver ?? app(AgronomicThresholdResolver::class);
+    }
+
     /**
-     * Evaluate a reading and generate agronomic alerts with safe non-prescriptive guidance.
+     * Resolve effective thresholds for evaluation (school-scoped or defaults).
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function getEffectiveThresholds(?int $schoolId = null): array
+    {
+        return $this->thresholdResolver->resolveForSchool($schoolId);
+    }
+
+    /**
+     * Evaluate a reading and generate agronomic alerts with safe neutral inspection guidance.
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function evaluate(?TelemetryReading $reading): Collection
+    public function evaluate(?TelemetryReading $reading, ?int $schoolId = null): Collection
     {
         if (! $reading) {
             return collect();
         }
 
+        $effectiveSchoolId = $schoolId ?? $reading->device?->school_id;
+        $thresholds = $this->getEffectiveThresholds($effectiveSchoolId);
         $alerts = collect();
 
         // 1. Evaluasi pH Tanah (Derajat Keasaman)
         if ($reading->ph !== null) {
             $ph = (float) $reading->ph;
+            $phMin = (float) ($thresholds['ph']['ideal_min'] ?? 6.0);
+            $phMax = (float) ($thresholds['ph']['ideal_max'] ?? 7.2);
+
             if ($ph > 0) {
-                if ($ph < 5.5) {
+                if ($ph < $phMin) {
                     $alerts->push([
                         'parameter' => 'pH Tanah',
                         'parameter_key' => 'ph',
                         'value' => number_format($ph, 1),
                         'unit' => 'pH',
-                        'severity' => 'danger',
+                        'severity' => $ph < 5.0 ? 'danger' : 'warning',
                         'status' => 'active',
-                        'title' => 'Tingkat Keasaman Masam Kritis (pH '.number_format($ph, 1).')',
-                        'impact' => 'Penyerapan unsur N-P-K terikat kuat oleh mineral tanah; memicu toksisitas ion Aluminium (Al).',
-                        'action' => 'Aplikasikan 50-80 gram kapur dolomit per m² media tanam dan siram dengan air netral untuk aktivasi buffer.',
+                        'title' => 'Tingkat Keasaman Masam (pH '.number_format($ph, 1).')',
+                        'impact' => 'Penyerapan hara makro terhambat dan kelarutan logam tanah meningkat.',
+                        'action' => 'Verifikasi kalibrasi sensor pH dan periksa buffer kemasaman media. Konsultasikan kebutuhan kapur dolomit dengan instruktur sesuai hasil uji tanah sebelum aplikasi.',
                     ]);
-                } elseif ($ph > 7.5) {
+                } elseif ($ph > $phMax) {
                     $alerts->push([
                         'parameter' => 'pH Tanah',
                         'parameter_key' => 'ph',
@@ -107,8 +129,8 @@ class AnomalyAlertEvaluator
                         'severity' => 'warning',
                         'status' => 'active',
                         'title' => 'Tingkat Keasaman Bersifat Basa (pH '.number_format($ph, 1).')',
-                        'impact' => 'Risiko klorosis klorofil akibat defisiensi zat besi (Fe) dan mangan (Mn).',
-                        'action' => 'Tambahkan belerang pertanian (sulfur) atau lakukan penyiraman dengan larutan pupuk ZA berkadar asam ringan.',
+                        'impact' => 'Ketersediaan unsur mikro esensial (Fe, Mn, Zn, Cu) menurun.',
+                        'action' => 'Verifikasi elektroda sensor pH dan periksa kualitas air irigasi. Konsultasikan tindakan penurunan pH (seperti belerang pertanian) dengan instruktur sebelum aplikasi.',
                     ]);
                 }
             }
@@ -117,8 +139,11 @@ class AnomalyAlertEvaluator
         // 2. Evaluasi Daya Hantar Listrik / EC (Salinitas & Konsentrasi Pupuk)
         if ($reading->ec !== null) {
             $ec = (float) $reading->ec;
+            $ecMin = (float) ($thresholds['ec']['ideal_min'] ?? 1000.0);
+            $ecMax = (float) ($thresholds['ec']['ideal_max'] ?? 2200.0);
+
             if ($ec > 0) {
-                if ($ec < 800) {
+                if ($ec < $ecMin) {
                     $alerts->push([
                         'parameter' => 'EC Nutrisi',
                         'parameter_key' => 'ec',
@@ -126,11 +151,11 @@ class AnomalyAlertEvaluator
                         'unit' => 'µS/cm',
                         'severity' => 'warning',
                         'status' => 'active',
-                        'title' => 'Konsentrasi Larutan Rendah (EC '.number_format($ec, 0).' µS/cm)',
-                        'impact' => 'Tanaman kekurangan pasokan ion hara esensial untuk pembelahan sel vegetatif.',
-                        'action' => 'Tambahkan larutan pupuk stok formulasi hara makro (AB Mix) dosis 5–10 ml/liter air secara terukur ke bak fertigasi hingga EC mencapai zona ideal.',
+                        'title' => 'Konsentrasi Larutan Nutrisi Rendah (EC '.number_format($ec, 0).' µS/cm)',
+                        'impact' => 'Ketersediaan ion hara terlarut di bawah rentang acuan vegetatif.',
+                        'action' => 'Periksa konsentrasi larutan nutrisi (AB Mix) dan kebersihan probe EC. Verifikasi takaran dengan instruktur sebelum penambahan larutan hara.',
                     ]);
-                } elseif ($ec > 2400) {
+                } elseif ($ec > $ecMax) {
                     $alerts->push([
                         'parameter' => 'EC Nutrisi',
                         'parameter_key' => 'ec',
@@ -139,8 +164,8 @@ class AnomalyAlertEvaluator
                         'severity' => 'danger',
                         'status' => 'active',
                         'title' => 'Kepekatan Garam/Pupuk Berlebih (EC '.number_format($ec, 0).' µS/cm)',
-                        'impact' => 'Potensi plasmolisis akar (fertilizer burn), daun terbakar, dan tanaman layu.',
-                        'action' => 'Segera lakukan flushing media tanam dengan air murni hingga EC air limpasan turun di bawah 1600 µS/cm.',
+                        'impact' => 'Tekanan osmotik tinggi berisiko memicu plasmolisis dan daun terbakar.',
+                        'action' => 'Lakukan flushing (pembilasan) media tanam dengan air baku dan periksa kalibrasi probe EC untuk mencegah stres osmotik perakaran.',
                     ]);
                 }
             }
@@ -149,8 +174,11 @@ class AnomalyAlertEvaluator
         // 3. Evaluasi Lengas / Kelembaban Tanah (Volumetric Water Content)
         if ($reading->humidity !== null) {
             $humidity = (float) $reading->humidity;
+            $humMin = (float) ($thresholds['moisture']['ideal_min'] ?? 45.0);
+            $humMax = (float) ($thresholds['moisture']['ideal_max'] ?? 65.0);
+
             if ($humidity > 0) {
-                if ($humidity < 40.0) {
+                if ($humidity < $humMin) {
                     $alerts->push([
                         'parameter' => 'Kelembaban Tanah',
                         'parameter_key' => 'humidity',
@@ -159,10 +187,10 @@ class AnomalyAlertEvaluator
                         'severity' => 'danger',
                         'status' => 'active',
                         'title' => 'Media Tanam Mengering di Bawah Titik Kritis ('.number_format($humidity, 1).'%)',
-                        'impact' => 'Tanaman mendekati titik layu permanen; stomata menutup dan fotosintesis terhenti.',
-                        'action' => 'Lakukan penyiraman atau irigasi tetes manual hingga media mencapai kapasitas lapang (kadar lengas 50–65%) dan periksa kelancaran emisi penetes.',
+                        'impact' => 'Tanaman mendekati titik layu sementara; turgor sel dan fotosintesis terhambat.',
+                        'action' => 'Periksa sistem irigasi, kebasahan substrat, dan kontak probe kelembaban tanah dengan media tanam.',
                     ]);
-                } elseif ($humidity > 85.0) {
+                } elseif ($humidity > $humMax) {
                     $alerts->push([
                         'parameter' => 'Kelembaban Tanah',
                         'parameter_key' => 'humidity',
@@ -171,8 +199,8 @@ class AnomalyAlertEvaluator
                         'severity' => 'warning',
                         'status' => 'active',
                         'title' => 'Media Tanam Jenuh Air ('.number_format($humidity, 1).'%)',
-                        'impact' => 'Aerasi pori mikro tanah terhambat, risiko anoksia akar dan infeksi jamur busuk akar Pythium.',
-                        'action' => 'Hentikan siklus penyiraman dan pastikan lubang drainase polybag atau bedengan tidak tersumbat.',
+                        'impact' => 'Aerasi pori tanah terhambat, risiko anoksia perakaran meningkat.',
+                        'action' => 'Periksa kelancaran drainase media dan tunda penyiraman untuk memulihkan aerasi perakaran.',
                     ]);
                 }
             }
@@ -181,7 +209,10 @@ class AnomalyAlertEvaluator
         // 4. Evaluasi Suhu (Temperatur Kanopi & Zona Perakaran)
         if ($reading->temperature !== null) {
             $temp = (float) $reading->temperature;
-            if ($temp > 33.0) {
+            $tempMin = (float) ($thresholds['temperature']['ideal_min'] ?? 22.0);
+            $tempMax = (float) ($thresholds['temperature']['ideal_max'] ?? 29.0);
+
+            if ($temp > $tempMax) {
                 $alerts->push([
                     'parameter' => 'Suhu Lingkungan',
                     'parameter_key' => 'temperature',
@@ -191,9 +222,9 @@ class AnomalyAlertEvaluator
                     'status' => 'active',
                     'title' => 'Suhu Kanopi Panas Ekstrem ('.number_format($temp, 1).'°C)',
                     'impact' => 'Tingkat transpirasi melampaui serapan akar; memicu heat stress pada pucuk daun muda.',
-                    'action' => 'Tingkatkan sirkulasi udara greenhouse/laboratorium dan tutup tirai paranet peneduh untuk mereduksi radiasi panas kanopi tanaman.',
+                    'action' => 'Tingkatkan sirkulasi ventilasi dan periksa paranet peneduh untuk mengurangi radiasi panas kanopi.',
                 ]);
-            } elseif ($temp > 0 && $temp < 18.0) {
+            } elseif ($temp > 0 && $temp < $tempMin) {
                 $alerts->push([
                     'parameter' => 'Suhu Lingkungan',
                     'parameter_key' => 'temperature',
@@ -202,8 +233,8 @@ class AnomalyAlertEvaluator
                     'severity' => 'warning',
                     'status' => 'active',
                     'title' => 'Suhu Lingkungan Dingin Ekstrem ('.number_format($temp, 1).'°C)',
-                    'impact' => 'Aktivitas metabolisme akar dan translokasi cairan hara melambat, meningkatkan risiko chilling injury.',
-                    'action' => 'Tutup ventilasi perimeter greenhouse pada malam hari dan kurangi frekuensi irigasi dingin untuk menjaga temperatur substrat akar.',
+                    'impact' => 'Aktivitas metabolisme akar dan translokasi cairan hara melambat.',
+                    'action' => 'Periksa ventilasi dan kondisi mikroklimat ruang praktik/greenhouse untuk menjaga temperatur media.',
                 ]);
             }
         }
@@ -211,7 +242,10 @@ class AnomalyAlertEvaluator
         // 5. Evaluasi Unsur Hara Makro: Nitrogen (N)
         if ($reading->nitrogen !== null) {
             $nitrogen = (float) $reading->nitrogen;
-            if ($nitrogen > 0 && $nitrogen < 20.0) {
+            $nMin = (float) ($thresholds['nitrogen']['ideal_min'] ?? 40.0);
+            $nMax = (float) ($thresholds['nitrogen']['ideal_max'] ?? 120.0);
+
+            if ($nitrogen > 0 && $nitrogen < $nMin) {
                 $alerts->push([
                     'parameter' => 'Nitrogen (N)',
                     'parameter_key' => 'nitrogen',
@@ -219,11 +253,11 @@ class AnomalyAlertEvaluator
                     'unit' => 'mg/kg',
                     'severity' => 'warning',
                     'status' => 'active',
-                    'title' => 'Defisiensi Nitrogen Tersedia ('.number_format($nitrogen, 1).' mg/kg)',
+                    'title' => 'Estimasi Nitrogen Rendah ('.number_format($nitrogen, 1).' mg/kg)',
                     'impact' => 'Menghambat pembentukan klorofil dan sintesis protein; memicu klorosis daun tua dan pertumbuhan kerdil.',
-                    'action' => 'Aplikasikan larutan pupuk nitrogen terlarut (seperti KNO3 atau pupuk majemuk) berkonsentrasi tepat ke zona perakaran.',
+                    'action' => 'Verifikasi tren pembacaan sensor dan konsultasikan kebutuhan pemupukan nitrogen dengan instruktur.',
                 ]);
-            } elseif ($nitrogen > 150.0) {
+            } elseif ($nitrogen > $nMax) {
                 $alerts->push([
                     'parameter' => 'Nitrogen (N)',
                     'parameter_key' => 'nitrogen',
@@ -231,9 +265,9 @@ class AnomalyAlertEvaluator
                     'unit' => 'mg/kg',
                     'severity' => 'warning',
                     'status' => 'active',
-                    'title' => 'Kelebihan Nitrogen Tersedia ('.number_format($nitrogen, 1).' mg/kg)',
-                    'impact' => 'Pertumbuhan vegetatif sukulen berlebih, jaringan daun lunak, tanaman rentan rebah dan rentan serangan hama.',
-                    'action' => 'Tunda penambahan pupuk N tinggi dan seimbangkan dengan pasokan hara fosfat serta kalium.',
+                    'title' => 'Estimasi Nitrogen Tinggi ('.number_format($nitrogen, 1).' mg/kg)',
+                    'impact' => 'Pertumbuhan vegetatif sukulen berlebih, jaringan daun lunak, tanaman rentan rebah.',
+                    'action' => 'Verifikasi pembacaan sensor dan pantau perkembangan vegetatif sebelum penambahan pupuk hara.',
                 ]);
             }
         }
@@ -241,7 +275,10 @@ class AnomalyAlertEvaluator
         // 6. Evaluasi Unsur Hara Makro: Fosfor (P)
         if ($reading->phosphorus !== null) {
             $phosphorus = (float) $reading->phosphorus;
-            if ($phosphorus > 0 && $phosphorus < 15.0) {
+            $pMin = (float) ($thresholds['phosphorus']['ideal_min'] ?? 25.0);
+            $pMax = (float) ($thresholds['phosphorus']['ideal_max'] ?? 60.0);
+
+            if ($phosphorus > 0 && $phosphorus < $pMin) {
                 $alerts->push([
                     'parameter' => 'Fosfor (P)',
                     'parameter_key' => 'phosphorus',
@@ -249,9 +286,21 @@ class AnomalyAlertEvaluator
                     'unit' => 'mg/kg',
                     'severity' => 'warning',
                     'status' => 'active',
-                    'title' => 'Defisiensi Fosfor Tersedia ('.number_format($phosphorus, 1).' mg/kg)',
-                    'impact' => 'Pertumbuhan sistem perakaran dan inisiasi perbungaan terhambat; daun bawah cenderung berwarna gelap keunguan.',
-                    'action' => 'Berikan pupuk fosfat larut air (seperti Mono Kalium Fosfat / MKP) untuk memacu perkembangan akar lateral.',
+                    'title' => 'Estimasi Fosfor Rendah ('.number_format($phosphorus, 1).' mg/kg)',
+                    'impact' => 'Pertumbuhan sistem perakaran dan inisiasi pembungaan terhambat; daun bawah cenderung kusam.',
+                    'action' => 'Periksa pH media tanam (pH masam/basa mengikat fosfor) dan verifikasi elektroda sensor.',
+                ]);
+            } elseif ($phosphorus > $pMax) {
+                $alerts->push([
+                    'parameter' => 'Fosfor (P)',
+                    'parameter_key' => 'phosphorus',
+                    'value' => number_format($phosphorus, 1),
+                    'unit' => 'mg/kg',
+                    'severity' => 'warning',
+                    'status' => 'active',
+                    'title' => 'Estimasi Fosfor Tinggi ('.number_format($phosphorus, 1).' mg/kg)',
+                    'impact' => 'Kelebihan fosfat dapat menghambat penyerapan hara mikro seperti seng (Zn) dan besi (Fe).',
+                    'action' => 'Verifikasi pembacaan sensor dan pantau kondisi rizosfer perakaran tanaman.',
                 ]);
             }
         }
@@ -259,7 +308,10 @@ class AnomalyAlertEvaluator
         // 7. Evaluasi Unsur Hara Makro: Kalium (K)
         if ($reading->potassium !== null) {
             $potassium = (float) $reading->potassium;
-            if ($potassium > 0 && $potassium < 50.0) {
+            $kMin = (float) ($thresholds['potassium']['ideal_min'] ?? 100.0);
+            $kMax = (float) ($thresholds['potassium']['ideal_max'] ?? 200.0);
+
+            if ($potassium > 0 && $potassium < $kMin) {
                 $alerts->push([
                     'parameter' => 'Kalium (K)',
                     'parameter_key' => 'potassium',
@@ -267,9 +319,21 @@ class AnomalyAlertEvaluator
                     'unit' => 'mg/kg',
                     'severity' => 'warning',
                     'status' => 'active',
-                    'title' => 'Defisiensi Kalium Tersedia ('.number_format($potassium, 1).' mg/kg)',
-                    'impact' => 'Turgor stomata melemah, translokasi karbohidrat terganggu, dan tepi daun tua mengalami nekrosis mengering.',
-                    'action' => 'Tambahkan pupuk kalium mudah diserap (Kalium Sulfat / K2SO4) untuk memperkuat dinding sel dan ketahanan tanaman terhadap cekaman lingkungan.',
+                    'title' => 'Estimasi Kalium Rendah ('.number_format($potassium, 1).' mg/kg)',
+                    'impact' => 'Turgor stomata melemah, translokasi karbohidrat terganggu, dan tepi daun rentan nekrosis.',
+                    'action' => 'Verifikasi pembacaan sensor dan pantau gejala fisik daun serta ketahanan stres tanaman.',
+                ]);
+            } elseif ($potassium > $kMax) {
+                $alerts->push([
+                    'parameter' => 'Kalium (K)',
+                    'parameter_key' => 'potassium',
+                    'value' => number_format($potassium, 1),
+                    'unit' => 'mg/kg',
+                    'severity' => 'warning',
+                    'status' => 'active',
+                    'title' => 'Estimasi Kalium Tinggi ('.number_format($potassium, 1).' mg/kg)',
+                    'impact' => 'Kelebihan kalium dapat mengganggu keseimbangan kation magnesium (Mg) dan kalsium (Ca).',
+                    'action' => 'Verifikasi pembacaan sensor dan pantau kepekatan larutan media tanam.',
                 ]);
             }
         }
@@ -278,11 +342,78 @@ class AnomalyAlertEvaluator
     }
 
     /**
-     * Check if a single reading has any anomaly flags.
+     * Determine full canonical classification for a telemetry reading.
+     *
+     * @return array{code: string, label: string, badge_class: string, alerts: Collection, deviations: array<int, string>}
      */
-    public function isAnomaly(TelemetryReading $reading): bool
+    public function classify(TelemetryReading $reading, ?int $schoolId = null): array
     {
-        return $this->evaluate($reading)->isNotEmpty();
+        $hasAnyMeasurement = (
+            $reading->ph !== null ||
+            $reading->ec !== null ||
+            $reading->humidity !== null ||
+            $reading->temperature !== null ||
+            $reading->nitrogen !== null ||
+            $reading->phosphorus !== null ||
+            $reading->potassium !== null
+        );
+
+        $hasThresholdFlags = ! empty($reading->threshold_flags);
+        $alerts = $this->evaluate($reading, $schoolId);
+
+        if (! $hasAnyMeasurement && ! $hasThresholdFlags) {
+            return [
+                'code' => 'insufficient',
+                'label' => 'Data Parsial',
+                'badge_class' => 'bg-slate-100 text-slate-700 border-slate-200',
+                'alerts' => collect(),
+                'deviations' => [],
+            ];
+        }
+
+        if ($alerts->isNotEmpty() || $hasThresholdFlags) {
+            $deviations = [];
+            foreach ($alerts as $a) {
+                $deviations[] = $a['title'];
+            }
+            if ($hasThresholdFlags && empty($deviations)) {
+                $deviations = is_array($reading->threshold_flags)
+                    ? array_values($reading->threshold_flags)
+                    : [(string) $reading->threshold_flags];
+            }
+
+            return [
+                'code' => 'anomaly',
+                'label' => 'Anomali',
+                'badge_class' => 'bg-amber-100 text-amber-800 border-amber-200',
+                'alerts' => $alerts,
+                'deviations' => $deviations,
+            ];
+        }
+
+        return [
+            'code' => 'normal',
+            'label' => 'Normal',
+            'badge_class' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            'alerts' => collect(),
+            'deviations' => [],
+        ];
+    }
+
+    /**
+     * Check if a single reading has any anomaly flags or is outside ideal reference.
+     */
+    public function isAnomaly(TelemetryReading $reading, ?int $schoolId = null): bool
+    {
+        return $this->classify($reading, $schoolId)['code'] === 'anomaly';
+    }
+
+    /**
+     * Check if a single reading is within ideal reference (and not missing).
+     */
+    public function isNormal(TelemetryReading $reading, ?int $schoolId = null): bool
+    {
+        return $this->classify($reading, $schoolId)['code'] === 'normal';
     }
 
     /**
