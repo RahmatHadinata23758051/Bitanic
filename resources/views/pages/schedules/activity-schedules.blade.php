@@ -72,52 +72,42 @@
     @endif
 
     <!-- Contextual Summary Strip -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[11px] font-medium text-slate-500">Total Sesi Terjadwal</div>
-            <div class="text-xl font-bold text-slate-900 font-tabular mt-0.5">
-                {{ $schedules->count() }} <span class="text-xs font-normal text-slate-500">Sesi</span>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Semua sesi terdaftar</div>
-        </div>
-
-        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[11px] font-medium text-slate-500">Sesi Hari Ini</div>
-            <div class="text-xl font-bold text-slate-900 font-tabular mt-0.5">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-medium text-slate-500">Sesi Hari Ini</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
                 {{ $schedules->filter(fn($s) => $s->activity_date && $s->activity_date->isToday())->count() }} <span class="text-xs font-normal text-slate-500">Sesi</span>
             </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">{{ \Carbon\Carbon::parse($todayDate)->locale('id')->isoFormat('dddd, D MMM') }}</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">{{ \Carbon\Carbon::parse($todayDate)->locale('id')->isoFormat('dddd, D MMMM Y') }}</div>
         </div>
 
-        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[11px] font-medium text-slate-500">Stasiun Trainer Kit</div>
-            <div class="text-xl font-bold text-slate-900 font-tabular mt-0.5">
-                {{ $devices->count() }} <span class="text-xs font-normal text-slate-500">Stasiun</span>
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-medium text-slate-500">Meja Terjadwal Hari Ini</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
+                {{ count($bookedDevicesToday) }} <span class="text-xs font-normal text-slate-500">/ {{ $devices->count() }} Meja</span>
             </div>
-            <div class="text-[10px] {{ $onlineDevicesCount > 0 ? 'text-emerald-700 font-medium' : 'text-slate-400' }} mt-0.5">
-                {{ $onlineDevicesCount }} online saat ini
-            </div>
+            <div class="text-[11px] text-slate-400 mt-0.5">{{ $devices->count() - count($bookedDevicesToday) }} meja tanpa jadwal hari ini</div>
         </div>
 
-        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[11px] font-medium text-slate-500">Meja Terjadwal Hari Ini</div>
-            <div class="text-xl font-bold font-tabular mt-0.5 {{ count($bookedDevicesToday) > 0 ? 'text-amber-700' : 'text-slate-700' }}">
-                {{ count($bookedDevicesToday) }} <span class="text-xs font-normal text-slate-500">Meja</span>
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-medium text-slate-500">Total Sesi Terdaftar</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
+                {{ $schedules->count() }} <span class="text-xs font-normal text-slate-500">Sesi Praktikum</span>
             </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">{{ $devices->count() - count($bookedDevicesToday) }} meja tanpa jadwal hari ini</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Semua jadwal aktif di laboratorium</div>
         </div>
     </div>
 
     <!-- Station Availability Section -->
-    <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
+    <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div>
-                <h2 class="text-sm font-bold text-slate-900">Ketersediaan Stasiun Trainer Kit</h2>
-                <p class="text-[11px] text-slate-500">Status koneksi sensor dan alokasi sesi hari ini</p>
+                <h2 class="text-sm font-semibold text-slate-900">Ketersediaan Stasiun Trainer Kit</h2>
+                <p class="text-xs text-slate-500">Status koneksi sensor dan alokasi sesi hari ini</p>
             </div>
-            <div class="flex items-center gap-3 text-[10px] text-slate-500">
-                <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Sensor Online</span>
-                <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-300"></span> Sensor Offline</span>
+            <div class="flex items-center gap-3 text-xs text-slate-500">
+                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Sensor Online</span>
+                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-300"></span> Sensor Offline</span>
             </div>
         </div>
 
@@ -126,33 +116,32 @@
                 <p class="text-xs font-medium">Belum ada stasiun Trainer Kit yang terdaftar di sekolah ini.</p>
             </div>
         @else
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 @foreach($devices as $kit)
                     @php
                         $st = $deviceStatuses[$kit->id] ?? ['is_online' => false, 'is_booked_today' => false];
                         $isOnline = $st['is_online'];
                         $isBookedToday = $st['is_booked_today'];
                     @endphp
-                    <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2">
+                    <div class="p-3 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50/60 transition-colors flex flex-col justify-between gap-2">
                         <div class="flex items-center justify-between gap-1">
-                            <span class="text-[11px] font-bold text-slate-900 font-mono">{{ $kit->code }}</span>
-                            <span class="inline-flex items-center gap-1 text-[10px] {{ $isOnline ? 'text-emerald-700' : 'text-slate-400' }}" title="{{ $isOnline ? 'Sensor online (heartbeat aktif)' : 'Sensor offline (tidak ada transmisi segar)' }}">
-                                <span class="w-1.5 h-1.5 rounded-full {{ $isOnline ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-300' }}"></span>
-                                <span class="text-[9px]">{{ $isOnline ? 'Online' : 'Offline' }}</span>
+                            <span class="text-xs font-semibold text-slate-900 font-mono">{{ $kit->code }}</span>
+                            <span class="inline-flex items-center gap-1 text-[11px] {{ $isOnline ? 'text-emerald-700' : 'text-slate-400' }}" title="{{ $isOnline ? 'Sensor online (heartbeat aktif)' : 'Sensor offline (tidak ada transmisi segar)' }}">
+                                <span class="w-1.5 h-1.5 rounded-full {{ $isOnline ? 'bg-emerald-500' : 'bg-slate-300' }}"></span>
+                                <span>{{ $isOnline ? 'Online' : 'Offline' }}</span>
                             </span>
                         </div>
-                        <div class="text-[11px] text-slate-600 truncate font-medium" title="{{ $kit->name }}">
-                            {{ $kit->name }}
+                        <div class="text-xs text-slate-600 line-clamp-2 leading-snug" title="{{ $kit->bench_location ?: $kit->name }}">
+                            {{ $kit->bench_location ?: $kit->name }}
                         </div>
-                        <div>
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                            <span class="text-slate-400">Hari ini:</span>
                             @if($isBookedToday)
-                                <span class="inline-flex items-center gap-1 text-[9px] font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded-md">
-                                    <span class="w-1 h-1 rounded-full bg-amber-500"></span>Terjadwal
-                                </span>
+                                <span class="font-medium text-amber-700">Terjadwal</span>
+                            @elseif($isOnline)
+                                <span class="font-medium text-slate-700">Tersedia</span>
                             @else
-                                <span class="inline-flex items-center text-[9px] font-medium text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded-md">
-                                    Tersedia
-                                </span>
+                                <span class="text-slate-400 italic">Offline</span>
                             @endif
                         </div>
                     </div>
@@ -169,7 +158,7 @@
                 <p class="text-[11px] text-slate-500">Jadwal pemakaian stasiun kerja dan modul ajar praktikum ATPH</p>
             </div>
             <div class="text-[11px] text-slate-500 font-medium">
-                Total: <span class="font-semibold text-slate-800 font-tabular">{{ $schedules->count() }}</span> sesi
+                Total: <span class="font-semibold text-slate-800 tabular-nums">{{ $schedules->count() }}</span> sesi
             </div>
         </div>
 
@@ -225,7 +214,7 @@
                             </td>
 
                             <!-- Waktu -->
-                            <td class="py-3 px-3 whitespace-nowrap font-tabular text-slate-700 font-medium">
+                            <td class="py-3 px-3 whitespace-nowrap tabular-nums text-slate-700 font-medium">
                                 {{ substr($sched->start_time, 0, 5) }} – {{ substr($sched->end_time, 0, 5) }} WIB
                             </td>
 
