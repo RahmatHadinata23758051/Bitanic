@@ -6,15 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\School;
 use App\Models\TelemetryReading;
+use App\Services\Agronomy\AgronomicThresholdResolver;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AnalyticsController extends Controller
 {
     /**
-     * Display the agronomic analytics page with data-backed correlation summaries.
+     * Display the agronomic analytics page with data-backed correlation summaries and threshold matrices.
      */
-    public function index(Request $request): View
+    public function index(Request $request, AgronomicThresholdResolver $thresholdResolver): View
     {
         $user = $request->user();
         $isSuperuser = (bool) $user?->isSuperuser();
@@ -56,15 +57,51 @@ class AnalyticsController extends Controller
             $selectedDevice = $devices->first();
         }
 
+        // Time range filtering
+        $range = (string) $request->query('range', '24h');
+        if (! in_array($range, ['1h', '6h', '24h', '7d'], true)) {
+            $range = '24h';
+        }
+
+        $cutoff = match ($range) {
+            '1h' => now()->subHour(),
+            '6h' => now()->subHours(6),
+            '7d' => now()->subDays(7),
+            default => now()->subHours(24),
+        };
+
+        $rangeLabels = [
+            '1h' => '1 Jam Terakhir',
+            '6h' => '6 Jam Terakhir',
+            '24h' => '24 Jam Terakhir',
+            '7d' => '7 Hari Terakhir',
+        ];
+
         $readings = $selectedDevice
             ? TelemetryReading::where('device_id', $selectedDevice->id)
                 ->when($targetSchoolId, fn ($q) => $q->whereHas('device', fn ($dq) => $dq->where('school_id', $targetSchoolId)))
+                ->where('recorded_at', '>=', $cutoff)
                 ->latest('recorded_at')
-                ->take(100)
+                ->take(300)
                 ->get()
                 ->sortBy('recorded_at')
                 ->values()
             : collect();
+
+        // Provenance composition
+        $provenanceGroups = $readings->pluck('provenance')->filter()->countBy();
+        $provenanceSummary = match (true) {
+            $readings->isEmpty() => 'Belum ada transmisi data',
+            $provenanceGroups->has('hardware') && $provenanceGroups->count() === 1 => 'Hardware (Modbus RS485)',
+            $provenanceGroups->has('simulation') && $provenanceGroups->count() === 1 => 'Data Simulasi',
+            $provenanceGroups->has('fixture') && $provenanceGroups->count() === 1 => 'Data Uji / Fixture',
+            default => 'Campuran ('.$provenanceGroups->map(fn ($cnt, $type) => ucfirst((string) $type).": {$cnt}")->implode(', ').')',
+        };
+
+        // School-scoped dynamic agronomic thresholds
+        $deviceSchoolId = $selectedDevice->school_id ?? $targetSchoolId;
+        $thresholds = $thresholdResolver->resolveForSchool($deviceSchoolId);
+        $isCustomizedThresholds = $thresholdResolver->isCustomizedForSchool($deviceSchoolId);
 
         $parameters = [
             'ph' => ['label' => 'pH Tanah', 'unit' => 'pH'],
@@ -88,15 +125,47 @@ class AnalyticsController extends Controller
             ];
         }
 
-        $correlation = static function (string $xKey, string $yKey) use ($readings): ?float {
+        $buildCorrelation = static function (
+            string $label,
+            string $xKey,
+            string $yKey,
+            string $xName,
+            string $yName,
+            string $xUnit,
+            string $yUnit,
+            string $neutralDesc
+        ) use ($readings): array {
             $pairs = $readings->filter(fn ($r) => $r->{$xKey} !== null && $r->{$yKey} !== null);
             $count = $pairs->count();
+
+            $points = $pairs->map(fn ($r) => [
+                'x' => round((float) $r->{$xKey}, 2),
+                'y' => round((float) $r->{$yKey}, 2),
+                'provenance' => $r->provenance ?? 'unknown',
+            ])->values()->all();
+
             if ($count < 2) {
-                return null;
+                return [
+                    'label' => $label,
+                    'value' => null,
+                    'n' => $count,
+                    'min_samples' => 10,
+                    'is_sufficient' => false,
+                    'status' => 'insufficient_samples',
+                    'status_label' => 'Data Belum Cukup',
+                    'strength_label' => 'Belum ada observasi yang cukup',
+                    'interpretation' => $neutralDesc,
+                    'x_name' => $xName,
+                    'y_name' => $yName,
+                    'x_unit' => $xUnit,
+                    'y_unit' => $yUnit,
+                    'points' => $points,
+                    'has_variance' => false,
+                ];
             }
 
-            $xMean = $pairs->avg($xKey);
-            $yMean = $pairs->avg($yKey);
+            $xMean = (float) $pairs->avg($xKey);
+            $yMean = (float) $pairs->avg($yKey);
             $numerator = 0.0;
             $xVariance = 0.0;
             $yVariance = 0.0;
@@ -109,9 +178,37 @@ class AnalyticsController extends Controller
                 $yVariance += $yDiff ** 2;
             }
 
+            $hasVariance = ($xVariance > 0.000001 && $yVariance > 0.000001);
             $denominator = sqrt($xVariance * $yVariance);
+            $rValue = $hasVariance && $denominator > 0 ? round($numerator / $denominator, 3) : null;
+            $isSufficient = ($count >= 10 && $hasVariance && $rValue !== null);
 
-            return $denominator > 0 ? round($numerator / $denominator, 3) : null;
+            $strengthLabel = match (true) {
+                ! $hasVariance => 'Variansi Nol (Nilai Konstan)',
+                $rValue === null => 'Tidak Terdefinisi',
+                abs($rValue) >= 0.7 => ($rValue > 0 ? 'Korelasi Linear Positif Kuat' : 'Korelasi Linear Negatif Kuat'),
+                abs($rValue) >= 0.4 => ($rValue > 0 ? 'Korelasi Linear Positif Sedang' : 'Korelasi Linear Negatif Sedang'),
+                abs($rValue) >= 0.2 => ($rValue > 0 ? 'Korelasi Linear Positif Lemah' : 'Korelasi Linear Negatif Lemah'),
+                default => 'Korelasi Linear Sangat Lemah / Mendekati Nol',
+            };
+
+            return [
+                'label' => $label,
+                'value' => $rValue, // Preserved float when n>=2 for backward test compatibility
+                'n' => $count,
+                'min_samples' => 10,
+                'is_sufficient' => $isSufficient,
+                'status' => ! $hasVariance ? 'zero_variance' : ($count < 10 ? 'insufficient_samples' : 'sufficient'),
+                'status_label' => ! $hasVariance ? 'Variansi Nol' : ($count < 10 ? 'Data Belum Cukup' : 'Observasi Memadai'),
+                'strength_label' => $strengthLabel,
+                'interpretation' => $neutralDesc,
+                'x_name' => $xName,
+                'y_name' => $yName,
+                'x_unit' => $xUnit,
+                'y_unit' => $yUnit,
+                'points' => $points,
+                'has_variance' => $hasVariance,
+            ];
         };
 
         return view('pages.analytics.agronomy-analytics', [
@@ -124,9 +221,32 @@ class AnalyticsController extends Controller
             'readingCount' => $readings->count(),
             'readings' => $readings,
             'correlations' => [
-                ['label' => 'pH Tanah ↔ EC Nutrisi', 'value' => $correlation('ph', 'ec')],
-                ['label' => 'Suhu Tanah ↔ Kadar Lengas', 'value' => $correlation('temperature', 'humidity')],
+                $buildCorrelation(
+                    'pH Tanah ↔ EC Nutrisi',
+                    'ph',
+                    'ec',
+                    'pH Tanah',
+                    'Konduktivitas Listrik',
+                    'pH',
+                    'µS/cm',
+                    'Keterikatan kovarians linear antara derajat kemasaman tanah dengan konsentrasi ion garam pupuk terlarut (EC). Nilai koefisien mencerminkan hubungan linear teramati pada dataset, bukan keterikatan kausal langsung.'
+                ),
+                $buildCorrelation(
+                    'Suhu Tanah ↔ Kadar Lengas',
+                    'temperature',
+                    'humidity',
+                    'Suhu Tanah',
+                    'Kadar Lengas',
+                    '°C',
+                    '%',
+                    'Kovariansi antara temperatur perakaran dengan retensi air pori tanah (VWC). Analisis mencerminkan dinamika kovarian data lapangan tanpa mengabaikan intervensi mikroklimat atau siklus irigasi.'
+                ),
             ],
+            'thresholds' => $thresholds,
+            'isCustomizedThresholds' => $isCustomizedThresholds,
+            'selectedRange' => $range,
+            'periodLabel' => $rangeLabels[$range],
+            'provenanceSummary' => $provenanceSummary,
         ]);
     }
 }

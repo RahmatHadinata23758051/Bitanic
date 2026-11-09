@@ -232,4 +232,126 @@ class AgronomyAnalyticsTenancyTest extends TestCase
         $response->assertSee('initialData:');
         $response->assertSee($chartData['ph']['values'][0]['x']);
     }
+
+    public function test_analytics_time_range_filtering(): void
+    {
+        // Add an older reading on deviceA1 (2 hours ago)
+        TelemetryReading::create([
+            'device_id' => $this->deviceA1->id,
+            'provenance' => 'hardware',
+            'ph' => 7.0,
+            'ec' => 1700.0,
+            'humidity' => 60.0,
+            'temperature' => 24.0,
+            'nitrogen' => 90.0,
+            'phosphorus' => 45.0,
+            'potassium' => 130.0,
+            'recorded_at' => now()->subHours(2),
+        ]);
+
+        // 1-hour range should exclude the 2-hour-old reading
+        $resp1h = $this->actingAs($this->teacherA)->get('/analytics?range=1h');
+        $resp1h->assertOk();
+        $this->assertEquals('1h', $resp1h->viewData('selectedRange'));
+        $this->assertEquals('1 Jam Terakhir', $resp1h->viewData('periodLabel'));
+        $this->assertEquals(2, $resp1h->viewData('readingCount'));
+
+        // 24-hour range should include the 2-hour-old reading
+        $resp24h = $this->actingAs($this->teacherA)->get('/analytics?range=24h');
+        $resp24h->assertOk();
+        $this->assertEquals('24h', $resp24h->viewData('selectedRange'));
+        $this->assertEquals(3, $resp24h->viewData('readingCount'));
+    }
+
+    public function test_analytics_correlations_require_ten_samples_for_sufficiency(): void
+    {
+        // Initially 2 readings from setUp: not sufficient (n < 10)
+        $resp = $this->actingAs($this->teacherA)->get('/analytics');
+        $resp->assertOk();
+        $correlations = $resp->viewData('correlations');
+        $this->assertFalse($correlations[0]['is_sufficient']);
+        $this->assertEquals(2, $correlations[0]['n']);
+        $this->assertEquals('insufficient_samples', $correlations[0]['status']);
+        $this->assertEquals('Data Belum Cukup', $correlations[0]['status_label']);
+
+        // Insert 8 more varying readings to reach 10
+        for ($i = 1; $i <= 8; $i++) {
+            TelemetryReading::create([
+                'device_id' => $this->deviceA1->id,
+                'provenance' => 'hardware',
+                'ph' => 6.0 + ($i * 0.1),
+                'ec' => 1400.0 + ($i * 30),
+                'humidity' => 60.0 + $i,
+                'temperature' => 24.0 + ($i * 0.5),
+                'nitrogen' => 70.0 + $i,
+                'phosphorus' => 35.0 + $i,
+                'potassium' => 110.0 + $i,
+                'recorded_at' => now()->subMinutes(15 + $i),
+            ]);
+        }
+
+        $respSufficient = $this->actingAs($this->teacherA)->get('/analytics');
+        $respSufficient->assertOk();
+        $correlationsSufficient = $respSufficient->viewData('correlations');
+        $this->assertTrue($correlationsSufficient[0]['is_sufficient']);
+        $this->assertEquals(10, $correlationsSufficient[0]['n']);
+        $this->assertEquals('sufficient', $correlationsSufficient[0]['status']);
+        $this->assertNotNull($correlationsSufficient[0]['value']);
+        $this->assertNotEmpty($correlationsSufficient[0]['points']);
+    }
+
+    public function test_analytics_zero_variance_handled_gracefully(): void
+    {
+        // Create a new device with identical readings (zero variance)
+        $flatDevice = Device::create([
+            'school_id' => $this->schoolA->id,
+            'code' => 'TK-FLAT-01',
+            'name' => 'Meja Flat Zero Variance',
+            'is_active' => true,
+        ]);
+
+        for ($i = 1; $i <= 10; $i++) {
+            TelemetryReading::create([
+                'device_id' => $flatDevice->id,
+                'provenance' => 'hardware',
+                'ph' => 6.5,
+                'ec' => 1500.0,
+                'humidity' => 50.0,
+                'temperature' => 25.0,
+                'nitrogen' => 80.0,
+                'phosphorus' => 40.0,
+                'potassium' => 120.0,
+                'recorded_at' => now()->subMinutes($i),
+            ]);
+        }
+
+        $resp = $this->actingAs($this->teacherA)->get("/analytics?device_id={$flatDevice->id}");
+        $resp->assertOk();
+        $correlations = $resp->viewData('correlations');
+        $this->assertNull($correlations[0]['value']);
+        $this->assertFalse($correlations[0]['is_sufficient']);
+        $this->assertEquals('zero_variance', $correlations[0]['status']);
+        $this->assertEquals('Variansi Nol', $correlations[0]['status_label']);
+    }
+
+    public function test_analytics_resolves_school_scoped_thresholds(): void
+    {
+        $resp = $this->actingAs($this->teacherA)->get('/analytics');
+        $resp->assertOk();
+
+        $thresholds = $resp->viewData('thresholds');
+        $this->assertIsArray($thresholds);
+        $this->assertCount(7, $thresholds);
+
+        foreach (['ph', 'moisture', 'ec', 'temperature', 'nitrogen', 'phosphorus', 'potassium'] as $param) {
+            $this->assertArrayHasKey($param, $thresholds);
+            $this->assertArrayHasKey('ideal_min', $thresholds[$param]);
+            $this->assertArrayHasKey('ideal_max', $thresholds[$param]);
+            $this->assertArrayHasKey('low_implication', $thresholds[$param]);
+            $this->assertArrayHasKey('high_implication', $thresholds[$param]);
+            $this->assertArrayHasKey('source_label', $thresholds[$param]);
+        }
+
+        $this->assertIsBool($resp->viewData('isCustomizedThresholds'));
+    }
 }

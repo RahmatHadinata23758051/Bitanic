@@ -25,6 +25,8 @@ class AgronomicThresholdResolver
             'definition' => 'Kemasaman tanah penentu daya larut hara perakaran.',
             'importance' => 'Mengatur kelarutan nutrisi makro-mikro tanaman.',
             'riskNote' => 'pH ekstrem (< 5,5 atau > 7,5) mengikat hara dan merusak akar.',
+            'low_implication' => 'Kemasaman tinggi (fiksasi fosfor kuat, kelarutan Al/Fe toksik)',
+            'high_implication' => 'Alkali/basa (defisiensi mikronutrien Fe, Mn, Zn, Cu)',
         ],
         'moisture' => [
             'parameter' => 'Kadar Lengas Tanah',
@@ -41,6 +43,8 @@ class AgronomicThresholdResolver
             'definition' => 'Air pori tanah untuk metabolisme dan turgor sel.',
             'importance' => 'Menjaga pasokan air dan metabolisme daun.',
             'riskNote' => 'Terlalu kering memicu layu; jenuh air memicu busuk akar.',
+            'low_implication' => 'Cekaman kekeringan (stomata menutup, turgor daun layu)',
+            'high_implication' => 'Hipoksia perakaran (anaerob), risiko busuk akar',
         ],
         'ec' => [
             'parameter' => 'Konduktivitas Listrik (EC)',
@@ -57,6 +61,8 @@ class AgronomicThresholdResolver
             'definition' => 'Konsentrasi ion garam pupuk terlarut pada media.',
             'importance' => 'Panduan dosis kepekatan larutan fertigasi tanaman.',
             'riskNote' => 'EC pekat membakar akar; terlalu rendah defisit nutrisi.',
+            'low_implication' => 'Larutan miskin hara makro, defisit nutrisi terlarut',
+            'high_implication' => 'Tekanan osmotik tinggi, risiko plasmolisis / akar terbakar',
         ],
         'temperature' => [
             'parameter' => 'Suhu Tanah',
@@ -73,6 +79,8 @@ class AgronomicThresholdResolver
             'definition' => 'Suhu zona perakaran penunjang respirasi dan enzim.',
             'importance' => 'Menjaga laju absorpsi air dan mikroba perombak.',
             'riskNote' => 'Panas ekstrem (> 30°C) memicu stres dehidrasi tanaman.',
+            'low_implication' => 'Aktivitas perakaran dan serapan hara/air lambat',
+            'high_implication' => 'Respirasi berlebih, stres panas, laju transpirasi tinggi',
         ],
         'nitrogen' => [
             'parameter' => 'Nitrogen Tersedia (N)',
@@ -89,6 +97,8 @@ class AgronomicThresholdResolver
             'definition' => 'Hara pembentuk klorofil dan biomassa daun hijau.',
             'importance' => 'Mendorong ekspansi daun dan fotosintesis aktif.',
             'riskNote' => 'Defisiensi memicu daun menguning; berlebih rentan hama.',
+            'low_implication' => 'Klorosis daun tua, pertumbuhan vegetatif kerdil',
+            'high_implication' => 'Vegetatif sukulen berlebih, rentan rebah dan hama',
         ],
         'phosphorus' => [
             'parameter' => 'Fosfor Tersedia (P)',
@@ -105,6 +115,8 @@ class AgronomicThresholdResolver
             'definition' => 'Penyusun energi (ATP) dan inisiasi akar serta bunga.',
             'importance' => 'Mempercepat perakaran awal dan pembungaan.',
             'riskNote' => 'Kekurangan memicu akar kerdil dan daun keunguan.',
+            'low_implication' => 'Perakaran kerdil, daun tua keunguan, inisiasi bunga lambat',
+            'high_implication' => 'Mengganggu penyerapan mikronutrien seng (Zn) dan besi (Fe)',
         ],
         'potassium' => [
             'parameter' => 'Kalium Tersedia (K)',
@@ -121,8 +133,24 @@ class AgronomicThresholdResolver
             'definition' => 'Pengatur turgor stomata, bobot buah, dan imunitas.',
             'importance' => 'Meningkatkan ketahanan stres dan mutu panen.',
             'riskNote' => 'Kekurangan memicu tepi daun hangus dan buah kecil.',
+            'low_implication' => 'Nekrosis tepi daun, batang lemah, toleransi stres rendah',
+            'high_implication' => 'Antagonis serapan kation magnesium (Mg) dan kalsium (Ca)',
         ],
     ];
+
+    /**
+     * Check if a given school has configured custom sensor thresholds.
+     */
+    public function isCustomizedForSchool(?int $schoolId): bool
+    {
+        if (! $schoolId) {
+            return false;
+        }
+
+        $setting = SchoolSetting::where('school_id', $schoolId)->first();
+
+        return $setting && is_array($setting->sensor_thresholds) && ! empty($setting->sensor_thresholds);
+    }
 
     /**
      * Resolve authoritative thresholds for a given school, merging stored settings with default presets.
@@ -132,6 +160,10 @@ class AgronomicThresholdResolver
     public function resolveForSchool(?int $schoolId): array
     {
         $resolved = self::DEFAULTS;
+        foreach (array_keys($resolved) as $key) {
+            $resolved[$key]['is_customized'] = false;
+            $resolved[$key]['source_label'] = 'Preset Standar';
+        }
 
         if (! $schoolId) {
             return $resolved;
@@ -147,57 +179,85 @@ class AgronomicThresholdResolver
         // pH
         if (isset($th['minPH'])) {
             $resolved['ph']['ideal_min'] = (float) $th['minPH'];
+            $resolved['ph']['is_customized'] = true;
+            $resolved['ph']['source_label'] = 'Disesuaikan Sekolah';
         }
         if (isset($th['maxPH'])) {
             $resolved['ph']['ideal_max'] = (float) $th['maxPH'];
+            $resolved['ph']['is_customized'] = true;
+            $resolved['ph']['source_label'] = 'Disesuaikan Sekolah';
         }
 
         // Moisture / Lengas
         if (isset($th['minMoisture'])) {
             $resolved['moisture']['ideal_min'] = (float) $th['minMoisture'];
+            $resolved['moisture']['is_customized'] = true;
+            $resolved['moisture']['source_label'] = 'Disesuaikan Sekolah';
         }
         if (isset($th['maxMoisture'])) {
             $resolved['moisture']['ideal_max'] = (float) $th['maxMoisture'];
+            $resolved['moisture']['is_customized'] = true;
+            $resolved['moisture']['source_label'] = 'Disesuaikan Sekolah';
         }
 
         // EC
         if (isset($th['minEC'])) {
             $resolved['ec']['ideal_min'] = (float) $th['minEC'];
+            $resolved['ec']['is_customized'] = true;
+            $resolved['ec']['source_label'] = 'Disesuaikan Sekolah';
         }
         if (isset($th['maxEC'])) {
             $resolved['ec']['ideal_max'] = (float) $th['maxEC'];
+            $resolved['ec']['is_customized'] = true;
+            $resolved['ec']['source_label'] = 'Disesuaikan Sekolah';
         }
 
         // Temperature
         if (isset($th['minTemperature'])) {
             $resolved['temperature']['ideal_min'] = (float) $th['minTemperature'];
+            $resolved['temperature']['is_customized'] = true;
+            $resolved['temperature']['source_label'] = 'Disesuaikan Sekolah';
         }
         if (isset($th['maxTemperature'])) {
             $resolved['temperature']['ideal_max'] = (float) $th['maxTemperature'];
+            $resolved['temperature']['is_customized'] = true;
+            $resolved['temperature']['source_label'] = 'Disesuaikan Sekolah';
         }
 
         // Nitrogen
         if (isset($th['minNitrogen'])) {
             $resolved['nitrogen']['ideal_min'] = (float) $th['minNitrogen'];
+            $resolved['nitrogen']['is_customized'] = true;
+            $resolved['nitrogen']['source_label'] = 'Disesuaikan Sekolah';
         }
         if (isset($th['maxNitrogen'])) {
             $resolved['nitrogen']['ideal_max'] = (float) $th['maxNitrogen'];
+            $resolved['nitrogen']['is_customized'] = true;
+            $resolved['nitrogen']['source_label'] = 'Disesuaikan Sekolah';
         }
 
         // Phosphorus
         if (isset($th['minPhosphorus'])) {
             $resolved['phosphorus']['ideal_min'] = (float) $th['minPhosphorus'];
+            $resolved['phosphorus']['is_customized'] = true;
+            $resolved['phosphorus']['source_label'] = 'Disesuaikan Sekolah';
         }
         if (isset($th['maxPhosphorus'])) {
             $resolved['phosphorus']['ideal_max'] = (float) $th['maxPhosphorus'];
+            $resolved['phosphorus']['is_customized'] = true;
+            $resolved['phosphorus']['source_label'] = 'Disesuaikan Sekolah';
         }
 
         // Potassium
         if (isset($th['minPotassium'])) {
             $resolved['potassium']['ideal_min'] = (float) $th['minPotassium'];
+            $resolved['potassium']['is_customized'] = true;
+            $resolved['potassium']['source_label'] = 'Disesuaikan Sekolah';
         }
         if (isset($th['maxPotassium'])) {
             $resolved['potassium']['ideal_max'] = (float) $th['maxPotassium'];
+            $resolved['potassium']['is_customized'] = true;
+            $resolved['potassium']['source_label'] = 'Disesuaikan Sekolah';
         }
 
         return $resolved;
