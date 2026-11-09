@@ -327,7 +327,13 @@
                             <p class="text-[11px] text-slate-500 leading-snug">{{ $corr['interpretation'] }}</p>
                         </div>
                         <div class="shrink-0">
-                            @if(!empty($corr['is_sufficient']))
+                            @if(($corr['status'] ?? '') === 'no_data')
+                                <span class="text-xs font-medium text-slate-400">Belum ada data</span>
+                            @elseif(($corr['status'] ?? '') === 'zero_variance')
+                                <span class="text-xs font-semibold text-amber-700">Variansi nol</span>
+                            @elseif(($corr['status'] ?? '') === 'insufficient_samples')
+                                <span class="text-xs font-semibold text-amber-700">Data belum cukup</span>
+                            @elseif(!empty($corr['is_sufficient']))
                                 <span class="text-xs font-semibold text-emerald-700">Data cukup</span>
                             @else
                                 <span class="text-xs font-semibold text-amber-700">Data belum cukup</span>
@@ -344,154 +350,176 @@
                         </div>
                     </div>
 
-                    <!-- Scatter Plot -->
-                    <div class="space-y-1.5">
-                        @php
-                            $pts = $corr['points'];
-                            $plotW = 340;
-                            $plotH = 150;
-                            $padL = 40;
-                            $padR = 16;
-                            $padT = 12;
-                            $padB = 24;
-                            $wArea = $plotW - $padL - $padR;
-                            $hArea = $plotH - $padT - $padB;
+                    @if(($corr['status'] ?? '') === 'no_data')
+                        <!-- Honest Empty State: No Data (Compact, no axes, no scatter, no regression, no Pearson gauge) -->
+                        <div class="py-6 px-4 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 space-y-1">
+                            <p class="text-xs font-semibold text-slate-700">Belum ada data berpasangan</p>
+                            <p class="text-[11px] text-slate-500">Belum ada telemetri berpasangan pada stasiun ini untuk menghitung korelasi.</p>
+                        </div>
+                    @elseif(($corr['status'] ?? '') === 'zero_variance')
+                        <!-- Honest Empty State: Zero Variance (No fake marker at zero) -->
+                        <div class="py-6 px-4 text-center rounded-xl border border-amber-200 bg-amber-50/60 space-y-1">
+                            <p class="text-xs font-semibold text-amber-900">Korelasi tidak dapat dihitung — nilai parameter konstan</p>
+                            <p class="text-[11px] text-amber-800/80">Nilai parameter tidak memiliki variasi pada periode ini sehingga korelasi Pearson tidak dapat ditentukan.</p>
+                        </div>
+                    @elseif(($corr['status'] ?? '') === 'insufficient_samples')
+                        <!-- Honest Empty State: Insufficient Samples (n < 10, no regression, no Pearson slider) -->
+                        <div class="py-6 px-4 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 space-y-1">
+                            <p class="text-xs font-semibold text-slate-700">Data belum cukup</p>
+                            <p class="text-[11px] text-slate-500">Tercatat {{ $corr['n'] }} dari minimal 10 observasi berpasangan. Koefisien korelasi dan regresi belum dapat diinterpretasikan secara andal.</p>
+                        </div>
+                    @else
+                        <!-- Sufficient Observations (n >= 10, variance > 0): Full Scatter Plot -->
+                        <div class="space-y-1.5">
+                            @php
+                                $pts = $corr['points'];
+                                $plotW = 340;
+                                $plotH = 150;
+                                $padL = 40;
+                                $padR = 16;
+                                $padT = 12;
+                                $padB = 24;
+                                $wArea = $plotW - $padL - $padR;
+                                $hArea = $plotH - $padT - $padB;
 
-                            $xMin = $corr['x_min'];
-                            $xMax = $corr['x_max'];
-                            $yMin = $corr['y_min'];
-                            $yMax = $corr['y_max'];
-                            $xRange = ($xMax - $xMin) > 0.001 ? ($xMax - $xMin) : 1.0;
-                            $yRange = ($yMax - $yMin) > 0.001 ? ($yMax - $yMin) : 1.0;
+                                $xMin = $corr['x_min'];
+                                $xMax = $corr['x_max'];
+                                $yMin = $corr['y_min'];
+                                $yMax = $corr['y_max'];
+                                $xRange = ($xMax - $xMin) > 0.001 ? ($xMax - $xMin) : 1.0;
+                                $yRange = ($yMax - $yMin) > 0.001 ? ($yMax - $yMin) : 1.0;
 
-                            // 2D Ideal Zone Rect Coordinates
-                            $xIdealMinClamped = max($xMin, min($xMax, $corr['x_ideal_min']));
-                            $xIdealMaxClamped = max($xMin, min($xMax, $corr['x_ideal_max']));
-                            $yIdealMinClamped = max($yMin, min($yMax, $corr['y_ideal_min']));
-                            $yIdealMaxClamped = max($yMin, min($yMax, $corr['y_ideal_max']));
+                                // 2D Ideal Zone Rect Coordinates
+                                $xIdealMinClamped = max($xMin, min($xMax, $corr['x_ideal_min']));
+                                $xIdealMaxClamped = max($xMin, min($xMax, $corr['x_ideal_max']));
+                                $yIdealMinClamped = max($yMin, min($yMax, $corr['y_ideal_min']));
+                                $yIdealMaxClamped = max($yMin, min($yMax, $corr['y_ideal_max']));
 
-                            $zoneX = $padL + (($xIdealMinClamped - $xMin) / $xRange) * $wArea;
-                            $zoneW = max(4.0, (($xIdealMaxClamped - $xIdealMinClamped) / $xRange) * $wArea);
-                            $zoneY = $padT + $hArea - (($yIdealMaxClamped - $yMin) / $yRange) * $hArea;
-                            $zoneH = max(4.0, (($yIdealMaxClamped - $yIdealMinClamped) / $yRange) * $hArea);
-                        @endphp
+                                $zoneX = $padL + (($xIdealMinClamped - $xMin) / $xRange) * $wArea;
+                                $zoneW = max(4.0, (($xIdealMaxClamped - $xIdealMinClamped) / $xRange) * $wArea);
+                                $zoneY = $padT + $hArea - (($yIdealMaxClamped - $yMin) / $yRange) * $hArea;
+                                $zoneH = max(4.0, (($yIdealMaxClamped - $yIdealMinClamped) / $yRange) * $hArea);
+                            @endphp
 
-                        <svg viewBox="0 0 {{ $plotW }} {{ $plotH }}" class="w-full h-36 bg-slate-50/70 rounded-xl border border-slate-200/90 overflow-visible">
-                            <!-- Reference Zone (both variables in ideal range) -->
-                            <rect
-                                x="{{ $zoneX }}"
-                                y="{{ $zoneY }}"
-                                width="{{ $zoneW }}"
-                                height="{{ $zoneH }}"
-                                fill="#dcfce7"
-                                stroke="#86efac"
-                                stroke-width="1"
-                                opacity="0.65"
-                            />
-
-                            <!-- Axes lines -->
-                            <line x1="{{ $padL }}" y1="{{ $padT }}" x2="{{ $padL }}" y2="{{ $padT + $hArea }}" stroke="#cbd5e1" stroke-width="1" />
-                            <line x1="{{ $padL }}" y1="{{ $padT + $hArea }}" x2="{{ $padL + $wArea }}" y2="{{ $padT + $hArea }}" stroke="#cbd5e1" stroke-width="1" />
-
-                            <!-- Y-axis ticks -->
-                            <text x="{{ $padL - 4 }}" y="{{ $padT + 8 }}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round($yMax) }}</text>
-                            <text x="{{ $padL - 4 }}" y="{{ $padT + ($hArea / 2) + 3 }}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round(($yMin + $yMax) / 2) }}</text>
-                            <text x="{{ $padL - 4 }}" y="{{ $padT + $hArea }}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round($yMin) }}</text>
-
-                            <!-- X-axis ticks -->
-                            <text x="{{ $padL }}" y="{{ $plotH - 6 }}" text-anchor="start" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round($xMin, 1) }}</text>
-                            <text x="{{ $padL + ($wArea / 2) }}" y="{{ $plotH - 6 }}" text-anchor="middle" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round(($xMin + $xMax) / 2, 1) }}</text>
-                            <text x="{{ $padL + $wArea }}" y="{{ $plotH - 6 }}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round($xMax, 1) }}</text>
-
-                            <!-- Regression Line (if valid) -->
-                            @if(!empty($corr['regression']))
-                                @php
-                                    $reg = $corr['regression'];
-                                    $rx1 = $padL + (($reg['x1'] - $xMin) / $xRange) * $wArea;
-                                    $ry1 = $padT + $hArea - (($reg['y1'] - $yMin) / $yRange) * $hArea;
-                                    $rx2 = $padL + (($reg['x2'] - $xMin) / $xRange) * $wArea;
-                                    $ry2 = $padT + $hArea - (($reg['y2'] - $yMin) / $yRange) * $hArea;
-                                    $ry1 = max($padT, min($padT + $hArea, $ry1));
-                                    $ry2 = max($padT, min($padT + $hArea, $ry2));
-                                @endphp
-                                <line
-                                    x1="{{ $rx1 }}"
-                                    y1="{{ $ry1 }}"
-                                    x2="{{ $rx2 }}"
-                                    y2="{{ $ry2 }}"
-                                    stroke="#047857"
-                                    stroke-width="1.6"
-                                    stroke-dasharray="4,3"
-                                />
-                            @endif
-
-                            <!-- Data Points -->
-                            @foreach($pts as $pt)
-                                @php
-                                    $cx = $padL + (($pt['x'] - $xMin) / $xRange) * $wArea;
-                                    $cy = $padT + $hArea - (($pt['y'] - $yMin) / $yRange) * $hArea;
-                                    $fill = $pt['is_in_zone'] ? '#059669' : '#ea580c';
-                                @endphp
-                                <circle
-                                    cx="{{ $cx }}"
-                                    cy="{{ $cy }}"
-                                    r="3"
-                                    fill="{{ $fill }}"
-                                    stroke="#ffffff"
+                            <svg viewBox="0 0 {{ $plotW }} {{ $plotH }}" class="w-full h-36 bg-slate-50/70 rounded-xl border border-slate-200/90 overflow-visible">
+                                <!-- Reference Zone (both variables in ideal range) -->
+                                <rect
+                                    x="{{ $zoneX }}"
+                                    y="{{ $zoneY }}"
+                                    width="{{ $zoneW }}"
+                                    height="{{ $zoneH }}"
+                                    fill="#dcfce7"
+                                    stroke="#86efac"
                                     stroke-width="1"
-                                >
-                                    <title>{{ $corr['x_name'] }}: {{ $pt['x'] }} {{ $corr['x_unit'] }} | {{ $corr['y_name'] }}: {{ $pt['y'] }} {{ $corr['y_unit'] }} ({{ $pt['is_in_zone'] ? 'Dalam zona ideal' : 'Di luar zona' }})</title>
-                                </circle>
-                            @endforeach
-                        </svg>
+                                    opacity="0.65"
+                                />
 
-                        <!-- Sub-legend -->
-                        <div class="flex items-center justify-between text-[10px] text-slate-500 font-sans flex-wrap gap-1 pt-0.5">
-                            <span>Datar: {{ $corr['x_name'] }} ({{ $corr['x_unit'] }}). Tegak: {{ $corr['y_name'] }} ({{ $corr['y_unit'] }}).</span>
-                            <div class="flex items-center gap-2">
-                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span> Dalam zona ideal</span>
-                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-600 inline-block"></span> Di luar zona</span>
-                                <span class="text-emerald-700 font-mono">--- Garis regresi</span>
+                                <!-- Axes lines -->
+                                <line x1="{{ $padL }}" y1="{{ $padT }}" x2="{{ $padL }}" y2="{{ $padT + $hArea }}" stroke="#cbd5e1" stroke-width="1" />
+                                <line x1="{{ $padL }}" y1="{{ $padT + $hArea }}" x2="{{ $padL + $wArea }}" y2="{{ $padT + $hArea }}" stroke="#cbd5e1" stroke-width="1" />
+
+                                <!-- Y-axis ticks -->
+                                <text x="{{ $padL - 4 }}" y="{{ $padT + 8 }}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round($yMax) }}</text>
+                                <text x="{{ $padL - 4 }}" y="{{ $padT + ($hArea / 2) + 3 }}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round(($yMin + $yMax) / 2) }}</text>
+                                <text x="{{ $padL - 4 }}" y="{{ $padT + $hArea }}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round($yMin) }}</text>
+
+                                <!-- X-axis ticks -->
+                                <text x="{{ $padL }}" y="{{ $plotH - 6 }}" text-anchor="start" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round($xMin, 1) }}</text>
+                                <text x="{{ $padL + ($wArea / 2) }}" y="{{ $plotH - 6 }}" text-anchor="middle" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round(($xMin + $xMax) / 2, 1) }}</text>
+                                <text x="{{ $padL + $wArea }}" y="{{ $plotH - 6 }}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-family="JetBrains Mono">{{ round($xMax, 1) }}</text>
+
+                                <!-- Regression Line (if valid) -->
+                                @if(!empty($corr['regression']))
+                                    @php
+                                        $reg = $corr['regression'];
+                                        $rx1 = $padL + (($reg['x1'] - $xMin) / $xRange) * $wArea;
+                                        $ry1 = $padT + $hArea - (($reg['y1'] - $yMin) / $yRange) * $hArea;
+                                        $rx2 = $padL + (($reg['x2'] - $xMin) / $xRange) * $wArea;
+                                        $ry2 = $padT + $hArea - (($reg['y2'] - $yMin) / $yRange) * $hArea;
+                                        $ry1 = max($padT, min($padT + $hArea, $ry1));
+                                        $ry2 = max($padT, min($padT + $hArea, $ry2));
+                                    @endphp
+                                    <line
+                                        x1="{{ $rx1 }}"
+                                        y1="{{ $ry1 }}"
+                                        x2="{{ $rx2 }}"
+                                        y2="{{ $ry2 }}"
+                                        stroke="#047857"
+                                        stroke-width="1.6"
+                                        stroke-dasharray="4,3"
+                                    />
+                                @endif
+
+                                <!-- Data Points -->
+                                @foreach($pts as $pt)
+                                    @php
+                                        $cx = $padL + (($pt['x'] - $xMin) / $xRange) * $wArea;
+                                        $cy = $padT + $hArea - (($pt['y'] - $yMin) / $yRange) * $hArea;
+                                        $fill = $pt['is_in_zone'] ? '#059669' : '#ea580c';
+                                    @endphp
+                                    <circle
+                                        cx="{{ $cx }}"
+                                        cy="{{ $cy }}"
+                                        r="3"
+                                        fill="{{ $fill }}"
+                                        stroke="#ffffff"
+                                        stroke-width="1"
+                                    >
+                                        <title>{{ $corr['x_name'] }}: {{ $pt['x'] }} {{ $corr['x_unit'] }} | {{ $corr['y_name'] }}: {{ $pt['y'] }} {{ $corr['y_unit'] }} ({{ $pt['is_in_zone'] ? 'Dalam zona ideal' : 'Di luar zona' }})</title>
+                                    </circle>
+                                @endforeach
+                            </svg>
+
+                            <!-- Sub-legend -->
+                            <div class="flex items-center justify-between text-[10px] text-slate-500 font-sans flex-wrap gap-1 pt-0.5">
+                                <span>Datar: {{ $corr['x_name'] }} ({{ $corr['x_unit'] }}). Tegak: {{ $corr['y_name'] }} ({{ $corr['y_unit'] }}).</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span> Dalam zona ideal</span>
+                                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-600 inline-block"></span> Di luar zona</span>
+                                    <span class="text-emerald-700 font-mono">--- Garis regresi</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Bottom Pearson r Gauge -->
-                    <div class="flex items-center justify-between gap-4 pt-2 border-t border-slate-100">
-                        <div>
-                            <div class="text-[10px] font-mono text-slate-400">Koefisien r</div>
-                            <div class="flex items-baseline gap-1.5">
-                                <span class="font-tabular text-2xl font-extrabold text-slate-900">
-                                    @if($corr['value'] !== null)
-                                        {{ ($corr['value'] > 0 ? '+' : '') . number_format($corr['value'], 2, ',', '.') }}
-                                    @else
-                                        —
+                        <!-- Bottom Pearson r Gauge -->
+                        <div class="flex items-center justify-between gap-4 pt-2 border-t border-slate-100">
+                            <div>
+                                <div class="text-[10px] font-mono text-slate-400">Koefisien r</div>
+                                <div class="flex items-baseline gap-1.5">
+                                    <span class="font-tabular text-2xl font-extrabold text-slate-900">
+                                        @if($corr['value'] !== null)
+                                            {{ ($corr['value'] > 0 ? '+' : '') . number_format($corr['value'], 2, ',', '.') }}
+                                        @else
+                                            —
+                                        @endif
+                                    </span>
+                                </div>
+                                <div class="text-xs font-semibold text-slate-700">
+                                    {{ $corr['strength_label'] }}
+                                </div>
+                            </div>
+
+                            <!-- Horizontal Slider Track: -1 to 0 to +1 -->
+                            <div class="space-y-1 w-36 sm:w-48">
+                                <div class="relative w-full h-1.5 bg-slate-200 rounded-full">
+                                    <!-- Center tick -->
+                                    <div class="absolute top-0 bottom-0 left-1/2 w-0.5 bg-slate-300"></div>
+                                    <!-- Marker Dot (only rendered when r_percent is non-null) -->
+                                    @if($corr['r_percent'] !== null)
+                                        <div
+                                            class="absolute -top-1 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-white shadow-xs -ml-1.5 transition-all"
+                                            style="left: {{ $corr['r_percent'] }}%;"
+                                        ></div>
                                     @endif
-                                </span>
-                            </div>
-                            <div class="text-xs font-semibold text-slate-700">
-                                {{ $corr['strength_label'] }}
-                            </div>
-                        </div>
-
-                        <!-- Horizontal Slider Track: -1 to 0 to +1 -->
-                        <div class="space-y-1 w-36 sm:w-48">
-                            <div class="relative w-full h-1.5 bg-slate-200 rounded-full">
-                                <!-- Center tick -->
-                                <div class="absolute top-0 bottom-0 left-1/2 w-0.5 bg-slate-300"></div>
-                                <!-- Marker Dot -->
-                                <div
-                                    class="absolute -top-1 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-white shadow-xs -ml-1.5 transition-all"
-                                    style="left: {{ $corr['r_percent'] }}%;"
-                                ></div>
-                            </div>
-                            <div class="flex justify-between text-[9px] font-mono text-slate-400">
-                                <span>-1</span>
-                                <span>0</span>
-                                <span>+1</span>
+                                </div>
+                                <div class="flex justify-between text-[9px] font-mono text-slate-400">
+                                    <span>-1</span>
+                                    <span>0</span>
+                                    <span>+1</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
                 </div>
             @endforeach
         </div>
@@ -511,7 +539,7 @@
                 <i data-lucide="book-open-check" class="w-4 h-4 text-emerald-600"></i>
                 <div>
                     <h2 class="text-sm font-bold text-slate-900">Acuan parameter agronomi</h2>
-                    <p class="text-xs text-slate-500">Rentang acuan fisiologis tanaman dan implikasi agronomi (SMK ATPH).</p>
+                    <p class="text-xs text-slate-500">Rentang acuan awal untuk kebutuhan praktikum. Kesesuaian dengan tanaman, media, dan metode pengukuran perlu diverifikasi.</p>
                 </div>
             </div>
 
@@ -522,9 +550,9 @@
                         Disesuaikan Sekolah
                     </span>
                 @else
-                    <span class="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
+                    <span class="inline-flex items-center gap-1.5 text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
                         <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                        Preset standar ATPH Hortikultura
+                        Preset Acuan Aplikasi
                     </span>
                 @endif
             </div>
@@ -534,7 +562,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
                 <thead>
-                    <tr class="border-b border-slate-200 text-slate-400 text-[11px] font-medium bg-slate-50/70">
+                    <tr class="border-b border-slate-200 text-slate-600 text-xs font-semibold bg-slate-50/80">
                         <th class="py-2.5 px-3">Parameter dan satuan</th>
                         <th class="py-2.5 px-3">Nilai terakhir</th>
                         <th class="py-2.5 px-3">Rentang acuan</th>
@@ -564,7 +592,7 @@
                             <!-- Parameter dan Satuan -->
                             <td class="py-3 px-3">
                                 <div class="font-bold text-slate-900">{{ $th['parameter'] ?? $paramKey }}</div>
-                                <div class="text-[11px] text-slate-400 font-normal">{{ $th['sublabel'] ?? '' }}</div>
+                                <div class="text-[11px] text-slate-500 font-normal">{{ $th['sublabel'] ?? '' }}</div>
                             </td>
 
                             <!-- Nilai Terakhir -->
@@ -582,7 +610,7 @@
                                     @endif
                                 @else
                                     <span class="font-tabular text-slate-400">—</span>
-                                    <div class="text-[10px] text-slate-400">Belum ada data</div>
+                                    <div class="text-[10px] text-slate-500">Belum ada data</div>
                                 @endif
                             </td>
 
@@ -599,15 +627,15 @@
                                             class="absolute top-0 bottom-0 bg-emerald-400/80 rounded-full"
                                             style="left: {{ $barLeft }}%; width: {{ $barWidth }}%;"
                                         ></div>
-                                        <!-- Reading Dot Marker -->
-                                        @if($dotPos !== null)
+                                        <!-- Reading Dot Marker (strictly suppressed when latestVal is null) -->
+                                        @if($dotPos !== null && $latestVal !== null)
                                             <div
                                                 class="absolute -top-0.5 w-2.5 h-2.5 rounded-full {{ $statusCode === 'optimal' ? 'bg-emerald-700' : 'bg-amber-600' }} border border-white shadow-2xs -ml-1"
                                                 style="left: {{ $dotPos }}%;"
                                             ></div>
                                         @endif
                                     </div>
-                                    <div class="flex justify-between text-[8.5px] font-mono text-slate-400">
+                                    <div class="flex justify-between text-[8.5px] text-slate-500">
                                         <span>{{ round($scaleMin) }}</span>
                                         <span>{{ round($scaleMax) }}</span>
                                     </div>
@@ -615,12 +643,12 @@
                             </td>
 
                             <!-- Indikasi Rendah / Defisit -->
-                            <td class="py-3 px-3 text-slate-600 leading-snug max-w-xs">
+                            <td class="py-3 px-3 text-slate-700 leading-snug max-w-xs">
                                 {{ $th['low_implication'] ?? '—' }}
                             </td>
 
                             <!-- Indikasi Tinggi / Berlebih -->
-                            <td class="py-3 px-3 text-slate-600 leading-snug max-w-xs">
+                            <td class="py-3 px-3 text-slate-700 leading-snug max-w-xs">
                                 {{ $th['high_implication'] ?? '—' }}
                             </td>
                         </tr>
@@ -647,16 +675,16 @@
                         <div class="p-2.5 bg-white rounded-lg border border-slate-200/80 space-y-1">
                             <div class="flex items-center justify-between font-bold text-slate-800">
                                 <span>{{ $th['parameter'] }}</span>
-                                <span class="text-[10px] font-mono text-slate-400">{{ $th['verification_status'] ?? 'Preset Aplikasi' }}</span>
+                                <span class="text-[10px] text-slate-500">{{ $th['verification_status'] ?? 'Preset Aplikasi' }}</span>
                             </div>
                             <div class="text-[11px] text-slate-500">
-                                <strong>Metode:</strong> {{ $th['measurement_method'] ?? 'Modbus RS485' }}
+                                <strong>Metode:</strong> {{ $th['measurement_method'] ?? 'Nilai parameter yang dilaporkan perangkat sensor.' }}
                             </div>
                             <div class="text-[11px] text-slate-500">
                                 <strong>Komoditas:</strong> {{ $th['crop_applicability'] ?? 'Hortikultura' }}
                             </div>
                             @if(!empty($th['measurement_caveat']))
-                                <div class="text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-100 italic">
+                                <div class="text-[10px] text-slate-600 bg-white p-1.5 rounded border border-slate-200/60 italic">
                                     {{ $th['measurement_caveat'] }}
                                 </div>
                             @endif

@@ -342,6 +342,36 @@ class AnalyticsController extends Controller
                 ];
             })->values()->all();
 
+            if ($count === 0) {
+                return [
+                    'label' => $label,
+                    'value' => null,
+                    'n' => 0,
+                    'min_samples' => 10,
+                    'is_sufficient' => false,
+                    'status' => 'no_data',
+                    'status_label' => 'Belum ada data berpasangan',
+                    'strength_label' => null,
+                    'interpretation' => $neutralDesc,
+                    'x_name' => $xName,
+                    'y_name' => $yName,
+                    'x_unit' => $xUnit,
+                    'y_unit' => $yUnit,
+                    'points' => [],
+                    'has_variance' => false,
+                    'r_percent' => null,
+                    'x_min' => $defaultXMin,
+                    'x_max' => $defaultXMax,
+                    'y_min' => $defaultYMin,
+                    'y_max' => $defaultYMax,
+                    'regression' => null,
+                    'x_ideal_min' => $xIdealMin,
+                    'x_ideal_max' => $xIdealMax,
+                    'y_ideal_min' => $yIdealMin,
+                    'y_ideal_max' => $yIdealMax,
+                ];
+            }
+
             if ($count < 2) {
                 return [
                     'label' => $label,
@@ -350,8 +380,8 @@ class AnalyticsController extends Controller
                     'min_samples' => 10,
                     'is_sufficient' => false,
                     'status' => 'insufficient_samples',
-                    'status_label' => 'Data Belum Cukup',
-                    'strength_label' => 'Belum ada observasi yang cukup',
+                    'status_label' => 'Data belum cukup',
+                    'strength_label' => null,
                     'interpretation' => $neutralDesc,
                     'x_name' => $xName,
                     'y_name' => $yName,
@@ -359,7 +389,7 @@ class AnalyticsController extends Controller
                     'y_unit' => $yUnit,
                     'points' => $points,
                     'has_variance' => false,
-                    'r_percent' => 50.0,
+                    'r_percent' => null,
                     'x_min' => $defaultXMin,
                     'x_max' => $defaultXMax,
                     'y_min' => $defaultYMin,
@@ -399,9 +429,9 @@ class AnalyticsController extends Controller
             $plotYMin = min($defaultYMin, min($yValues));
             $plotYMax = max($defaultYMax, max($yValues));
 
-            // Compute linear regression endpoints when variance exists
+            // Compute linear regression endpoints only when sample is sufficient and variance exists
             $regression = null;
-            if ($hasVariance && $xVariance > 0.000001 && $rValue !== null) {
+            if ($isSufficient && $xVariance > 0.000001 && $rValue !== null) {
                 $slope = $numerator / $xVariance;
                 $intercept = $yMean - ($slope * $xMean);
                 $regY1 = ($slope * $plotXMin) + $intercept;
@@ -416,26 +446,58 @@ class AnalyticsController extends Controller
                 ];
             }
 
+            if (! $hasVariance) {
+                return [
+                    'label' => $label,
+                    'value' => null,
+                    'n' => $count,
+                    'min_samples' => 10,
+                    'is_sufficient' => false,
+                    'status' => 'zero_variance',
+                    'status_label' => 'Korelasi tidak dapat dihitung — nilai parameter konstan',
+                    'strength_label' => 'Nilai parameter konstan',
+                    'interpretation' => $neutralDesc,
+                    'x_name' => $xName,
+                    'y_name' => $yName,
+                    'x_unit' => $xUnit,
+                    'y_unit' => $yUnit,
+                    'points' => $points,
+                    'has_variance' => false,
+                    'r_percent' => null,
+                    'x_min' => $plotXMin,
+                    'x_max' => $plotXMax,
+                    'y_min' => $plotYMin,
+                    'y_max' => $plotYMax,
+                    'regression' => null,
+                    'x_ideal_min' => $xIdealMin,
+                    'x_ideal_max' => $xIdealMax,
+                    'y_ideal_min' => $yIdealMin,
+                    'y_ideal_max' => $yIdealMax,
+                ];
+            }
+
             $strengthLabel = match (true) {
-                ! $hasVariance => 'Variansi Nol (Nilai Konstan)',
-                $rValue === null => 'Tidak Terdefinisi',
+                ! $isSufficient => null,
+                $rValue === null => null,
                 abs($rValue) >= 0.7 => ($rValue > 0 ? 'Korelasi positif kuat' : 'Korelasi negatif kuat'),
                 abs($rValue) >= 0.4 => ($rValue > 0 ? 'Korelasi positif sedang' : 'Korelasi negatif sedang'),
                 abs($rValue) >= 0.2 => ($rValue > 0 ? 'Korelasi positif lemah' : 'Korelasi negatif lemah'),
                 default => 'Korelasi sangat lemah / mendekati nol',
             };
 
-            // Calculate r slider position (0% at -1, 50% at 0, 100% at +1)
-            $rPercent = $rValue !== null ? max(0.0, min(100.0, (($rValue + 1.0) / 2.0) * 100.0)) : 50.0;
+            // Calculate r slider position (0% at -1, 50% at 0, 100% at +1) only when sufficient
+            $rPercent = ($isSufficient && $rValue !== null)
+                ? round(max(0.0, min(100.0, (($rValue + 1.0) / 2.0) * 100.0)), 1)
+                : null;
 
             return [
                 'label' => $label,
-                'value' => $rValue, // Float preserved for backward test compatibility
+                'value' => $rValue, // Retained float when count >= 2 for backwards test compatibility
                 'n' => $count,
                 'min_samples' => 10,
                 'is_sufficient' => $isSufficient,
-                'status' => ! $hasVariance ? 'zero_variance' : ($count < 10 ? 'insufficient_samples' : 'sufficient'),
-                'status_label' => ! $hasVariance ? 'Variansi Nol' : ($count < 10 ? 'Data Belum Cukup' : 'Data cukup'),
+                'status' => $count < 10 ? 'insufficient_samples' : 'sufficient',
+                'status_label' => $count < 10 ? 'Data belum cukup' : 'Data cukup',
                 'strength_label' => $strengthLabel,
                 'interpretation' => $neutralDesc,
                 'x_name' => $xName,
@@ -444,7 +506,7 @@ class AnalyticsController extends Controller
                 'y_unit' => $yUnit,
                 'points' => $points,
                 'has_variance' => $hasVariance,
-                'r_percent' => round($rPercent, 1),
+                'r_percent' => $rPercent,
                 'x_min' => $plotXMin,
                 'x_max' => $plotXMax,
                 'y_min' => $plotYMin,

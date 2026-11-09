@@ -272,7 +272,10 @@ class AgronomyAnalyticsTenancyTest extends TestCase
         $this->assertFalse($correlations[0]['is_sufficient']);
         $this->assertEquals(2, $correlations[0]['n']);
         $this->assertEquals('insufficient_samples', $correlations[0]['status']);
-        $this->assertEquals('Data Belum Cukup', $correlations[0]['status_label']);
+        $this->assertEquals('Data belum cukup', $correlations[0]['status_label']);
+        $this->assertNull($correlations[0]['r_percent']);
+        $this->assertNull($correlations[0]['regression']);
+        $this->assertNull($correlations[0]['strength_label']);
 
         // Insert 8 more varying readings to reach 10
         for ($i = 1; $i <= 8; $i++) {
@@ -297,6 +300,9 @@ class AgronomyAnalyticsTenancyTest extends TestCase
         $this->assertEquals(10, $correlationsSufficient[0]['n']);
         $this->assertEquals('sufficient', $correlationsSufficient[0]['status']);
         $this->assertNotNull($correlationsSufficient[0]['value']);
+        $this->assertNotNull($correlationsSufficient[0]['r_percent']);
+        $this->assertNotNull($correlationsSufficient[0]['regression']);
+        $this->assertNotNull($correlationsSufficient[0]['strength_label']);
         $this->assertNotEmpty($correlationsSufficient[0]['points']);
     }
 
@@ -331,7 +337,9 @@ class AgronomyAnalyticsTenancyTest extends TestCase
         $this->assertNull($correlations[0]['value']);
         $this->assertFalse($correlations[0]['is_sufficient']);
         $this->assertEquals('zero_variance', $correlations[0]['status']);
-        $this->assertEquals('Variansi Nol', $correlations[0]['status_label']);
+        $this->assertEquals('Korelasi tidak dapat dihitung — nilai parameter konstan', $correlations[0]['status_label']);
+        $this->assertNull($correlations[0]['r_percent']);
+        $this->assertNull($correlations[0]['regression']);
     }
 
     public function test_analytics_resolves_school_scoped_thresholds(): void
@@ -448,14 +456,35 @@ class AgronomyAnalyticsTenancyTest extends TestCase
 
     public function test_analytics_bivariate_regression_and_ideal_zone(): void
     {
+        // When n < 10 (2 readings from setUp), regression is null (not interpretable)
+        $respInitial = $this->actingAs($this->teacherA)->get('/analytics');
+        $respInitial->assertOk();
+        $correlationsInitial = $respInitial->viewData('correlations');
+        $this->assertNull($correlationsInitial[0]['regression']);
+
+        // Insert 8 more varying readings to reach 10 samples
+        for ($i = 1; $i <= 8; $i++) {
+            TelemetryReading::create([
+                'device_id' => $this->deviceA1->id,
+                'provenance' => 'hardware',
+                'ph' => 6.0 + ($i * 0.1),
+                'ec' => 1400.0 + ($i * 30),
+                'humidity' => 60.0 + $i,
+                'temperature' => 24.0 + ($i * 0.5),
+                'nitrogen' => 70.0 + $i,
+                'phosphorus' => 35.0 + $i,
+                'potassium' => 110.0 + $i,
+                'recorded_at' => now()->subMinutes(20 + $i),
+            ]);
+        }
+
         $resp = $this->actingAs($this->teacherA)->get('/analytics');
         $resp->assertOk();
 
         $correlations = $resp->viewData('correlations');
         $this->assertCount(2, $correlations);
 
-        // In setUp there are 2 varying readings (6.5, 1500) and (6.8, 1600)
-        // Regression must be computed and not null
+        // With 10 readings and variance, regression must be computed and not null
         $this->assertNotNull($correlations[0]['regression']);
         $this->assertArrayHasKey('slope', $correlations[0]['regression']);
         $this->assertArrayHasKey('intercept', $correlations[0]['regression']);
@@ -470,5 +499,34 @@ class AgronomyAnalyticsTenancyTest extends TestCase
         $this->assertNotEmpty($correlations[0]['points']);
         $this->assertArrayHasKey('is_in_zone', $correlations[0]['points'][0]);
         $this->assertIsBool($correlations[0]['points'][0]['is_in_zone']);
+    }
+
+    public function test_analytics_honest_empty_states_and_preset_badge(): void
+    {
+        // Create an empty device with 0 readings
+        $emptyDevice = Device::create([
+            'school_id' => $this->schoolA->id,
+            'code' => 'TK-EMPTY-01',
+            'name' => 'Meja Kosong Tanpa Data',
+            'is_active' => true,
+        ]);
+
+        $resp = $this->actingAs($this->teacherA)->get("/analytics?device_id={$emptyDevice->id}");
+        $resp->assertOk();
+
+        $correlations = $resp->viewData('correlations');
+        $this->assertIsArray($correlations);
+        $this->assertEquals('no_data', $correlations[0]['status']);
+        $this->assertEquals('Belum ada data berpasangan', $correlations[0]['status_label']);
+        $this->assertNull($correlations[0]['value']);
+        $this->assertNull($correlations[0]['r_percent']);
+        $this->assertNull($correlations[0]['regression']);
+        $this->assertNull($correlations[0]['strength_label']);
+
+        // Assert empty state HTML and preset badge
+        $resp->assertSee('Belum ada data berpasangan');
+        $resp->assertSee('Preset Acuan Aplikasi');
+        $resp->assertSee('Rentang acuan awal untuk kebutuhan praktikum. Kesesuaian dengan tanaman, media, dan metode pengukuran perlu diverifikasi.');
+        $resp->assertDontSee('Preset standar ATPH Hortikultura');
     }
 }
