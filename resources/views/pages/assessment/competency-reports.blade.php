@@ -152,10 +152,10 @@
                             $hasGradedReports = $gradedReports->isNotEmpty();
                             $grade = $hasGradedReports
                                 ? (float) $gradedReports->avg('final_grade')
-                                : ($profile?->average_grade !== null ? (float) $profile->average_grade : null);
+                                : null;
                             $pred = $grade !== null
                                 ? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D')))
-                                : ($profile?->competency_predicative ?? null);
+                                : null;
                         @endphp
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="py-3.5 px-3">

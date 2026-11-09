@@ -91,15 +91,15 @@ class CompetencyAssessmentController extends Controller
                 return (float) $gradedReports->avg('final_grade');
             }
 
-            return $student->profile?->average_grade !== null ? (float) $student->profile->average_grade : null;
+            return null;
         };
 
-        $resolvePredicate = function (?float $grade, $profile): ?string {
+        $resolvePredicate = function (?float $grade): ?string {
             if ($grade !== null) {
                 return $grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D'));
             }
 
-            return $profile?->competency_predicative ?? null;
+            return null;
         };
 
         $gradedScores = $allStudents->map(fn ($s) => $resolveStudentGrade($s))->filter(fn ($g) => $g !== null);
@@ -110,9 +110,9 @@ class CompetencyAssessmentController extends Controller
         $stats = [
             'total_students' => $allStudents->count(),
             'certified' => $allStudents->filter(fn ($s) => (bool) $s->profile?->trainer_certified)->count(),
-            'pred_a' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s), $s->profile) === 'A')->count(),
-            'pred_b' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s), $s->profile) === 'B')->count(),
-            'pred_c' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s), $s->profile) === 'C')->count(),
+            'pred_a' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s)) === 'A')->count(),
+            'pred_b' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s)) === 'B')->count(),
+            'pred_c' => $allStudents->filter(fn ($s) => $resolvePredicate($resolveStudentGrade($s)) === 'C')->count(),
             'avg_score' => $avgScore,
         ];
 
@@ -205,10 +205,10 @@ class CompetencyAssessmentController extends Controller
                         : collect();
                     $grade = $gradedReports->isNotEmpty()
                         ? (float) $gradedReports->avg('final_grade')
-                        : ($profile?->average_grade !== null ? (float) $profile->average_grade : null);
+                        : null;
                     $pred = $grade !== null
                         ? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D')))
-                        : ($profile?->competency_predicative ?? '—');
+                        : '—';
 
                     fputcsv($handle, [
                         $this->sanitizeCsvCell($student->name),

@@ -64,15 +64,27 @@ class CompetencyAssessmentTenantTest extends TestCase
             'user_id' => $studentA->id,
             'type' => 'siswa',
             'class_grade' => 'XI ATPH 1',
-            'average_grade' => 90,
-            'competency_predicative' => 'A',
         ]);
         UserProfile::create([
             'user_id' => $studentB->id,
             'type' => 'siswa',
             'class_grade' => 'XI ATPH 2',
-            'average_grade' => 40,
-            'competency_predicative' => 'C',
+        ]);
+
+        $module = ModulePracticum::create(['meeting_number' => 1, 'title' => 'Modul Asesmen']);
+        StudentReport::create([
+            'user_id' => $studentA->id,
+            'module_id' => $module->id,
+            'status' => 'graded',
+            'final_grade' => 90.0,
+            'lks_answers' => ['q' => 'ok'],
+        ]);
+        StudentReport::create([
+            'user_id' => $studentB->id,
+            'module_id' => $module->id,
+            'status' => 'graded',
+            'final_grade' => 40.0,
+            'lks_answers' => ['q' => 'ok'],
         ]);
 
         $response = $this->actingAs($teacher)->get('/assessment');
@@ -105,14 +117,26 @@ class CompetencyAssessmentTenantTest extends TestCase
         UserProfile::create([
             'user_id' => $studentA->id,
             'type' => 'siswa',
-            'average_grade' => 91,
-            'competency_predicative' => 'A',
         ]);
         UserProfile::create([
             'user_id' => $studentB->id,
             'type' => 'siswa',
-            'average_grade' => 41,
-            'competency_predicative' => 'C',
+        ]);
+
+        $module = ModulePracticum::create(['meeting_number' => 1, 'title' => 'Modul Asesmen']);
+        StudentReport::create([
+            'user_id' => $studentA->id,
+            'module_id' => $module->id,
+            'status' => 'graded',
+            'final_grade' => 91.0,
+            'lks_answers' => ['q' => 'ok'],
+        ]);
+        StudentReport::create([
+            'user_id' => $studentB->id,
+            'module_id' => $module->id,
+            'status' => 'graded',
+            'final_grade' => 41.0,
+            'lks_answers' => ['q' => 'ok'],
         ]);
 
         $response = $this->actingAs($superuser)->get('/assessment?school_id='.$schoolA->id);
@@ -148,15 +172,28 @@ class CompetencyAssessmentTenantTest extends TestCase
             'identifier_number' => '0098765432',
             'class_grade' => 'XII ATPH 1',
             'attendance_percent' => 97.5,
-            'average_grade' => 88.0,
-            'competency_predicative' => 'A',
             'trainer_certified' => true,
         ]);
         UserProfile::create([
             'user_id' => $otherStudent->id,
             'type' => 'siswa',
             'identifier_number' => '0087654321',
-            'average_grade' => 45.0,
+        ]);
+
+        $module = ModulePracticum::create(['meeting_number' => 1, 'title' => 'Modul Asesmen']);
+        StudentReport::create([
+            'user_id' => $student->id,
+            'module_id' => $module->id,
+            'status' => 'graded',
+            'final_grade' => 88.0,
+            'lks_answers' => ['q' => 'ok'],
+        ]);
+        StudentReport::create([
+            'user_id' => $otherStudent->id,
+            'module_id' => $module->id,
+            'status' => 'graded',
+            'final_grade' => 45.0,
+            'lks_answers' => ['q' => 'ok'],
         ]);
 
         $response = $this->actingAs($teacher)->get('/assessment/export');
@@ -189,12 +226,26 @@ class CompetencyAssessmentTenantTest extends TestCase
         UserProfile::create([
             'user_id' => $student->id,
             'type' => 'siswa',
-            'average_grade' => 89.0,
         ]);
         UserProfile::create([
             'user_id' => $classmate->id,
             'type' => 'siswa',
-            'average_grade' => 42.0,
+        ]);
+
+        $module = ModulePracticum::create(['meeting_number' => 1, 'title' => 'Modul Asesmen']);
+        StudentReport::create([
+            'user_id' => $student->id,
+            'module_id' => $module->id,
+            'status' => 'graded',
+            'final_grade' => 89.0,
+            'lks_answers' => ['q' => 'ok'],
+        ]);
+        StudentReport::create([
+            'user_id' => $classmate->id,
+            'module_id' => $module->id,
+            'status' => 'graded',
+            'final_grade' => 42.0,
+            'lks_answers' => ['q' => 'ok'],
         ]);
 
         $page = $this->actingAs($student)->get('/assessment');
@@ -324,5 +375,53 @@ class CompetencyAssessmentTenantTest extends TestCase
         $exportContent = $export->streamedContent();
         $this->assertStringContainsString('95.0', $exportContent);
         $this->assertStringNotContainsString('70.0', $exportContent);
+    }
+
+    public function test_student_with_historical_profile_grade_but_zero_graded_lks_shows_honest_missing_state(): void
+    {
+        $school = School::create([
+            'npsn' => '20200311',
+            'name' => 'SMK Historis Tanpa LKS',
+            'slug' => 'smk-historis-tanpa-lks',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id, 'name' => 'Siswa Warisan Lama']);
+
+        // Historical profile record has unverified grade of 92.0 and Predikat A, but NO graded student reports exist
+        UserProfile::create([
+            'user_id' => $student->id,
+            'type' => 'siswa',
+            'identifier_number' => '0012345678',
+            'class_grade' => 'XII ATPH 3',
+            'average_grade' => 92.0,
+            'competency_predicative' => 'A',
+        ]);
+
+        // 1. Gradebook view: must display honest missing state '—' and NOT the unverified 92.0 or A
+        $response = $this->actingAs($teacher)->get('/assessment');
+        $response->assertOk();
+        $response->assertSee('Siswa Warisan Lama');
+        $response->assertDontSee('92.0');
+        // Student grade column and predicate badge must display em-dash '—'
+        $response->assertSee('—');
+
+        // Stats should not count this student in pred_a or average score
+        $this->assertEquals(0, $response->viewData('stats')['pred_a']);
+        $this->assertNull($response->viewData('stats')['avg_score']);
+
+        // 2. CSV export: must export '—' for grade and predicate, NOT 92.0 or A
+        $export = $this->actingAs($teacher)->get('/assessment/export');
+        $export->assertOk();
+        $csv = $export->streamedContent();
+        $this->assertStringContainsString('Siswa Warisan Lama', $csv);
+        $this->assertStringNotContainsString('92.0', $csv);
+
+        // 3. Historical profile integrity: verify database values are untouched
+        $this->assertDatabaseHas('user_profiles', [
+            'user_id' => $student->id,
+            'average_grade' => 92.0,
+            'competency_predicative' => 'A',
+        ]);
     }
 }
