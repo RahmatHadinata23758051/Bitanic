@@ -1,12 +1,12 @@
 # Bitanic — Revised Implementation Backlog & Work Order
 ## Multi-School Ready Vocational LMS & IoT Workstation
 
-- **Version**: 1.2.2
-- **Date**: 2026-11-06
-- **Status**: Active development; source reconciliation is against `bitanic-app` HEAD `bb9fe94f089575aac4c490239d78b59d68a7e198`, with uncommitted topbar and backlog reconciliation changes in this working tree. Guest browser smoke and role authorization feature tests pass. Login-capable student/teacher/admin browser journeys remain blocked because no approved non-production accounts are available. UI redesign has not started.
+- **Version**: 1.3.0
+- **Date**: 2026-11-10
+- **Status**: Full system acceptance & multi-tenant verification complete at HEAD `c23aa8c`. 403 SQLite tests / 2,471 assertions pass; PostgreSQL 17.6 integration and concurrency tests pass; complete 5-role authorization matrix and fail-closed multi-school IDOR protections verified in `RbacAndMultiTenantAcceptanceTest`. Target architecture baseline v1.0 locked in `docs/architecture/BITANIC_ARCHITECTURE_BASELINE_V1.md`.
 - **Product Direction**: Single-School MVP with Multi-School Ready Architecture
 - **Methodology**: TDD, dependency-first delivery, task-isolated implementation, evidence-based QC.
-- **Reconciled application HEAD**: `09ba8cf` (`bitanic-app`, 2026-11-06); schedule race, route-matrix and backlog updates are committed locally; the topbar truthfulness change remains in the working tree. The dated 2026-11-05 evidence subsection below is historical and was recorded against its explicitly named earlier HEAD.
+- **Reconciled application HEAD**: `c23aa8c` (`bitanic-app`, 2026-11-10); full RBAC and multi-tenant acceptance test suite committed locally; dual-driver test gates passed with 0 failures; Vite production asset build succeeded; baseline reference assets untouched.
 - **Canonical file**: `C:\Users\user\Nata\MAKERINDO\Bitanic\BACKLOG_REVISED.md`; a synchronized tracked snapshot is maintained at `bitanic-app/BACKLOG_REVISED.md` because the canonical file is outside the Git worktree.  
 - **Status vocabulary**: `DONE` = acceptance verified; `PARTIAL` = implementation exists but acceptance/coverage remains; `TODO` = no verified implementation; `BLOCKED` = requires an external decision, approval, or hardware prerequisite. `DEFERRED` is used only as a scheduling qualifier, not as a replacement status.
 
@@ -529,6 +529,35 @@ Historical entries above are preserved verbatim; this subsection only records fa
 - **Screenshot evidence**: QA screenshots generated during the dashboard revision were temporary untracked artifacts and have been deleted. No screenshot evidence is currently retained in the repository; regenerate only if the PO requests visual review.
 - **Handover artifacts**: `AGENTS.md` and `docs/HANDOVER_ANTIGRAVITY.md` were added as documentation-only changes for the Google Antigravity transfer. They contain no application implementation changes.
 - **Unchanged**: authentication browser smoke remains blocked on approved disposable QA accounts; hardware downlink items remain BLOCKED under BR-400/401/402/403; BR-002/BR-003/BR-100/BR-504 decisions remain with the PO.
+
+### 2.12 — Full System Acceptance, RBAC & Multi-Tenant E2E Verification (2026-11-10)
+
+Comprehensive acceptance and multi-tenant isolation testing executed against locked Bitanic Architecture Baseline v1.0. All 15 functional modules, 56 registered routes, and 5 runtime identities were verified.
+
+- **Acceptance test suite (`tests/Feature/RbacAndMultiTenantAcceptanceTest.php`)**: 8 tests / 147 assertions passed, establishing end-to-end verification of:
+  1. Full Role Authorization Matrix across all 5 identities (Guest, Siswa, Guru, Legacy Admin, Superuser) across 56 routes.
+  2. Strict Multi-School Isolation & Cross-School IDOR Protection (Directory, Reports Hub, LKS Grading, Device Calibration, Hardware Reboot, Schedule Deletion, Planting Media).
+  3. Academic Scenario A: Classroom, Student Group, and Allocation Lifecycle.
+  4. Academic Scenario B: Practicum Scheduling and Conflict Prevention (Kit Overlap, Inverted Time, Cross-School Booking).
+  5. Academic Scenario C: Practicum LKS Submission, Telemetry Snapshot Evidence, and Teacher 4-Scale Rubric Grading.
+  6. Academic Scenario D: Verified Competency Assessment Gradebook Aggregation and Memory-Safe CSV Export.
+  7. IoT Scenario A & B: Authenticated Hardware Ingestion via `X-Device-Key` vs. Invalid / Malformed / Revoked Key Rejection.
+  8. IoT Scenario C & F: Truthful Simulation Provenance and Hardware Actuator Safeguards (Simulation-Only Reboot & Atomic Calibration Rollback).
+- **Test execution summary**:
+  - SQLite in-memory: 403 passed, 0 failures, 5 skipped (2,471 assertions).
+  - PostgreSQL 17.6 (`bitanic_test`): 10 passed (81 assertions) across `PostgresIntegrationAndConcurrencyTest` and `PostgresScheduleConcurrencyRaceTest`.
+  - Pint code formatting: PASS on newly modified files.
+  - Vite asset compilation: PASS (93 kB CSS, 1.87 MB JS).
+  - Baseline immutable assets (`upi-edge/`, `dump_upiedge.sql`): 100% clean and unmodified.
+- **Backlog task reconciliation**:
+  - `ARCH-RBAC-01`: **PARTIAL** — Verified 5 active roles. Documented architectural gap between target tenant-scoped `Admin Sekolah` and current legacy `admin` role inheritance in `docs/architecture/BITANIC_ARCHITECTURE_BASELINE_V1.md`.
+  - `QA-ROLE-MATRIX-01`: **DONE** — Complete route & role authorization matrix verified in `RbacAndMultiTenantAcceptanceTest`.
+  - `QC-01`: **DONE** — Full dual-driver SQLite and PostgreSQL 17 suites pass with 0 regressions.
+  - `DATA-MASTER-01`: **PARTIAL** — School master settings, classrooms, media, and active devices verified; centralized hardware serial master deferred to hardware manufacturing roadmap.
+  - `ACA-PROVENANCE-01`: **DONE** — Verified gradebook aggregates live average exclusively from graded student reports, ignoring stale user profile caches.
+  - `DEVICE-LIFECYCLE-01`: **PARTIAL / BLOCKED on physical ACK** — Software calibration and simulation-only reboot verified; physical actuation downlink remains blocked.
+  - `SCHOOL-LICENSE-01`: **DEFERRED** — 1 School = 1 License contract documented in Architecture Baseline v1.0; commercial licensing deferred by PO directive.
+  - `PAYMENT-01`: **HOLD** — Midtrans SaaS routes retired under `LEGACY-01`; no financial transactions executed in vocational MVP.
 
 ### 2.8 — Newly Recorded Follow-up Tasks
 
