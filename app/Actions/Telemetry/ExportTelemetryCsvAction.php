@@ -80,7 +80,8 @@ class ExportTelemetryCsvAction
                     break;
                 }
 
-                $classification = $this->evaluator->classify($row, $schoolId);
+                $deviceSchoolId = $row->device?->school_id ?? $schoolId;
+                $classification = $this->evaluator->classify($row, $deviceSchoolId);
                 $statusLabel = strtoupper($classification['label']);
                 $deviationString = ! empty($classification['deviations'])
                     ? implode('; ', $classification['deviations'])

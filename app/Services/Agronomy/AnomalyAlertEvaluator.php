@@ -107,7 +107,7 @@ class AnomalyAlertEvaluator
             $phMin = (float) ($thresholds['ph']['ideal_min'] ?? 6.0);
             $phMax = (float) ($thresholds['ph']['ideal_max'] ?? 7.2);
 
-            if ($ph > 0) {
+            if ($ph >= 0) {
                 if ($ph < $phMin) {
                     $alerts->push([
                         'parameter' => 'pH Tanah',
@@ -142,7 +142,7 @@ class AnomalyAlertEvaluator
             $ecMin = (float) ($thresholds['ec']['ideal_min'] ?? 1000.0);
             $ecMax = (float) ($thresholds['ec']['ideal_max'] ?? 2200.0);
 
-            if ($ec > 0) {
+            if ($ec >= 0) {
                 if ($ec < $ecMin) {
                     $alerts->push([
                         'parameter' => 'EC Nutrisi',
@@ -177,7 +177,7 @@ class AnomalyAlertEvaluator
             $humMin = (float) ($thresholds['moisture']['ideal_min'] ?? 45.0);
             $humMax = (float) ($thresholds['moisture']['ideal_max'] ?? 65.0);
 
-            if ($humidity > 0) {
+            if ($humidity >= 0) {
                 if ($humidity < $humMin) {
                     $alerts->push([
                         'parameter' => 'Kelembaban Tanah',
@@ -245,7 +245,7 @@ class AnomalyAlertEvaluator
             $nMin = (float) ($thresholds['nitrogen']['ideal_min'] ?? 40.0);
             $nMax = (float) ($thresholds['nitrogen']['ideal_max'] ?? 120.0);
 
-            if ($nitrogen > 0 && $nitrogen < $nMin) {
+            if ($nitrogen >= 0 && $nitrogen < $nMin) {
                 $alerts->push([
                     'parameter' => 'Nitrogen (N)',
                     'parameter_key' => 'nitrogen',
@@ -278,7 +278,7 @@ class AnomalyAlertEvaluator
             $pMin = (float) ($thresholds['phosphorus']['ideal_min'] ?? 25.0);
             $pMax = (float) ($thresholds['phosphorus']['ideal_max'] ?? 60.0);
 
-            if ($phosphorus > 0 && $phosphorus < $pMin) {
+            if ($phosphorus >= 0 && $phosphorus < $pMin) {
                 $alerts->push([
                     'parameter' => 'Fosfor (P)',
                     'parameter_key' => 'phosphorus',
@@ -311,7 +311,7 @@ class AnomalyAlertEvaluator
             $kMin = (float) ($thresholds['potassium']['ideal_min'] ?? 100.0);
             $kMax = (float) ($thresholds['potassium']['ideal_max'] ?? 200.0);
 
-            if ($potassium > 0 && $potassium < $kMin) {
+            if ($potassium >= 0 && $potassium < $kMin) {
                 $alerts->push([
                     'parameter' => 'Kalium (K)',
                     'parameter_key' => 'potassium',

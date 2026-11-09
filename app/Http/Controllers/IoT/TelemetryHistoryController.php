@@ -67,40 +67,53 @@ class TelemetryHistoryController extends Controller
             $validSelectedDevice = $devices->first(fn ($d) => (string) $d->id === (string) $deviceId || $d->code === (string) $deviceId);
         }
 
-        $thresholds = $thresholdResolver->resolveForSchool($targetSchoolId);
-
-        $query = $this->buildFilteredQuery($request, $devices, $thresholds, $validationError)
+        $query = $this->buildFilteredQuery($request, $devices, $thresholdResolver, $validationError)
             ->when($targetSchoolId, fn ($query) => $query->whereHas('device', fn ($deviceQuery) => $deviceQuery->where('school_id', $targetSchoolId)));
 
         // Active Actionable Alert Semantics:
-        // Distinguish active emergencies on fresh readings from historical deviations.
+        // Distinguish active emergencies on fresh hardware readings from historical deviations.
         $activeAlerts = collect();
         $alertDevice = null;
         $isFreshAlert = false;
 
-        $isViewingPastDate = $request->filled('end_date') &&
-            Carbon::parse($request->query('end_date'))->endOfDay()->isPast() &&
-            ! Carbon::parse($request->query('end_date'))->isToday();
+        $hasDateFilter = $request->filled('start_date') || $request->filled('end_date');
 
-        if (! $isViewingPastDate && ! $validationError) {
+        if (! $hasDateFilter && $validationError === null) {
             $candidateReading = null;
+
             if ($validSelectedDevice) {
+                // Selected station: strictly hardware provenance, latest recorded reading
                 $candidateReading = TelemetryReading::where('device_id', $validSelectedDevice->id)
+                    ->where('provenance', 'hardware')
+                    ->whereNotNull('recorded_at')
                     ->latest('recorded_at')
                     ->first();
             } else {
-                $candidateReading = TelemetryReading::whereIn('device_id', $devices->pluck('id'))
-                    ->where('provenance', 'hardware')
-                    ->latest('recorded_at')
-                    ->first();
+                // All stations: strictly hardware provenance among authorized devices
+                $deviceIds = $devices->pluck('id')->all();
+                if (! empty($deviceIds)) {
+                    $candidateReading = TelemetryReading::whereIn('device_id', $deviceIds)
+                        ->where('provenance', 'hardware')
+                        ->whereNotNull('recorded_at')
+                        ->latest('recorded_at')
+                        ->first();
+                }
             }
 
-            if ($candidateReading && $candidateReading->recorded_at) {
-                $timeout = $availabilityResolver->getTimeoutSeconds($candidateReading->device);
+            if ($candidateReading && $candidateReading->recorded_at && $candidateReading->device) {
+                $targetDevice = $candidateReading->device;
+                $timeout = $availabilityResolver->getTimeoutSeconds($targetDevice);
+
+                // Freshness check: must be within device availability heartbeat window
                 if ($candidateReading->recorded_at->greaterThanOrEqualTo(now()->subSeconds($timeout))) {
-                    $isFreshAlert = true;
-                    $activeAlerts = $evaluator->evaluate($candidateReading, $targetSchoolId);
-                    $alertDevice = $candidateReading->device;
+                    $deviceSchoolId = $targetDevice->school_id;
+                    $alerts = $evaluator->evaluate($candidateReading, $deviceSchoolId);
+
+                    if ($alerts->isNotEmpty()) {
+                        $isFreshAlert = true;
+                        $activeAlerts = $alerts;
+                        $alertDevice = $targetDevice;
+                    }
                 }
             }
         }
@@ -111,15 +124,24 @@ class TelemetryHistoryController extends Controller
         $onlineDevicesCount = $devices->filter(fn ($d) => $availabilityResolver->isOnline($d))->count();
         $schoolTotalReadings = TelemetryReading::whereIn('device_id', $devices->pluck('id'))->count();
 
-        // Selected period label
+        // Selected period label with safe parsing guard
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
-        $periodLabel = match (true) {
-            $request->filled('start_date') && $request->filled('end_date') => Carbon::parse($startDate)->isoFormat('D MMM Y').' – '.Carbon::parse($endDate)->isoFormat('D MMM Y').' (WIB)',
-            $request->filled('start_date') => 'Sejak '.Carbon::parse($startDate)->isoFormat('D MMM Y').' (WIB)',
-            $request->filled('end_date') => 'Sampai '.Carbon::parse($endDate)->isoFormat('D MMM Y').' (WIB)',
-            default => 'Semua Riwayat Waktu',
-        };
+        $periodLabel = 'Semua Riwayat Waktu';
+
+        if ($validationError === null) {
+            if ($request->filled('start_date') && $request->filled('end_date')) {
+                $periodLabel = Carbon::createFromFormat('Y-m-d', $startDate, 'Asia/Jakarta')->isoFormat('D MMM Y')
+                    .' – '
+                    .Carbon::createFromFormat('Y-m-d', $endDate, 'Asia/Jakarta')->isoFormat('D MMM Y').' (WIB)';
+            } elseif ($request->filled('start_date')) {
+                $periodLabel = 'Sejak '.Carbon::createFromFormat('Y-m-d', $startDate, 'Asia/Jakarta')->isoFormat('D MMM Y').' (WIB)';
+            } elseif ($request->filled('end_date')) {
+                $periodLabel = 'Sampai '.Carbon::createFromFormat('Y-m-d', $endDate, 'Asia/Jakarta')->isoFormat('D MMM Y').' (WIB)';
+            }
+        } else {
+            $periodLabel = 'Filter Tanggal Tidak Valid';
+        }
 
         $readings = $query->paginate(25)->withQueryString();
 
@@ -189,8 +211,7 @@ class TelemetryHistoryController extends Controller
             ->orderBy('code')
             ->get();
 
-        $thresholds = $thresholdResolver->resolveForSchool($targetSchoolId);
-        $query = $this->buildFilteredQuery($request, $devices, $thresholds, $validationError)
+        $query = $this->buildFilteredQuery($request, $devices, $thresholdResolver, $validationError)
             ->when($targetSchoolId, fn ($query) => $query->whereHas('device', fn ($deviceQuery) => $deviceQuery->where('school_id', $targetSchoolId)));
 
         $filename = 'bitanic-telemetry-'.now()->setTimezone('Asia/Jakarta')->format('Ymd_His').'.csv';
@@ -199,20 +220,18 @@ class TelemetryHistoryController extends Controller
     }
 
     /**
-     * Validate incoming HTTP filter inputs.
+     * Validate incoming HTTP filter inputs strictly before any parsing.
      */
     protected function validateFilterInputs(Request $request): ?string
     {
         $validator = Validator::make($request->query(), [
             'device_id' => ['nullable', 'string', 'max:50'],
-            'start_date' => ['nullable', 'date_format:Y-m-d'],
-            'end_date' => ['nullable', 'date_format:Y-m-d'],
+            'start_date' => ['nullable', 'string', 'max:15'],
+            'end_date' => ['nullable', 'string', 'max:15'],
             'status' => ['nullable', 'in:all,normal,anomaly'],
             'provenance' => ['nullable', 'in:all,hardware,simulation,fixture'],
             'school_id' => ['nullable', 'integer'],
         ], [
-            'start_date.date_format' => 'Format tanggal mulai tidak valid (harus YYYY-MM-DD).',
-            'end_date.date_format' => 'Format tanggal akhir tidak valid (harus YYYY-MM-DD).',
             'status.in' => 'Pilihan status kondisi tidak valid.',
             'provenance.in' => 'Pilihan asal data tidak valid.',
         ]);
@@ -221,8 +240,23 @@ class TelemetryHistoryController extends Controller
             return $validator->errors()->first();
         }
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            if ($request->query('start_date') > $request->query('end_date')) {
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+
+        if ($startDate !== null && $startDate !== '') {
+            if (! $this->isValidCalendarDate($startDate)) {
+                return 'Format tanggal mulai tidak valid (harus YYYY-MM-DD dengan tanggal kalender yang benar).';
+            }
+        }
+
+        if ($endDate !== null && $endDate !== '') {
+            if (! $this->isValidCalendarDate($endDate)) {
+                return 'Format tanggal akhir tidak valid (harus YYYY-MM-DD dengan tanggal kalender yang benar).';
+            }
+        }
+
+        if ($startDate !== null && $startDate !== '' && $endDate !== null && $endDate !== '') {
+            if ($startDate > $endDate) {
                 return 'Tanggal mulai tidak boleh melebihi tanggal akhir.';
             }
         }
@@ -231,16 +265,29 @@ class TelemetryHistoryController extends Controller
     }
 
     /**
-     * Build base query with incoming HTTP filters, canonical thresholds, and cross-school IDOR protection.
+     * Validate that a string matches YYYY-MM-DD and represents a real calendar date.
+     */
+    protected function isValidCalendarDate(mixed $date): bool
+    {
+        if (! is_string($date) || ! preg_match('/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/', $date)) {
+            return false;
+        }
+
+        [$year, $month, $day] = explode('-', $date);
+
+        return checkdate((int) $month, (int) $day, (int) $year);
+    }
+
+    /**
+     * Build base query with incoming HTTP filters, multi-school canonical thresholds, and fail-closed security.
      *
      * @param  Collection<int, Device>  $devices
-     * @param  array<string, array<string, mixed>>  $thresholds
      * @return Builder<TelemetryReading>
      */
     protected function buildFilteredQuery(
         Request $request,
         Collection $devices,
-        array $thresholds,
+        AgronomicThresholdResolver $thresholdResolver,
         ?string $validationError = null
     ): Builder {
         $query = TelemetryReading::with('device')
@@ -260,7 +307,7 @@ class TelemetryHistoryController extends Controller
                 $query->where('device_id', $validDevice->id);
             } else {
                 // Cross-school IDOR attempt: requested device does not belong to authorized school
-                $query->whereRaw('1 = 0');
+                return $query->whereRaw('1 = 0');
             }
         }
 
@@ -270,7 +317,7 @@ class TelemetryHistoryController extends Controller
                 $startUtc = Carbon::createFromFormat('Y-m-d H:i:s', $request->query('start_date').' 00:00:00', 'Asia/Jakarta')->setTimezone('UTC');
                 $query->where('recorded_at', '>=', $startUtc);
             } catch (\Throwable) {
-                $query->whereRaw('1 = 0');
+                return $query->whereRaw('1 = 0');
             }
         }
 
@@ -279,7 +326,7 @@ class TelemetryHistoryController extends Controller
                 $endUtc = Carbon::createFromFormat('Y-m-d H:i:s', $request->query('end_date').' 23:59:59', 'Asia/Jakarta')->setTimezone('UTC');
                 $query->where('recorded_at', '<=', $endUtc);
             } catch (\Throwable) {
-                $query->whereRaw('1 = 0');
+                return $query->whereRaw('1 = 0');
             }
         }
 
@@ -289,61 +336,96 @@ class TelemetryHistoryController extends Controller
             $query->where('provenance', $provenance);
         }
 
-        // 4. Condition status filter matching canonical threshold resolver
+        // 4. Condition status filter matching canonical threshold resolver per device owning school
         $status = $request->query('status', 'all');
-        if ($status === 'anomaly') {
-            $query->where(function (Builder $q) use ($thresholds) {
-                $q->where(function ($sub) {
-                    $sub->whereNotNull('threshold_flags')
-                        ->where('threshold_flags', '!=', '[]')
-                        ->where('threshold_flags', '!=', '{}');
-                })
-                    ->orWhere('ph', '<', (float) ($thresholds['ph']['ideal_min'] ?? 6.0))
-                    ->orWhere('ph', '>', (float) ($thresholds['ph']['ideal_max'] ?? 7.2))
-                    ->orWhere('ec', '<', (float) ($thresholds['ec']['ideal_min'] ?? 1000.0))
-                    ->orWhere('ec', '>', (float) ($thresholds['ec']['ideal_max'] ?? 2200.0))
-                    ->orWhere('humidity', '<', (float) ($thresholds['moisture']['ideal_min'] ?? 45.0))
-                    ->orWhere('humidity', '>', (float) ($thresholds['moisture']['ideal_max'] ?? 65.0))
-                    ->orWhere('temperature', '<', (float) ($thresholds['temperature']['ideal_min'] ?? 22.0))
-                    ->orWhere('temperature', '>', (float) ($thresholds['temperature']['ideal_max'] ?? 29.0))
-                    ->orWhere('nitrogen', '<', (float) ($thresholds['nitrogen']['ideal_min'] ?? 40.0))
-                    ->orWhere('nitrogen', '>', (float) ($thresholds['nitrogen']['ideal_max'] ?? 120.0))
-                    ->orWhere('phosphorus', '<', (float) ($thresholds['phosphorus']['ideal_min'] ?? 25.0))
-                    ->orWhere('phosphorus', '>', (float) ($thresholds['phosphorus']['ideal_max'] ?? 60.0))
-                    ->orWhere('potassium', '<', (float) ($thresholds['potassium']['ideal_min'] ?? 100.0))
-                    ->orWhere('potassium', '>', (float) ($thresholds['potassium']['ideal_max'] ?? 200.0));
-            });
-        } elseif ($status === 'normal') {
-            $query->where(function (Builder $q) use ($thresholds) {
-                // Must not have stored anomaly threshold flags
-                $q->where(function ($sub) {
-                    $sub->whereNull('threshold_flags')
-                        ->orWhere('threshold_flags', '[]')
-                        ->orWhere('threshold_flags', '{}');
-                });
+        if (in_array($status, ['anomaly', 'normal'], true)) {
+            $schoolGroups = $devices->groupBy(fn ($d) => $d->school_id ?? 0);
 
-                // Must have at least one measured parameter (not empty/all-null)
-                $q->where(function ($sub) {
-                    $sub->whereNotNull('ph')
-                        ->orWhereNotNull('ec')
-                        ->orWhereNotNull('humidity')
-                        ->orWhereNotNull('temperature')
-                        ->orWhereNotNull('nitrogen')
-                        ->orWhereNotNull('phosphorus')
-                        ->orWhereNotNull('potassium');
-                });
+            if ($schoolGroups->isEmpty()) {
+                return $query->whereRaw('1 = 0');
+            }
 
-                // All non-null parameters must fall within ideal range
-                $q->where(fn ($sub) => $sub->whereNull('ph')->orWhereBetween('ph', [(float) ($thresholds['ph']['ideal_min'] ?? 6.0), (float) ($thresholds['ph']['ideal_max'] ?? 7.2)]))
-                    ->where(fn ($sub) => $sub->whereNull('ec')->orWhereBetween('ec', [(float) ($thresholds['ec']['ideal_min'] ?? 1000.0), (float) ($thresholds['ec']['ideal_max'] ?? 2200.0)]))
-                    ->where(fn ($sub) => $sub->whereNull('humidity')->orWhereBetween('humidity', [(float) ($thresholds['moisture']['ideal_min'] ?? 45.0), (float) ($thresholds['moisture']['ideal_max'] ?? 65.0)]))
-                    ->where(fn ($sub) => $sub->whereNull('temperature')->orWhereBetween('temperature', [(float) ($thresholds['temperature']['ideal_min'] ?? 22.0), (float) ($thresholds['temperature']['ideal_max'] ?? 29.0)]))
-                    ->where(fn ($sub) => $sub->whereNull('nitrogen')->orWhereBetween('nitrogen', [(float) ($thresholds['nitrogen']['ideal_min'] ?? 40.0), (float) ($thresholds['nitrogen']['ideal_max'] ?? 120.0)]))
-                    ->where(fn ($sub) => $sub->whereNull('phosphorus')->orWhereBetween('phosphorus', [(float) ($thresholds['phosphorus']['ideal_min'] ?? 25.0), (float) ($thresholds['phosphorus']['ideal_max'] ?? 60.0)]))
-                    ->where(fn ($sub) => $sub->whereNull('potassium')->orWhereBetween('potassium', [(float) ($thresholds['potassium']['ideal_min'] ?? 100.0), (float) ($thresholds['potassium']['ideal_max'] ?? 200.0)]));
+            $query->where(function (Builder $statusQuery) use ($schoolGroups, $thresholdResolver, $status) {
+                foreach ($schoolGroups as $schoolId => $schoolDevices) {
+                    $deviceIds = $schoolDevices->pluck('id')->all();
+                    if (empty($deviceIds)) {
+                        continue;
+                    }
+
+                    $thresholds = $thresholdResolver->resolveForSchool($schoolId ?: null);
+
+                    $statusQuery->orWhere(function (Builder $sub) use ($deviceIds, $thresholds, $status) {
+                        $sub->whereIn('device_id', $deviceIds);
+                        if ($status === 'anomaly') {
+                            $this->applyAnomalySqlCondition($sub, $thresholds);
+                        } else {
+                            $this->applyNormalSqlCondition($sub, $thresholds);
+                        }
+                    });
+                }
             });
         }
 
         return $query;
+    }
+
+    /**
+     * Apply anomaly condition matching canonical AnomalyAlertEvaluator thresholds.
+     *
+     * @param  array<string, array<string, mixed>>  $thresholds
+     */
+    protected function applyAnomalySqlCondition(Builder $query, array $thresholds): void
+    {
+        $query->where(function (Builder $q) use ($thresholds) {
+            $q->where(function ($sub) {
+                $sub->whereNotNull('threshold_flags')
+                    ->where('threshold_flags', '!=', '[]')
+                    ->where('threshold_flags', '!=', '{}');
+            })
+                ->orWhere(fn ($sub) => $sub->whereNotNull('ph')->where(fn ($s) => $s->where('ph', '<', (float) ($thresholds['ph']['ideal_min'] ?? 6.0))->orWhere('ph', '>', (float) ($thresholds['ph']['ideal_max'] ?? 7.2))))
+                ->orWhere(fn ($sub) => $sub->whereNotNull('ec')->where(fn ($s) => $s->where('ec', '<', (float) ($thresholds['ec']['ideal_min'] ?? 1000.0))->orWhere('ec', '>', (float) ($thresholds['ec']['ideal_max'] ?? 2200.0))))
+                ->orWhere(fn ($sub) => $sub->whereNotNull('humidity')->where(fn ($s) => $s->where('humidity', '<', (float) ($thresholds['moisture']['ideal_min'] ?? 45.0))->orWhere('humidity', '>', (float) ($thresholds['moisture']['ideal_max'] ?? 65.0))))
+                ->orWhere(fn ($sub) => $sub->whereNotNull('temperature')->where(fn ($s) => $s->where('temperature', '<', (float) ($thresholds['temperature']['ideal_min'] ?? 22.0))->orWhere('temperature', '>', (float) ($thresholds['temperature']['ideal_max'] ?? 29.0))))
+                ->orWhere(fn ($sub) => $sub->whereNotNull('nitrogen')->where(fn ($s) => $s->where('nitrogen', '<', (float) ($thresholds['nitrogen']['ideal_min'] ?? 40.0))->orWhere('nitrogen', '>', (float) ($thresholds['nitrogen']['ideal_max'] ?? 120.0))))
+                ->orWhere(fn ($sub) => $sub->whereNotNull('phosphorus')->where(fn ($s) => $s->where('phosphorus', '<', (float) ($thresholds['phosphorus']['ideal_min'] ?? 25.0))->orWhere('phosphorus', '>', (float) ($thresholds['phosphorus']['ideal_max'] ?? 60.0))))
+                ->orWhere(fn ($sub) => $sub->whereNotNull('potassium')->where(fn ($s) => $s->where('potassium', '<', (float) ($thresholds['potassium']['ideal_min'] ?? 100.0))->orWhere('potassium', '>', (float) ($thresholds['potassium']['ideal_max'] ?? 200.0))));
+        });
+    }
+
+    /**
+     * Apply normal condition matching canonical AnomalyAlertEvaluator thresholds.
+     *
+     * @param  array<string, array<string, mixed>>  $thresholds
+     */
+    protected function applyNormalSqlCondition(Builder $query, array $thresholds): void
+    {
+        $query->where(function (Builder $q) use ($thresholds) {
+            // 1. Must not have stored anomaly threshold flags
+            $q->where(function ($sub) {
+                $sub->whereNull('threshold_flags')
+                    ->orWhere('threshold_flags', '[]')
+                    ->orWhere('threshold_flags', '{}');
+            });
+
+            // 2. Must have at least one measured parameter (not empty/all-null)
+            $q->where(function ($sub) {
+                $sub->whereNotNull('ph')
+                    ->orWhereNotNull('ec')
+                    ->orWhereNotNull('humidity')
+                    ->orWhereNotNull('temperature')
+                    ->orWhereNotNull('nitrogen')
+                    ->orWhereNotNull('phosphorus')
+                    ->orWhereNotNull('potassium');
+            });
+
+            // 3. All non-null parameters must fall within ideal range
+            $q->where(fn ($sub) => $sub->whereNull('ph')->orWhereBetween('ph', [(float) ($thresholds['ph']['ideal_min'] ?? 6.0), (float) ($thresholds['ph']['ideal_max'] ?? 7.2)]))
+                ->where(fn ($sub) => $sub->whereNull('ec')->orWhereBetween('ec', [(float) ($thresholds['ec']['ideal_min'] ?? 1000.0), (float) ($thresholds['ec']['ideal_max'] ?? 2200.0)]))
+                ->where(fn ($sub) => $sub->whereNull('humidity')->orWhereBetween('humidity', [(float) ($thresholds['moisture']['ideal_min'] ?? 45.0), (float) ($thresholds['moisture']['ideal_max'] ?? 65.0)]))
+                ->where(fn ($sub) => $sub->whereNull('temperature')->orWhereBetween('temperature', [(float) ($thresholds['temperature']['ideal_min'] ?? 22.0), (float) ($thresholds['temperature']['ideal_max'] ?? 29.0)]))
+                ->where(fn ($sub) => $sub->whereNull('nitrogen')->orWhereBetween('nitrogen', [(float) ($thresholds['nitrogen']['ideal_min'] ?? 40.0), (float) ($thresholds['nitrogen']['ideal_max'] ?? 120.0)]))
+                ->where(fn ($sub) => $sub->whereNull('phosphorus')->orWhereBetween('phosphorus', [(float) ($thresholds['phosphorus']['ideal_min'] ?? 25.0), (float) ($thresholds['phosphorus']['ideal_max'] ?? 60.0)]))
+                ->where(fn ($sub) => $sub->whereNull('potassium')->orWhereBetween('potassium', [(float) ($thresholds['potassium']['ideal_min'] ?? 100.0), (float) ($thresholds['potassium']['ideal_max'] ?? 200.0)]));
+        });
     }
 }

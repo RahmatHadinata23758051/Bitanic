@@ -92,7 +92,7 @@
                             Peringatan Deviasi Aktif · {{ $alertDevice?->code }} ({{ $alertDevice?->name }})
                         </h2>
                         <p class="text-xs text-amber-800">
-                            Terdeteksi {{ $activeAlerts->count() }} parameter tanah di luar batas acuan ideal pada pembacaan sensor terkini.
+                            Terdeteksi {{ $activeAlerts->count() }} parameter tanah di luar batas acuan ideal pada stasiun {{ $alertDevice?->code }} (pembacaan sensor terkini).
                         </p>
                     </div>
                 </div>
