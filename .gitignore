@@ -32,6 +32,7 @@ upi-edge/
 .env.production
 .env.local
 .env.*.local
+.env.browser_e2e
 !.env.example
 
 # ==============================================================================
