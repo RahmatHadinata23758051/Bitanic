@@ -58,38 +58,38 @@
     <!-- 4 Stats Summary Cards Bento -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Total Praktikan</span>
-            <div class="font-tabular text-2xl font-bold text-slate-900 mt-1.5">
+            <div class="text-xs font-medium text-slate-500">Total Praktikan</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
                 {{ $stats['total_students'] }} <span class="text-xs font-normal text-slate-500">Siswa</span>
             </div>
-            <span class="text-[11px] text-slate-400 mt-1 block">Terdaftar aktif di sistem</span>
+            <div class="text-[11px] text-slate-400 mt-0.5">Terdaftar aktif di sistem</div>
         </div>
         <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Siswa Tersertifikasi</span>
-            <div class="font-tabular text-2xl font-bold text-emerald-700 mt-1.5">
+            <div class="text-xs font-medium text-slate-500">Siswa Tersertifikasi</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
                 {{ $stats['certified'] }} <span class="text-xs font-normal text-slate-500">Siswa</span>
             </div>
-            <span class="text-[11px] text-slate-400 mt-1 block">
+            <div class="text-[11px] text-slate-400 mt-0.5">
                 {{ $stats['certified'] > 0 ? 'Uji operasional IoT' : 'Belum ada sertifikasi diterbitkan' }}
-            </span>
+            </div>
         </div>
         <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Predikat A & B</span>
-            <div class="font-tabular text-2xl font-bold text-indigo-700 mt-1.5">
+            <div class="text-xs font-medium text-slate-500">Predikat A &amp; B</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
                 {{ $stats['pred_a'] + $stats['pred_b'] }} <span class="text-xs font-normal text-slate-500">Siswa</span>
             </div>
-            <span class="text-[11px] text-slate-400 mt-1 block">Sangat Baik & Baik</span>
+            <div class="text-[11px] text-slate-400 mt-0.5">Sangat Baik &amp; Baik</div>
         </div>
         <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Rata-Rata Angkatan</span>
-            <div class="font-tabular text-2xl font-bold text-slate-900 mt-1.5">
+            <div class="text-xs font-medium text-slate-500">Rata-Rata Angkatan</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
                 @if($stats['avg_score'] !== null)
                     {{ number_format($stats['avg_score'], 1) }}
                 @else
                     —
                 @endif
             </div>
-            <span class="text-[11px] text-slate-400 mt-1 block">Skala penilaian 0 – 100</span>
+            <div class="text-[11px] text-slate-400 mt-0.5">Skala penilaian 0 – 100</div>
         </div>
     </div>
 
@@ -97,8 +97,8 @@
     <div class="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-slate-900">Rekapitulasi Capaian Kompetensi Siswa</h3>
-                <p class="text-xs text-slate-500">Nilai rata-rata LKS modul 1 s/d 12 dan predikat akhir kompetensi</p>
+                <h3 class="text-sm font-semibold text-slate-900">Rekapitulasi Capaian Kompetensi Siswa</h3>
+                <p class="text-xs text-slate-500">Buku induk nilai asesmen kompetensi kejuruan dan status sertifikasi Trainer Kit</p>
             </div>
 
             <!-- Class Filter -->
@@ -152,7 +152,7 @@
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="py-3.5 px-3">
                                 <div class="font-semibold text-slate-900">{{ $s->name }}</div>
-                                <div class="font-tabular text-[11px] text-slate-500">{{ $profile?->identifier_number ?? 'NISN —' }}</div>
+                                <div class="tabular-nums text-[11px] text-slate-500">{{ $profile?->identifier_number ?? 'NISN —' }}</div>
                             </td>
                             <td class="py-3.5 px-3">
                                 <div class="font-semibold text-slate-800">{{ $profile?->class_grade ?? ($profile?->classroom?->name ?? '—') }}</div>
@@ -160,14 +160,14 @@
                             </td>
                             <td class="py-3.5 px-3">
                                 @if($profile?->assigned_kit_id)
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold font-tabular bg-slate-100 text-slate-700">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold font-mono bg-slate-100 text-slate-700">
                                         TK-0{{ $profile->assigned_kit_id }}
                                     </span>
                                 @else
                                     <span class="text-slate-400 italic text-[11px]">Belum Ditugaskan</span>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-3 text-center font-tabular font-semibold">
+                            <td class="py-3.5 px-3 text-center tabular-nums font-medium">
                                 @if($profile?->attendance_percent !== null)
                                     <span class="{{ (float)$profile->attendance_percent >= 90 ? 'text-emerald-700' : 'text-amber-600' }}">
                                         {{ number_format((float)$profile->attendance_percent, 1) }}%
@@ -176,7 +176,7 @@
                                     <span class="text-slate-400">—</span>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-3 text-center font-tabular font-bold text-sm">
+                            <td class="py-3.5 px-3 text-center tabular-nums font-semibold text-sm">
                                 @if($grade !== null)
                                     <span class="text-slate-900">{{ number_format($grade, 1) }}</span>
                                 @else
@@ -185,11 +185,11 @@
                             </td>
                             <td class="py-3.5 px-3 text-center">
                                 @if($pred)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold {{ $pred === 'A' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : ($pred === 'B' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : ($pred === 'C' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-rose-50 text-rose-700 border border-rose-200')) }}">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $pred === 'A' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : ($pred === 'B' ? 'bg-slate-100 text-slate-700 border border-slate-200' : ($pred === 'C' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-rose-50 text-rose-800 border border-rose-200')) }}">
                                         {{ $pred }}
                                     </span>
                                 @else
-                                    <span class="text-slate-400 font-tabular">—</span>
+                                    <span class="text-slate-400 tabular-nums">—</span>
                                 @endif
                             </td>
                             <td class="py-3.5 px-3 text-right">
