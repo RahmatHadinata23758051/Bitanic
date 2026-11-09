@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Academic;
 
 use App\Http\Controllers\Controller;
+use App\Models\Classroom;
 use App\Models\ModulePracticum;
 use App\Models\School;
 use App\Models\StudentReport;
@@ -64,7 +65,7 @@ class PracticumReportController extends Controller
             'submitted' => (clone $baseQuery)->where('status', 'submitted')->count(),
             'graded' => (clone $baseQuery)->where('status', 'graded')->count(),
             'revision' => (clone $baseQuery)->whereIn('status', ['revision', 'revision_needed'])->count(),
-            'avg_grade' => (clone $baseQuery)->whereNotNull('final_grade')->avg('final_grade') ?? 0,
+            'avg_grade' => (clone $baseQuery)->whereNotNull('final_grade')->avg('final_grade'),
         ];
 
         $query = (clone $baseQuery)->with(['user.profile', 'module', 'teacher', 'device', 'evidenceReading'])
@@ -81,12 +82,16 @@ class PracticumReportController extends Controller
 
         $reports = $query->paginate(15)->withQueryString();
         $modules = ModulePracticum::orderBy('meeting_number')->get();
+        $classrooms = Classroom::when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->orderBy('name')
+            ->get();
         $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
 
         return view('pages.reports.practicum-reports', [
             'user' => $user,
             'reports' => $reports,
             'modules' => $modules,
+            'classrooms' => $classrooms,
             'stats' => $stats,
             'currentStatus' => $statusFilter,
             'currentModuleId' => $moduleIdFilter,
