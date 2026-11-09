@@ -46,7 +46,7 @@ class TrainerKitManagerController extends Controller
                 : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
         }
 
-        $kits = Device::with(['latestReading', 'activeApiKey'])
+        $kits = Device::with(['latestReading', 'activeApiKey', 'school'])
             ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
             ->orderBy('code')
             ->paginate(15)
