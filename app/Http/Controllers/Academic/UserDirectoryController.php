@@ -44,7 +44,11 @@ class UserDirectoryController extends Controller
             ->orderBy('name');
 
         if ($role && in_array($role, ['siswa', 'guru', 'superuser', 'admin'], true)) {
-            $query->where('role', $role);
+            if (in_array($role, ['superuser', 'admin'], true)) {
+                $query->whereIn('role', ['superuser', 'admin']);
+            } else {
+                $query->where('role', $role);
+            }
         }
 
         if ($search !== '') {

@@ -166,4 +166,43 @@ class UserDirectoryTest extends TestCase
         $response->assertSee('Student School A');
         $response->assertDontSee('Student School B');
     }
+
+    public function test_admin_and_superuser_roles_are_correctly_labelled_and_filtered(): void
+    {
+        $school = School::create([
+            'npsn' => '20200407',
+            'name' => 'SMK Admin Role Test',
+            'slug' => 'smk-admin-role-test',
+            'status' => 'active',
+        ]);
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'school_id' => $school->id,
+            'name' => 'Administrator Bitanic',
+        ]);
+
+        $teacher = User::factory()->create([
+            'role' => 'guru',
+            'school_id' => $school->id,
+            'name' => 'Guru Penguji',
+        ]);
+
+        $otherTeacher = User::factory()->create([
+            'role' => 'guru',
+            'school_id' => $school->id,
+            'name' => 'Guru Kedua Lainnya',
+        ]);
+
+        $response = $this->actingAs($teacher)->get('/users-data');
+        $response->assertOk();
+        $response->assertSee('Administrator Bitanic');
+        $response->assertSee('Admin');
+
+        // Filter by role=admin excludes other teachers from directory table
+        $adminFilterResponse = $this->actingAs($teacher)->get('/users-data?role=admin');
+        $adminFilterResponse->assertOk();
+        $adminFilterResponse->assertSee('Administrator Bitanic');
+        $adminFilterResponse->assertDontSee('Guru Kedua Lainnya');
+    }
 }
