@@ -120,3 +120,4 @@ This architecture baseline is backed by exhaustive automated test evidence:
 - **Code Style & Formatting**: Laravel Pint passed.
 - **Frontend Assets**: Vite production build succeeded (93 kB CSS, 1.87 MB JS).
 - **Baseline Immutability**: `upi-edge/` and `dump_upiedge.sql` preserved with zero modifications.
+
