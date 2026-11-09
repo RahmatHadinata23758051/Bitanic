@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Academic;
 
 use App\Http\Controllers\Controller;
+use App\Models\Classroom;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -39,13 +40,17 @@ class CompetencyAssessmentController extends Controller
         $classFilter = $request->query('class');
 
         $query = User::where('role', 'siswa')
-            ->with(['profile', 'studentReports.module'])
+            ->with(['profile.classroom', 'profile.studentGroup', 'studentReports.module'])
             ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->when($isStudent, fn ($q) => $q->where('id', $user->id));
 
         if ($classFilter) {
-            $query->whereHas('profile', function ($q) use ($classFilter) {
+            $isNumericClass = is_numeric($classFilter);
+            $query->whereHas('profile', function ($q) use ($classFilter, $isNumericClass) {
                 $q->where('class_grade', $classFilter);
+                if ($isNumericClass) {
+                    $q->orWhere('classroom_id', (int) $classFilter);
+                }
             });
         }
 
@@ -55,32 +60,58 @@ class CompetencyAssessmentController extends Controller
             ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->when($isStudent, fn ($q) => $q->where('id', $user->id))
             ->when($isStudent && $classFilter, function ($q) use ($user, $classFilter) {
-                $profileQuery = fn ($pq) => $pq->where('user_id', $user->id)->where('class_grade', $classFilter);
+                $isNumeric = is_numeric($classFilter);
+                $profileQuery = fn ($pq) => $pq->where('user_id', $user->id)
+                    ->where(function ($sub) use ($classFilter, $isNumeric) {
+                        $sub->where('class_grade', $classFilter);
+                        if ($isNumeric) {
+                            $sub->orWhere('classroom_id', (int) $classFilter);
+                        }
+                    });
                 $q->whereHas('profile', $profileQuery);
             })
             ->when(! $isStudent && $classFilter, function ($q) use ($classFilter) {
-                $q->whereHas('profile', function ($pq) use ($classFilter) {
+                $isNumeric = is_numeric($classFilter);
+                $q->whereHas('profile', function ($pq) use ($classFilter, $isNumeric) {
                     $pq->where('class_grade', $classFilter);
+                    if ($isNumeric) {
+                        $pq->orWhere('classroom_id', (int) $classFilter);
+                    }
                 });
             })
-            ->with('profile')
+            ->with(['profile.classroom', 'profile.studentGroup'])
             ->get();
+
+        $gradedStudents = $allStudents->filter(fn ($s) => $s->profile?->average_grade !== null);
+        $avgScore = $gradedStudents->isNotEmpty()
+            ? (float) $gradedStudents->avg(fn ($s) => $s->profile->average_grade)
+            : null;
 
         $stats = [
             'total_students' => $allStudents->count(),
-            'certified' => $allStudents->filter(fn ($s) => $s->profile?->trainer_certified)->count(),
+            'certified' => $allStudents->filter(fn ($s) => (bool) $s->profile?->trainer_certified)->count(),
             'pred_a' => $allStudents->filter(fn ($s) => $s->profile?->competency_predicative === 'A')->count(),
             'pred_b' => $allStudents->filter(fn ($s) => $s->profile?->competency_predicative === 'B')->count(),
             'pred_c' => $allStudents->filter(fn ($s) => $s->profile?->competency_predicative === 'C')->count(),
-            'avg_score' => $allStudents->avg(fn ($s) => $s->profile?->average_grade) ?? 0,
+            'avg_score' => $avgScore,
         ];
 
         $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
 
+        $classrooms = Classroom::when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))
+            ->orderBy('name')
+            ->get();
+
+        $availableClasses = $classrooms->isNotEmpty()
+            ? $classrooms->pluck('name')
+            : $allStudents->pluck('profile.class_grade')->filter()->unique()->sort()->values();
+
         return view('pages.assessment.competency-reports', [
+            'user' => $user,
             'students' => $students,
             'stats' => $stats,
             'currentClass' => $classFilter,
+            'availableClasses' => $availableClasses,
             'selectedSchoolId' => $selectedSchoolId,
             'schools' => $schools,
             'isSuperuser' => $isSuperuser,
@@ -115,14 +146,18 @@ class CompetencyAssessmentController extends Controller
         $classFilter = $request->query('class');
 
         $query = User::where('role', 'siswa')
-            ->with('profile')
+            ->with(['profile.classroom', 'profile.studentGroup'])
             ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->when($isStudent, fn ($q) => $q->where('id', $user->id))
             ->orderBy('name');
 
         if ($classFilter) {
-            $query->whereHas('profile', function ($q) use ($classFilter) {
+            $isNumericClass = is_numeric($classFilter);
+            $query->whereHas('profile', function ($q) use ($classFilter, $isNumericClass) {
                 $q->where('class_grade', $classFilter);
+                if ($isNumericClass) {
+                    $q->orWhere('classroom_id', (int) $classFilter);
+                }
             });
         }
 
@@ -145,17 +180,17 @@ class CompetencyAssessmentController extends Controller
             $query->chunk(100, function ($students) use ($handle) {
                 foreach ($students as $student) {
                     $profile = $student->profile;
-                    $grade = $profile?->average_grade ?? 0;
-                    $pred = $profile?->competency_predicative ?? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D')));
+                    $grade = $profile?->average_grade !== null ? (float) $profile->average_grade : null;
+                    $pred = $profile?->competency_predicative ?? ($grade !== null ? ($grade >= 85 ? 'A' : ($grade >= 75 ? 'B' : ($grade >= 65 ? 'C' : 'D'))) : '—');
 
                     fputcsv($handle, [
-                        $student->name,
-                        $profile?->identifier_number ?? '-',
-                        $profile?->class_grade ?? '-',
-                        $profile?->group_name ?? '-',
-                        $profile?->assigned_kit_id ? 'TK-0'.$profile->assigned_kit_id : 'Belum Ditugaskan',
-                        $profile?->attendance_percent !== null ? $profile->attendance_percent.'%' : '-',
-                        number_format((float) $grade, 1),
+                        $this->sanitizeCsvCell($student->name),
+                        $this->sanitizeCsvCell($profile?->identifier_number ?? '—'),
+                        $this->sanitizeCsvCell($profile?->class_grade ?? ($profile?->classroom?->name ?? '—')),
+                        $this->sanitizeCsvCell($profile?->group_name ?? ($profile?->studentGroup?->name ?? '—')),
+                        $this->sanitizeCsvCell($profile?->assigned_kit_id ? 'TK-0'.$profile->assigned_kit_id : 'Belum Ditugaskan'),
+                        $profile?->attendance_percent !== null ? number_format((float) $profile->attendance_percent, 1).'%' : '—',
+                        $grade !== null ? number_format($grade, 1) : '—',
                         $pred,
                         $profile?->trainer_certified ? 'Tersertifikasi' : 'Proses Belajar',
                     ]);
@@ -167,5 +202,22 @@ class CompetencyAssessmentController extends Controller
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
+    }
+
+    /**
+     * Sanitize cell against CSV Formula Injection (CWE-1236 / DDE attack).
+     */
+    protected function sanitizeCsvCell(mixed $value): string
+    {
+        if ($value === null) {
+            return '—';
+        }
+
+        $str = (string) $value;
+        if ($str !== '' && in_array($str[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'".$str;
+        }
+
+        return $str;
     }
 }

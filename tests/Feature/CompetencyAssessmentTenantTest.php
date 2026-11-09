@@ -208,4 +208,56 @@ class CompetencyAssessmentTenantTest extends TestCase
         $this->assertStringContainsString('Siswa Sendiri', $content);
         $this->assertStringNotContainsString('Siswa Lain', $content);
     }
+
+    public function test_assessment_displays_honest_em_dash_when_no_students_have_grades(): void
+    {
+        $school = School::create([
+            'npsn' => '20200308',
+            'name' => 'SMK Tanpa Nilai',
+            'slug' => 'smk-tanpa-nilai',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $school->id, 'name' => 'Siswa Baru']);
+
+        // Student has no profile record yet, representing a newly registered student
+        $response = $this->actingAs($teacher)->get('/assessment');
+        $response->assertOk();
+        $response->assertSee('Siswa Baru');
+        // Average score and student grade should show em-dash '—'
+        $response->assertSee('—');
+    }
+
+    public function test_assessment_csv_export_sanitizes_formula_injection(): void
+    {
+        $school = School::create([
+            'npsn' => '20200309',
+            'name' => 'SMK Uji Injeksi',
+            'slug' => 'smk-uji-injeksi',
+            'status' => 'active',
+        ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
+        $student = User::factory()->create([
+            'role' => 'siswa',
+            'school_id' => $school->id,
+            'name' => '=cmd|\' /C calc\'!A0',
+        ]);
+
+        UserProfile::create([
+            'user_id' => $student->id,
+            'type' => 'siswa',
+            'identifier_number' => '+628123456789',
+            'class_grade' => '@XII ATPH 1',
+            'average_grade' => 85.0,
+        ]);
+
+        $export = $this->actingAs($teacher)->get('/assessment/export');
+        $export->assertOk();
+        $content = $export->streamedContent();
+
+        // Formula injection prefixes must be neutralized with a leading single quote
+        $this->assertStringContainsString("'=cmd|", $content);
+        $this->assertStringContainsString("'+628123456789", $content);
+        $this->assertStringContainsString("'@XII ATPH 1", $content);
+    }
 }

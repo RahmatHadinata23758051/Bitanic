@@ -148,7 +148,7 @@ class DashboardTest extends TestCase
         $response = $this->actingAs(User::factory()->create(['role' => 'guru']))->get('/reports');
 
         $response->assertStatus(200);
-        $response->assertSee('Hub Laporan Lembar Kerja Siswa (LKS)');
+        $response->assertSee('Laporan LKS');
     }
 
     public function test_trainer_kits_route_renders_hardware_fleet(): void
