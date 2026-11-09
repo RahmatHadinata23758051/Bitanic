@@ -89,9 +89,9 @@
                 </div>
 
                 <div class="pt-2">
-                    <h4 class="text-xs font-bold text-slate-900 mb-2">Ambang Batas Agronomi Standar</h4>
+                    <h4 class="text-xs font-bold text-slate-900 mb-2">Ambang Batas Agronomi Standar (7-in-1)</h4>
                     @php $th = $setting->sensor_thresholds ?? []; @endphp
-                    <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div>
                             <label class="text-slate-600 block mb-1">pH Min – Max:</label>
                             <div class="flex items-center gap-1">
@@ -117,11 +117,35 @@
                             </div>
                         </div>
                         <div>
+                            <label class="text-slate-600 block mb-1">Suhu (°C) Min – Max:</label>
+                            <div class="flex items-center gap-1">
+                                <input type="number" step="0.5" name="thresholds[minTemperature]" value="{{ $th['minTemperature'] ?? 22.0 }}" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs font-mono">
+                                <span>-</span>
+                                <input type="number" step="0.5" name="thresholds[maxTemperature]" value="{{ $th['maxTemperature'] ?? 29.0 }}" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs font-mono">
+                            </div>
+                        </div>
+                        <div>
                             <label class="text-slate-600 block mb-1">Nitrogen (mg/kg) Min – Max:</label>
                             <div class="flex items-center gap-1">
                                 <input type="number" step="5" name="thresholds[minNitrogen]" value="{{ $th['minNitrogen'] ?? 40 }}" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs font-mono">
                                 <span>-</span>
                                 <input type="number" step="5" name="thresholds[maxNitrogen]" value="{{ $th['maxNitrogen'] ?? 120 }}" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs font-mono">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-slate-600 block mb-1">Fosfor (mg/kg) Min – Max:</label>
+                            <div class="flex items-center gap-1">
+                                <input type="number" step="5" name="thresholds[minPhosphorus]" value="{{ $th['minPhosphorus'] ?? 25 }}" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs font-mono">
+                                <span>-</span>
+                                <input type="number" step="5" name="thresholds[maxPhosphorus]" value="{{ $th['maxPhosphorus'] ?? 60 }}" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs font-mono">
+                            </div>
+                        </div>
+                        <div class="sm:col-span-2 sm:w-1/2 sm:pr-1.5">
+                            <label class="text-slate-600 block mb-1">Kalium (mg/kg) Min – Max:</label>
+                            <div class="flex items-center gap-1">
+                                <input type="number" step="5" name="thresholds[minPotassium]" value="{{ $th['minPotassium'] ?? 100 }}" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs font-mono">
+                                <span>-</span>
+                                <input type="number" step="5" name="thresholds[maxPotassium]" value="{{ $th['maxPotassium'] ?? 200 }}" class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs font-mono">
                             </div>
                         </div>
                     </div>

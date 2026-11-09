@@ -43,6 +43,23 @@ class SettingsAuditController extends Controller
 
         $setting = SchoolSetting::where('school_id', $schoolId)->first();
 
+        $defaultThresholds = [
+            'minMoisture' => 30.0,
+            'maxMoisture' => 75.0,
+            'minPH' => 5.5,
+            'maxPH' => 7.2,
+            'minEC' => 800,
+            'maxEC' => 2200,
+            'minTemperature' => 22.0,
+            'maxTemperature' => 29.0,
+            'minNitrogen' => 40.0,
+            'maxNitrogen' => 120.0,
+            'minPhosphorus' => 25.0,
+            'maxPhosphorus' => 60.0,
+            'minPotassium' => 100.0,
+            'maxPotassium' => 200.0,
+        ];
+
         if (! $setting) {
             $setting = (object) [
                 'school_id' => $schoolId,
@@ -51,19 +68,12 @@ class SettingsAuditController extends Controller
                 'semester' => 'Ganjil',
                 'course_name' => 'Agribisnis Tanaman Pangan & Hortikultura (ATPH)',
                 'lead_teacher' => '-',
-                'sensor_thresholds' => [
-                    'minMoisture' => 30.0,
-                    'maxMoisture' => 75.0,
-                    'minPH' => 5.5,
-                    'maxPH' => 7.2,
-                    'minEC' => 800,
-                    'maxEC' => 2200,
-                    'minNitrogen' => 40.0,
-                    'maxNitrogen' => 120.0,
-                ],
+                'sensor_thresholds' => $defaultThresholds,
                 'audio_alarm_enabled' => true,
                 'auto_sync_interval_sec' => 3,
             ];
+        } else {
+            $setting->sensor_thresholds = array_merge($defaultThresholds, (array) ($setting->sensor_thresholds ?? []));
         }
 
         $auditLogs = AuditLog::with('user')
@@ -98,11 +108,20 @@ class SettingsAuditController extends Controller
             'thresholds.maxEC' => 'required|numeric|min:0|max:20000|gte:thresholds.minEC',
             'thresholds.minNitrogen' => 'required|numeric|min:0|max:1000',
             'thresholds.maxNitrogen' => 'required|numeric|min:0|max:1000|gte:thresholds.minNitrogen',
+            'thresholds.minTemperature' => 'nullable|numeric|min:-10|max:100',
+            'thresholds.maxTemperature' => 'nullable|numeric|min:-10|max:100'.($request->filled('thresholds.minTemperature') ? '|gte:thresholds.minTemperature' : ''),
+            'thresholds.minPhosphorus' => 'nullable|numeric|min:0|max:1000',
+            'thresholds.maxPhosphorus' => 'nullable|numeric|min:0|max:1000'.($request->filled('thresholds.minPhosphorus') ? '|gte:thresholds.minPhosphorus' : ''),
+            'thresholds.minPotassium' => 'nullable|numeric|min:0|max:1000',
+            'thresholds.maxPotassium' => 'nullable|numeric|min:0|max:1000'.($request->filled('thresholds.minPotassium') ? '|gte:thresholds.minPotassium' : ''),
         ], [
             'thresholds.maxMoisture.gte' => 'Lengas tanah maksimum harus lebih besar atau sama dengan minimum.',
             'thresholds.maxPH.gte' => 'Derajat keasaman (pH) maksimum harus lebih besar atau sama dengan minimum.',
             'thresholds.maxEC.gte' => 'Konduktivitas listrik (EC) maksimum harus lebih besar atau sama dengan minimum.',
             'thresholds.maxNitrogen.gte' => 'Kadar Nitrogen maksimum harus lebih besar atau sama dengan minimum.',
+            'thresholds.maxTemperature.gte' => 'Suhu tanah maksimum harus lebih besar atau sama dengan minimum.',
+            'thresholds.maxPhosphorus.gte' => 'Kadar Fosfor maksimum harus lebih besar atau sama dengan minimum.',
+            'thresholds.maxPotassium.gte' => 'Kadar Kalium maksimum harus lebih besar atau sama dengan minimum.',
         ]);
 
         $user = Auth::user();
