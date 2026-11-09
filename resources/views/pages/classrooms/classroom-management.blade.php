@@ -2,12 +2,13 @@
 
 @section('content')
 <div class="space-y-6" x-data="{
-    activeTab: 'classes',
     showClassModal: false,
+    showEditClassModal: false,
     showGroupModal: false,
     showImportModal: false,
     selectedClassId: null,
     selectedClassName: '',
+    editClassData: { id: null, name: '', department: '', academic_year: '', homeroom_teacher_id: '', description: '' },
     importFile: null,
     importPreview: null,
     importLoading: false,
@@ -18,6 +19,18 @@
         this.selectedClassId = classId;
         this.selectedClassName = className;
         this.showGroupModal = true;
+    },
+
+    openEditClass(cls) {
+        this.editClassData = {
+            id: cls.id,
+            name: cls.name,
+            department: cls.department || '',
+            academic_year: cls.academic_year || '',
+            homeroom_teacher_id: cls.homeroom_teacher_id || '',
+            description: cls.description || ''
+        };
+        this.showEditClassModal = true;
     },
 
     async handleFileSelect(e) {
@@ -81,50 +94,53 @@
     }
 }">
 
-    <!-- Header Section -->
-    <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div class="space-y-1.5">
-            <div class="flex items-center gap-2 flex-wrap">
-                <span class="px-2.5 py-0.5 rounded-md text-xs font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    AKADEMIK & LAB
-                </span>
-                <span class="text-xs text-slate-400">•</span>
-                <span class="text-xs font-semibold text-slate-600">SMK Pertanian Pembangunan Negeri 1 Sukaraja</span>
+    <!-- Page Header (Unboxed, Bitanic Standard) -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-sans">
+                    Kelas
+                </h1>
+                <span class="sr-only">Manajemen Kelas</span>
             </div>
-            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-                Manajemen Kelas, Kelompok & Alokasi Praktik
-            </h1>
-            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
-                Pengelolaan kelas vokasi ATPH, pembagian kelompok bedengan kerja, dan alokasi meja Trainer Kit IoT.
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Pengelolaan kelas, kelompok, dan peserta praktikum
             </p>
         </div>
 
-        <!-- Action Buttons -->
+        <!-- Action Toolbar -->
         <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
             <button
                 type="button"
                 @click="showImportModal = true"
-                class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-2 transition-colors border border-slate-300"
+                class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-2 transition-colors border border-slate-200/80 shadow-2xs"
             >
                 <i data-lucide="upload" class="w-4 h-4 text-slate-500"></i>
-                <span>Bulk Import Akun</span>
+                <span>Impor Akun</span>
             </button>
             <button
                 type="button"
                 @click="showClassModal = true"
-                class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs flex items-center gap-2 transition-colors shadow-sm"
+                class="px-4 py-2 rounded-xl bg-[#0c3c26] hover:bg-[#082819] text-white font-semibold text-xs flex items-center gap-2 transition-colors shadow-2xs"
             >
                 <i data-lucide="plus" class="w-4 h-4"></i>
-                <span>Tambah Kelas Baru</span>
+                <span>Tambah Kelas</span>
             </button>
         </div>
     </div>
 
-    <!-- Error Display -->
+    <!-- Flash Messages / Alerts -->
+    @if (session('success'))
+        <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+            <span>{{ session('success') }}</span>
+        </div>
+    @endif
+
     @if ($errors->any())
         <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
             <div class="font-bold flex items-center gap-1.5">
-                <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
+                <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0"></i>
                 <span>Perhatian: Ada kesalahan input</span>
             </div>
             <ul class="list-disc list-inside space-y-0.5 text-rose-700">
@@ -138,34 +154,45 @@
     <!-- Classroom & Groups Grid -->
     <div class="space-y-4">
         @forelse ($classrooms as $classroom)
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
                 <!-- Class Header -->
-                <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div class="space-y-1">
+                <div class="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="space-y-1.5">
                         <div class="flex items-center gap-2.5 flex-wrap">
-                            <span class="px-2 py-0.5 rounded text-[11px] font-bold font-mono bg-slate-200 text-slate-800">
+                            <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200/60 font-tabular">
                                 {{ $classroom->academic_year }}
                             </span>
-                            <h2 class="text-base sm:text-lg font-bold text-slate-900">{{ $classroom->name }}</h2>
-                            <span class="text-xs text-slate-400">•</span>
-                            <span class="text-xs text-slate-600">{{ $classroom->department }}</span>
+                            <h2 class="text-base font-bold text-slate-900">{{ $classroom->name }}</h2>
+                            @if ($classroom->department)
+                                <span class="text-xs text-slate-400">•</span>
+                                <span class="text-xs text-slate-500">{{ $classroom->department }}</span>
+                            @endif
                         </div>
-                        <div class="text-xs text-slate-500 flex items-center gap-2">
-                            <span>Wali Kelas:</span>
-                            <span class="font-medium text-slate-700">{{ $classroom->homeroomTeacher->name ?? 'Belum Ditentukan' }}</span>
-                            <span class="text-slate-300">|</span>
-                            <span>{{ $classroom->groups->count() }} Kelompok Kerja</span>
+                        <div class="text-xs text-slate-500 flex items-center gap-2.5 flex-wrap">
+                            <span>Wali: <strong class="font-medium text-slate-700">{{ $classroom->homeroomTeacher->name ?? 'Belum Ditentukan' }}</strong></span>
+                            <span class="text-slate-300">•</span>
+                            <span><strong class="font-medium font-tabular text-slate-700">{{ $classroom->groups->count() }}</strong> Kelompok</span>
+                            <span class="text-slate-300">•</span>
+                            <span><strong class="font-medium font-tabular text-slate-700">{{ $classroom->profiles_count ?? $classroom->profiles->count() }}</strong> Siswa</span>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 shrink-0">
                         <button
                             type="button"
                             @click="openGroupModal({{ $classroom->id }}, '{{ addslashes($classroom->name) }}')"
-                            class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                            class="px-3 py-1.5 rounded-lg border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors shadow-2xs"
                         >
-                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                            <i data-lucide="plus" class="w-3.5 h-3.5 text-slate-500"></i>
                             <span>Tambah Kelompok</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="openEditClass({{ json_encode($classroom) }})"
+                            class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                            title="Edit Kelas"
+                        >
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
                         </button>
                         <form method="POST" action="{{ route('classes.destroy', $classroom->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus kelas ini?')">
                             @csrf
@@ -182,21 +209,21 @@
                 </div>
 
                 <!-- Groups List inside Class -->
-                <div class="p-5">
+                <div class="p-4 sm:p-5">
                     @if ($classroom->groups->isEmpty())
-                        <div class="p-4 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-500">
-                            Belum ada kelompok kerja di kelas ini. Klik tombol <span class="font-semibold text-emerald-700">Tambah Kelompok</span> untuk membuat kelompok praktikum.
+                        <div class="py-6 px-4 rounded-lg border border-dashed border-slate-200 text-center text-xs text-slate-500">
+                            Belum ada kelompok kerja di kelas ini. Klik <span class="font-medium text-slate-700">Tambah Kelompok</span> untuk membuat kelompok praktikum.
                         </div>
                     @else
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             @foreach ($classroom->groups as $group)
-                                <div class="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors space-y-2">
+                                <div class="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:bg-white hover:border-slate-300 transition-colors space-y-2">
                                     <div class="flex items-start justify-between gap-2">
-                                        <div class="font-bold text-sm text-slate-800">{{ $group->name }}</div>
+                                        <div class="font-semibold text-sm text-slate-800">{{ $group->name }}</div>
                                         <form method="POST" action="{{ route('groups.destroy', $group->id) }}" onsubmit="return confirm('Hapus kelompok ini?')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="text-slate-400 hover:text-rose-600 p-0.5">
+                                            <button type="submit" class="text-slate-400 hover:text-rose-600 p-0.5 transition-colors" title="Hapus Kelompok">
                                                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                             </button>
                                         </form>
@@ -205,12 +232,12 @@
                                     <!-- Trainer Kit Badge -->
                                     <div class="text-xs">
                                         @if ($group->device)
-                                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono font-bold text-[11px] border border-emerald-200">
-                                                <i data-lucide="cpu" class="w-3 h-3 text-emerald-600"></i>
+                                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[11px] border border-emerald-200/70">
+                                                <i data-lucide="cpu" class="w-3 h-3 text-emerald-700"></i>
                                                 {{ $group->device->code }} ({{ $group->device->name }})
                                             </span>
                                         @else
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-mono text-[11px]">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[11px]">
                                                 Tanpa Default Kit
                                             </span>
                                         @endif
@@ -226,21 +253,23 @@
                 </div>
             </div>
         @empty
-            <div class="p-12 rounded-2xl bg-white border border-slate-200 text-center space-y-3">
-                <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto text-emerald-700">
-                    <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+            <div class="py-12 px-6 rounded-xl bg-white border border-slate-200/80 shadow-2xs text-center space-y-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto text-slate-500">
+                    <i data-lucide="users" class="w-5 h-5"></i>
                 </div>
-                <h3 class="font-bold text-slate-800 text-sm">Belum Ada Data Kelas</h3>
-                <p class="text-xs text-slate-500 max-w-sm mx-auto">
-                    Mulai dengan membuat master kelas vokasi baru atau gunakan fitur bulk import akun siswa dan guru.
-                </p>
+                <div class="space-y-1">
+                    <h3 class="font-semibold text-slate-800 text-sm">Belum ada kelas</h3>
+                    <p class="text-xs text-slate-500 max-w-sm mx-auto">
+                        Tambahkan kelas untuk mulai mengatur kelompok dan peserta praktikum.
+                    </p>
+                </div>
                 <button
                     type="button"
                     @click="showClassModal = true"
-                    class="px-4 py-2 rounded-xl bg-emerald-700 text-white font-semibold text-xs hover:bg-emerald-800 inline-flex items-center gap-1.5"
+                    class="px-3.5 py-2 rounded-xl bg-[#0c3c26] hover:bg-[#082819] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors shadow-2xs"
                 >
                     <i data-lucide="plus" class="w-4 h-4"></i>
-                    <span>Tambah Kelas Pertama</span>
+                    <span>Tambah Kelas</span>
                 </button>
             </div>
         @endforelse
@@ -254,9 +283,9 @@
     <div
         x-show="showClassModal"
         x-cloak
-        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
     >
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-200" @click.outside="showClassModal = false">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl border border-slate-200" @click.outside="showClassModal = false">
             <div class="flex items-center justify-between">
                 <h3 class="font-bold text-slate-900 text-base">Tambah Kelas Baru</h3>
                 <button type="button" @click="showClassModal = false" class="text-slate-400 hover:text-slate-600">
@@ -267,23 +296,23 @@
             <form method="POST" action="{{ route('classes.store') }}" class="space-y-3.5">
                 @csrf
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kelas *</label>
-                    <input type="text" name="name" required placeholder="Contoh: XII ATPH 1" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Kelas *</label>
+                    <input type="text" name="name" required placeholder="Contoh: XII ATPH 1" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Jurusan / Konsentrasi Keahlian</label>
-                    <input type="text" name="department" value="Agribisnis Tanaman Pangan & Hortikultura" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Jurusan / Konsentrasi Keahlian</label>
+                    <input type="text" name="department" value="Agribisnis Tanaman Pangan & Hortikultura" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Tahun Ajaran *</label>
-                    <input type="text" name="academic_year" value="2026/2027" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran *</label>
+                    <input type="text" name="academic_year" value="2026/2027" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Wali Kelas / Guru Pendamping</label>
-                    <select name="homeroom_teacher_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Wali Kelas / Guru Pendamping</label>
+                    <select name="homeroom_teacher_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
                         <option value="">-- Pilih Guru --</option>
                         @foreach ($teachers as $teacher)
                             <option value="{{ $teacher->id }}">{{ $teacher->name }} ({{ $teacher->email }})</option>
@@ -292,8 +321,58 @@
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2">
-                    <button type="button" @click="showClassModal = false" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800">Simpan Kelas</button>
+                    <button type="button" @click="showClassModal = false" class="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0c3c26] hover:bg-[#082819] transition-colors shadow-2xs">Simpan Kelas</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Kelas -->
+    <div
+        x-show="showEditClassModal"
+        x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+    >
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl border border-slate-200" @click.outside="showEditClassModal = false">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-base">Edit Kelas</h3>
+                <button type="button" @click="showEditClassModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form :action="'{{ url('/classes') }}/' + editClassData.id" method="POST" class="space-y-3.5">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Kelas *</label>
+                    <input type="text" name="name" x-model="editClassData.name" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Jurusan / Konsentrasi Keahlian</label>
+                    <input type="text" name="department" x-model="editClassData.department" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran *</label>
+                    <input type="text" name="academic_year" x-model="editClassData.academic_year" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Wali Kelas / Guru Pendamping</label>
+                    <select name="homeroom_teacher_id" x-model="editClassData.homeroom_teacher_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                        <option value="">-- Pilih Guru --</option>
+                        @foreach ($teachers as $teacher)
+                            <option value="{{ $teacher->id }}">{{ $teacher->name }} ({{ $teacher->email }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" @click="showEditClassModal = false" class="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0c3c26] hover:bg-[#082819] transition-colors shadow-2xs">Perbarui Kelas</button>
                 </div>
             </form>
         </div>
@@ -303,13 +382,13 @@
     <div
         x-show="showGroupModal"
         x-cloak
-        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
     >
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-200" @click.outside="showGroupModal = false">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl border border-slate-200" @click.outside="showGroupModal = false">
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="font-bold text-slate-900 text-base">Tambah Kelompok Kerja</h3>
-                    <p class="text-xs text-slate-500">Kelas: <span class="font-bold text-slate-800" x-text="selectedClassName"></span></p>
+                    <p class="text-xs text-slate-500">Kelas: <span class="font-semibold text-slate-800" x-text="selectedClassName"></span></p>
                 </div>
                 <button type="button" @click="showGroupModal = false" class="text-slate-400 hover:text-slate-600">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -319,13 +398,13 @@
             <form :action="'{{ url('/classes') }}/' + selectedClassId + '/groups'" method="POST" class="space-y-3.5">
                 @csrf
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kelompok *</label>
-                    <input type="text" name="name" required placeholder="Contoh: Kelompok 1 (Bedengan A)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Kelompok *</label>
+                    <input type="text" name="name" required placeholder="Contoh: Kelompok 1 (Bedengan A)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Alokasi Default Trainer Kit Meja</label>
-                    <select name="device_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Alokasi Default Trainer Kit Meja</label>
+                    <select name="device_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
                         <option value="">-- Tanpa Meja Default --</option>
                         @foreach ($devices as $device)
                             <option value="{{ $device->id }}">{{ $device->code }} - {{ $device->name }} ({{ $device->bench_location ?? 'Lab' }})</option>
@@ -334,13 +413,13 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Catatan / Komoditas Praktikum</label>
-                    <textarea name="notes" rows="2" placeholder="Contoh: Budidaya tomat hidroponik substrat" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan / Komoditas Praktikum</label>
+                    <textarea name="notes" rows="2" placeholder="Contoh: Budidaya tomat hidroponik substrat" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none"></textarea>
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2">
-                    <button type="button" @click="showGroupModal = false" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800">Simpan Kelompok</button>
+                    <button type="button" @click="showGroupModal = false" class="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0c3c26] hover:bg-[#082819] transition-colors shadow-2xs">Simpan Kelompok</button>
                 </div>
             </form>
         </div>
@@ -350,9 +429,9 @@
     <div
         x-show="showImportModal"
         x-cloak
-        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
     >
-        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-xl border border-slate-200 max-h-[90vh] flex flex-col" @click.outside="showImportModal = false">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-5 sm:p-6 space-y-4 shadow-xl border border-slate-200 max-h-[90vh] flex flex-col" @click.outside="showImportModal = false">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
                     <h3 class="font-bold text-slate-900 text-base">Bulk Import Akun Pengguna</h3>
@@ -365,14 +444,14 @@
 
             <div class="space-y-4 flex-1 overflow-y-auto pr-1">
                 <!-- File Input -->
-                <div class="p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-emerald-500 text-center transition-colors">
-                    <input type="file" accept=".csv, .xlsx" @change="handleFileSelect" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer">
+                <div class="p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-400 bg-slate-50/40 text-center transition-colors">
+                    <input type="file" accept=".csv, .xlsx" @change="handleFileSelect" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
                     <p class="text-[11px] text-slate-400 mt-2">Maksimal 10MB (.csv atau .xlsx). Pratinjau validasi data akan langsung ditampilkan.</p>
                 </div>
 
                 <!-- Loading State -->
                 <div x-show="importLoading" class="p-8 text-center space-y-2">
-                    <div class="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <div class="w-6 h-6 border-2 border-[#0c3c26] border-t-transparent rounded-full animate-spin mx-auto"></div>
                     <p class="text-xs text-slate-500">Menganalisis dan memvalidasi baris data...</p>
                 </div>
 
@@ -384,23 +463,23 @@
 
                 <!-- Preview Table -->
                 <div x-show="importPreview" class="space-y-3">
-                    <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center justify-between text-xs flex-wrap gap-2">
                         <div class="flex items-center gap-2">
-                            <span class="font-bold text-slate-700">Total Baris: <span class="font-mono" x-text="importPreview?.total_rows"></span></span>
+                            <span class="font-medium text-slate-700">Total: <span class="font-tabular font-semibold" x-text="importPreview?.total_rows"></span></span>
                             <span class="text-slate-300">|</span>
-                            <span class="text-emerald-700 font-bold">Valid: <span class="font-mono" x-text="importPreview?.valid_count"></span></span>
+                            <span class="text-emerald-700 font-medium">Valid: <span class="font-tabular font-semibold" x-text="importPreview?.valid_count"></span></span>
                             <span class="text-slate-300">|</span>
-                            <span class="text-rose-700 font-bold">Tidak Valid: <span class="font-mono" x-text="importPreview?.invalid_count"></span></span>
+                            <span class="text-rose-700 font-medium">Tidak Valid: <span class="font-tabular font-semibold" x-text="importPreview?.invalid_count"></span></span>
                         </div>
-                        <div class="text-[11px] text-emerald-700 font-medium flex items-center gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <div class="text-[11px] text-slate-500 flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-slate-400"></i>
                             Proteksi sandi unik & wajib ganti saat login pertama
                         </div>
                     </div>
 
-                    <div class="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
+                    <div class="border border-slate-200/80 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
                         <table class="w-full text-left text-xs">
-                            <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold sticky top-0">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium sticky top-0">
                                 <tr>
                                     <th class="p-2.5">#</th>
                                     <th class="p-2.5">Nama</th>
@@ -412,16 +491,16 @@
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 <template x-for="r in (importPreview?.rows || [])" :key="r.row_index">
-                                    <tr :class="r.is_valid ? 'hover:bg-slate-50' : 'bg-rose-50/50'">
-                                        <td class="p-2.5 font-mono text-[11px] text-slate-400" x-text="r.row_index"></td>
+                                    <tr :class="r.is_valid ? 'hover:bg-slate-50/60' : 'bg-rose-50/30'">
+                                        <td class="p-2.5 font-tabular text-[11px] text-slate-400" x-text="r.row_index"></td>
                                         <td class="p-2.5 font-medium text-slate-800" x-text="r.name"></td>
                                         <td class="p-2.5 font-mono text-[11px] text-slate-600" x-text="r.email"></td>
                                         <td class="p-2.5">
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono" :class="r.role === 'siswa' ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800'" x-text="r.role"></span>
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-medium uppercase font-tabular" :class="r.role === 'siswa' ? 'bg-slate-100 text-slate-700' : 'bg-slate-200 text-slate-800'" x-text="r.role"></span>
                                         </td>
                                         <td class="p-2.5">
-                                            <span x-show="r.is_valid" class="text-emerald-700 font-bold text-[11px]">Valid</span>
-                                            <span x-show="!r.is_valid" class="text-rose-700 font-bold text-[11px]">Error</span>
+                                            <span x-show="r.is_valid" class="text-emerald-700 font-medium text-[11px]">Valid</span>
+                                            <span x-show="!r.is_valid" class="text-rose-700 font-medium text-[11px]">Error</span>
                                         </td>
                                         <td class="p-2.5 text-[11px] text-rose-600" x-text="r.errors?.join(', ') || '-'"></td>
                                     </tr>
@@ -434,13 +513,13 @@
 
             <!-- Footer Actions -->
             <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
-                <button type="button" @click="showImportModal = false" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Tutup</button>
+                <button type="button" @click="showImportModal = false" class="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Tutup</button>
                 <button
                     type="button"
                     x-show="importPreview && importPreview.valid_count > 0"
                     :disabled="uploadProgress"
                     @click="submitImport"
-                    class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 inline-flex items-center gap-2"
+                    class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0c3c26] hover:bg-[#082819] disabled:opacity-50 inline-flex items-center gap-2 transition-colors shadow-2xs"
                 >
                     <span x-show="!uploadProgress">Impor <span x-text="importPreview?.valid_count"></span> Akun Valid</span>
                     <span x-show="uploadProgress">Memproses...</span>

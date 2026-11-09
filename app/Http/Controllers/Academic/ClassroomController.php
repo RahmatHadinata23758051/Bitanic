@@ -23,6 +23,7 @@ class ClassroomController extends Controller
         }
 
         $classrooms = Classroom::with(['groups.device', 'homeroomTeacher'])
+            ->withCount('profiles')
             ->where('school_id', $schoolId)
             ->orderBy('academic_year')
             ->orderBy('name')
