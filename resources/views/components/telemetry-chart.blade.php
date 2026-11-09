@@ -1,21 +1,55 @@
 @props([
     'initialData' => [],
-    'chartId' => 'telemetryTrendChart'
+    'chartId' => 'telemetryTrendChart',
+    'thresholds' => []
 ])
 
 <div
     class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4"
     x-data="{
         initialData: @js($initialData),
+        thresholds: @js($thresholds),
         activeTab: 'ph', // 'ph' | 'moisture' | 'ec' | 'temperature' | 'npk'
         activeRange: '24h',
         chartInstance: null,
 
         parametersMeta: {
-            ph: { label: 'pH', unit: 'pH', min: 0, max: 14, idealMin: 6.0, idealMax: 7.2, color: '#16a34a' },
-            moisture: { label: 'Lengas', unit: '%', min: 0, max: 100, idealMin: 45, idealMax: 65, color: '#0284c7' },
-            ec: { label: 'EC', unit: 'µS/cm', min: 0, max: 3000, idealMin: 1000, idealMax: 2200, color: '#d97706' },
-            temperature: { label: 'Suhu', unit: '°C', min: 10, max: 45, idealMin: 22, idealMax: 29, color: '#ea580c' },
+            ph: {
+                label: 'pH',
+                unit: 'pH',
+                min: 0,
+                max: 14,
+                idealMin: {{ $thresholds['ph']['ideal_min'] ?? 6.0 }},
+                idealMax: {{ $thresholds['ph']['ideal_max'] ?? 7.2 }},
+                color: '#16a34a'
+            },
+            moisture: {
+                label: 'Lengas',
+                unit: '%',
+                min: 0,
+                max: 100,
+                idealMin: {{ $thresholds['moisture']['ideal_min'] ?? 45 }},
+                idealMax: {{ $thresholds['moisture']['ideal_max'] ?? 65 }},
+                color: '#0284c7'
+            },
+            ec: {
+                label: 'EC',
+                unit: 'µS/cm',
+                min: 0,
+                max: 4000,
+                idealMin: {{ $thresholds['ec']['ideal_min'] ?? 1000 }},
+                idealMax: {{ $thresholds['ec']['ideal_max'] ?? 2200 }},
+                color: '#d97706'
+            },
+            temperature: {
+                label: 'Suhu',
+                unit: '°C',
+                min: 10,
+                max: 45,
+                idealMin: {{ $thresholds['temperature']['ideal_min'] ?? 22 }},
+                idealMax: {{ $thresholds['temperature']['ideal_max'] ?? 29 }},
+                color: '#ea580c'
+            },
         },
 
         getParamData(key) {
@@ -201,39 +235,52 @@
     }"
     x-init="initChart()"
 >
-    <!-- Header: Title & Time Range -->
+    <!-- Header: Title, Repositioned AI Action & Time Range -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2">
             <i data-lucide="line-chart" class="w-4 h-4 text-emerald-600"></i>
             <h3 class="text-sm font-semibold text-slate-800">Tren telemetri lahan</h3>
         </div>
 
-        <!-- Time Range Selector -->
-        <div class="flex items-center p-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-mono">
+        <div class="flex items-center gap-2 flex-wrap">
+            <!-- Repositioned Analisis AI Secondary Button -->
             <button
                 type="button"
-                @click="switchRange('1h')"
-                :class="activeRange === '1h' ? 'bg-[#0c3c26] text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
-                class="px-2.5 py-0.5 rounded-md text-[11px] transition-colors"
-            >1J</button>
-            <button
-                type="button"
-                @click="switchRange('6h')"
-                :class="activeRange === '6h' ? 'bg-[#0c3c26] text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
-                class="px-2.5 py-0.5 rounded-md text-[11px] transition-colors"
-            >6J</button>
-            <button
-                type="button"
-                @click="switchRange('24h')"
-                :class="activeRange === '24h' ? 'bg-[#0c3c26] text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
-                class="px-2.5 py-0.5 rounded-md text-[11px] transition-colors"
-            >24J</button>
-            <button
-                type="button"
-                @click="switchRange('7d')"
-                :class="activeRange === '7d' ? 'bg-[#0c3c26] text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
-                class="px-2.5 py-0.5 rounded-md text-[11px] transition-colors"
-            >7H</button>
+                @click="$dispatch('open-ai-drawer')"
+                class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-emerald-800 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors"
+                title="Buka panel konsultasi agronomi kecerdasan buatan"
+            >
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span>Analisis AI</span>
+            </button>
+
+            <!-- Time Range Selector -->
+            <div class="flex items-center p-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-mono">
+                <button
+                    type="button"
+                    @click="switchRange('1h')"
+                    :class="activeRange === '1h' ? 'bg-[#0c3c26] text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    class="px-2.5 py-0.5 rounded-md text-[11px] transition-colors"
+                >1J</button>
+                <button
+                    type="button"
+                    @click="switchRange('6h')"
+                    :class="activeRange === '6h' ? 'bg-[#0c3c26] text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    class="px-2.5 py-0.5 rounded-md text-[11px] transition-colors"
+                >6J</button>
+                <button
+                    type="button"
+                    @click="switchRange('24h')"
+                    :class="activeRange === '24h' ? 'bg-[#0c3c26] text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    class="px-2.5 py-0.5 rounded-md text-[11px] transition-colors"
+                >24J</button>
+                <button
+                    type="button"
+                    @click="switchRange('7d')"
+                    :class="activeRange === '7d' ? 'bg-[#0c3c26] text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    class="px-2.5 py-0.5 rounded-md text-[11px] transition-colors"
+                >7H</button>
+            </div>
         </div>
     </div>
 

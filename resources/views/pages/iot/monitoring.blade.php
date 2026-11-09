@@ -2,28 +2,29 @@
 
 @section('content')
 <div class="space-y-6">
-    <!-- Header / Konteks -->
+    <!-- Header / Konteks: Balanced Workstation Header -->
     <div class="space-y-3">
-        <!-- Top Row: Page Title & Workstation Selector -->
-        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div class="space-y-0.5">
-                <h1 class="text-2xl font-bold text-slate-900 tracking-tight font-sans">
-                    Monitoring IoT<span class="sr-only"> — Monitoring Telemetri Lahan & Trainer Kit Vokasi</span>
-                </h1>
-                <p class="text-xs text-slate-500 font-normal">
-                    Telemetri sensor tanah 7-in-1
-                </p>
-            </div>
+        <!-- Top Title -->
+        <div class="space-y-0.5">
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight font-sans">
+                Monitoring IoT<span class="sr-only"> — Monitoring Telemetri Lahan & Trainer Kit Vokasi</span>
+            </h1>
+            <p class="text-xs text-slate-500 font-normal">
+                Telemetri sensor tanah 7-in-1
+            </p>
+        </div>
 
-            <!-- Device Selector -->
-            <div class="shrink-0">
-                <form method="GET" action="{{ url('/iot-monitoring') }}" class="space-y-1">
-                    <label for="device-selector" class="block text-xs font-medium text-slate-600">Stasiun</label>
+        <!-- Workstation Selector & Connection Status Row (Natural context layout) -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- Stasiun Meja Praktik Selector -->
+                <form method="GET" action="{{ url('/iot-monitoring') }}" class="inline-flex items-center gap-2">
+                    <label for="device-selector" class="text-xs font-semibold text-slate-700 whitespace-nowrap">Stasiun:</label>
                     <select
                         id="device-selector"
                         name="device_id"
                         onchange="this.form.submit()"
-                        class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-800 border border-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs min-w-[240px]"
+                        class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-800 border border-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs min-w-[220px]"
                         @if($devices->isEmpty()) disabled aria-describedby="device-selector-empty" @endif
                     >
                         @forelse($devices as $dev)
@@ -38,35 +39,46 @@
                         <span id="device-selector-empty" class="sr-only">Tidak ada Trainer Kit untuk dimonitor.</span>
                     @endif
                 </form>
-            </div>
-        </div>
 
-        <!-- Sub-row: Status, Timestamps, Disclosure & Actions -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-slate-100 text-xs">
-            <div class="flex items-center gap-3 flex-wrap">
-                <!-- Single Concise Device Status -->
+                <span class="text-slate-300 hidden sm:inline">|</span>
+
+                <!-- Single Clear Device Status (No animated pulsing, fully distinguishable) -->
                 <div class="inline-flex items-center gap-1.5 font-medium">
-                    @if($activeDevice?->is_online ?? false)
-                        <span class="inline-flex items-center gap-1.5 text-emerald-700">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 {{ ($telemetry['is_live'] ?? false) ? 'animate-pulse' : '' }}"></span>
-                            <span>Online</span>
-                        </span>
+                    @if(! $activeDevice)
+                        <span class="w-2 h-2 rounded-full bg-slate-300 shrink-0"></span>
+                        <span class="text-slate-500">Tidak ada Trainer Kit terdaftar</span>
                         <span class="text-slate-300">·</span>
-                        @if($telemetry['is_live'] ?? false)
+                        <span class="text-slate-500">Belum Ada Transmisi Data</span>
+                    @elseif($activeDevice->is_online)
+                        @if($telemetry['provenance'] === 'simulation' || $telemetry['provenance'] === 'fixture')
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                            <span class="text-emerald-700">Online</span>
+                            <span class="text-slate-300">·</span>
+                            <span class="text-indigo-700">Data Simulasi / Fixture</span>
+                            @if($telemetry['has_telemetry'])
+                                <span class="text-slate-400 font-normal">({{ $telemetry['recorded_at'] }})</span>
+                            @endif
+                        @elseif($telemetry['is_live'])
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                            <span class="text-emerald-700">Online</span>
+                            <span class="text-slate-300">·</span>
                             <span class="text-emerald-700">Streaming Modbus Aktif</span>
-                        @elseif($telemetry['has_telemetry'])
-                            <span class="text-slate-600">Telemetri Terakhir (Stale / Offline)</span>
-                        @else
-                            <span class="text-slate-500">Belum Ada Transmisi Data</span>
-                        @endif
-                        @if($telemetry['has_telemetry'])
                             <span class="text-slate-400 font-normal">({{ $telemetry['recorded_at'] }})</span>
+                        @elseif($telemetry['has_telemetry'])
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                            <span class="text-emerald-700">Online</span>
+                            <span class="text-slate-300">·</span>
+                            <span class="text-slate-600">Telemetri Terakhir (Stale)</span>
+                            <span class="text-slate-400 font-normal">({{ $telemetry['recorded_at'] }})</span>
+                        @else
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                            <span class="text-emerald-700">Online</span>
+                            <span class="text-slate-300">·</span>
+                            <span class="text-slate-500">Belum Ada Pembacaan Sensor</span>
                         @endif
                     @else
-                        <span class="inline-flex items-center gap-1.5 text-slate-600">
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                            <span>Offline</span>
-                        </span>
+                        <span class="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>
+                        <span class="text-slate-600">Offline</span>
                         <span class="text-slate-300">·</span>
                         @if($telemetry['has_telemetry'])
                             <span class="text-amber-700">Telemetri Terakhir (Stale / Offline)</span>
@@ -77,7 +89,7 @@
                     @endif
                 </div>
 
-                <!-- Info Perangkat Popover -->
+                <!-- Info Perangkat Popover (Authentic Attributes, No Fabricated Defaults) -->
                 <div x-data="{ open: false }" class="relative inline-block">
                     <button
                         type="button"
@@ -96,19 +108,23 @@
                     >
                         <div class="flex justify-between border-b border-slate-100 pb-1">
                             <span class="text-slate-400 font-sans">Protokol:</span>
-                            <span class="text-slate-800 font-semibold">{{ $activeDevice->protocol ?? 'Modbus RTU over RS485' }}</span>
+                            <span class="text-slate-800 font-semibold">{{ $activeDevice->protocol ?? 'Belum dikonfigurasi' }}</span>
                         </div>
                         <div class="flex justify-between border-b border-slate-100 pb-1">
                             <span class="text-slate-400 font-sans">Baudrate:</span>
-                            <span class="text-slate-800 font-semibold">{{ $activeDevice ? '9600 bps, 8-N-1' : '—' }}</span>
+                            <span class="text-slate-800 font-semibold">{{ $activeDevice?->baudrate ? ($activeDevice->baudrate . ' bps') : 'Belum dikonfigurasi' }}</span>
                         </div>
                         <div class="flex justify-between border-b border-slate-100 pb-1">
                             <span class="text-slate-400 font-sans">Firmware:</span>
-                            <span class="text-emerald-700 font-semibold">{{ $activeDevice->firmware_version ?? 'v2.4.1' }}</span>
+                            <span class="text-emerald-700 font-semibold">{{ $activeDevice->firmware_version ?? 'Belum dikonfigurasi' }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-slate-400 font-sans">IP Gateway:</span>
-                            <span class="text-slate-800 font-semibold">{{ $activeDevice->ip_address ?? '192.168.4.1' }}</span>
+                            @if(Auth::check() && in_array(Auth::user()->role, ['superuser', 'admin', 'guru']))
+                                <span class="text-slate-800 font-semibold">{{ $activeDevice->ip_address ?? 'Belum dikonfigurasi' }}</span>
+                            @else
+                                <span class="text-slate-400 italic font-sans text-[10px]">Akses terbatas</span>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -119,63 +135,14 @@
                     </span>
                 @endif
             </div>
-
-            <!-- Action Buttons: Analisis AI & Ekspor CSV -->
-            <div class="flex items-center gap-2 shrink-0">
-                <button
-                    type="button"
-                    @click="$dispatch('open-ai-drawer')"
-                    class="px-3.5 py-1.5 rounded-lg bg-[#0c3c26] hover:bg-[#08281a] text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors"
-                >
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                    <span>Analisis AI</span>
-                </button>
-                <a
-                    href="{{ url('/telemetry/history') }}"
-                    class="px-3.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium flex items-center gap-1.5 shadow-2xs transition-colors"
-                >
-                    <i data-lucide="download" class="w-3.5 h-3.5 text-slate-500"></i>
-                    <span>Ekspor CSV</span>
-                </a>
-            </div>
         </div>
     </div>
 
-    <!-- Section: Parameter Sensor -->
+    <!-- Section: Parameter Sensor (School-Scoped Thresholds) -->
     <div class="space-y-4">
         <div>
             <h2 class="text-sm font-semibold text-slate-900 tracking-tight">Parameter sensor</h2>
         </div>
-
-        @php
-            $phVal = $telemetry['ph'];
-            $phStatus = $phVal === null ? 'optimal' : ($phVal < 5.5 ? 'critical' : ($phVal <= 7.2 ? 'optimal' : 'warning'));
-            $phLabel = $phVal === null ? 'Belum ada data' : ($phVal < 5.5 ? 'Masam Ekstrem' : ($phVal <= 7.2 ? 'Optimal' : 'Alkali/Basa'));
-
-            $humVal = $telemetry['humidity'];
-            $humStatus = $humVal === null ? 'optimal' : ($humVal < 45 ? 'critical' : ($humVal <= 65 ? 'optimal' : 'warning'));
-            $humLabel = $humVal === null ? 'Belum ada data' : ($humVal < 45 ? 'Kering Kritis' : ($humVal <= 65 ? 'Optimal' : 'Jenuh Air'));
-
-            $ecVal = $telemetry['ec'];
-            $ecStatus = $ecVal === null ? 'optimal' : ($ecVal < 1000 ? 'warning' : ($ecVal <= 2200 ? 'optimal' : 'critical'));
-            $ecLabel = $ecVal === null ? 'Belum ada data' : ($ecVal < 1000 ? 'Rendah/Defisit' : ($ecVal <= 2200 ? 'Optimal' : 'Salin Pekat'));
-
-            $tempVal = $telemetry['temperature'];
-            $tempStatus = $tempVal === null ? 'optimal' : ($tempVal < 22 ? 'warning' : ($tempVal <= 29 ? 'optimal' : 'critical'));
-            $tempLabel = $tempVal === null ? 'Belum ada data' : ($tempVal < 22 ? 'Dingin' : ($tempVal <= 29 ? 'Optimal' : 'Panas Cekaman'));
-
-            $nVal = $telemetry['nitrogen'];
-            $nStatus = $nVal === null ? 'optimal' : ($nVal < 40 ? 'warning' : ($nVal <= 120 ? 'optimal' : 'critical'));
-            $nLabel = $nVal === null ? 'Belum ada data' : ($nVal < 40 ? 'Defisiensi' : ($nVal <= 120 ? 'Optimal' : 'Eksitasi/Toksik'));
-
-            $pVal = $telemetry['phosphorus'];
-            $pStatus = $pVal === null ? 'optimal' : ($pVal < 25 ? 'warning' : ($pVal <= 60 ? 'optimal' : 'critical'));
-            $pLabel = $pVal === null ? 'Belum ada data' : ($pVal < 25 ? 'Defisiensi' : ($pVal <= 60 ? 'Optimal' : 'Fiksasi Berlebih'));
-
-            $kVal = $telemetry['potassium'];
-            $kStatus = $kVal === null ? 'optimal' : ($kVal < 100 ? 'warning' : ($kVal <= 200 ? 'optimal' : 'critical'));
-            $kLabel = $kVal === null ? 'Belum ada data' : ($kVal < 100 ? 'Defisiensi' : ($kVal <= 200 ? 'Optimal' : 'Antagonis Hara'));
-        @endphp
 
         <!-- Group 1: Kondisi Media Tanam (4 Kolom) -->
         <div class="space-y-2">
@@ -183,74 +150,74 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- pH -->
                 <x-sensor-card
-                    parameter="Derajat Keasaman (pH)"
-                    :value="$phVal"
-                    unit="pH"
-                    :scaleMin="0"
-                    :scaleMax="14"
-                    :idealMin="6.0"
-                    :idealMax="7.2"
-                    :status="$phStatus"
-                    :statusLabel="$phLabel"
+                    parameter="{{ $thresholds['ph']['parameter'] }}"
+                    :value="$telemetry['ph']"
+                    unit="{{ $thresholds['ph']['unit'] }}"
+                    :scaleMin="$thresholds['ph']['scale_min']"
+                    :scaleMax="$thresholds['ph']['scale_max']"
+                    :idealMin="$thresholds['ph']['ideal_min']"
+                    :idealMax="$thresholds['ph']['ideal_max']"
+                    :status="$evaluations['ph']['status']"
+                    :statusLabel="$evaluations['ph']['label']"
                     icon="ph"
-                    sublabel="Aktivitas ion H⁺"
-                    definition="Derajat kemasaman tanah yang menentukan kelarutan ion hara bagi penyerapan perakaran tanaman."
-                    importance="Mengatur ketersediaan hara makro dan menjaga aktivitas mikroorganisme tanah yang menguntungkan."
-                    riskNote="Nilai terlalu rendah mengikat fosfor dan memicu keracunan aluminium, sedangkan nilai tinggi menghambat hara mikro."
+                    sublabel="{{ $thresholds['ph']['sublabel'] }}"
+                    definition="{{ $thresholds['ph']['definition'] }}"
+                    importance="{{ $thresholds['ph']['importance'] }}"
+                    riskNote="{{ $thresholds['ph']['riskNote'] }}"
                 />
 
                 <!-- Lengas -->
                 <x-sensor-card
-                    parameter="Kadar Lengas Tanah"
-                    :value="$humVal"
-                    unit="%"
-                    :scaleMin="0"
-                    :scaleMax="100"
-                    :idealMin="45"
-                    :idealMax="65"
-                    :status="$humStatus"
-                    :statusLabel="$humLabel"
+                    parameter="{{ $thresholds['moisture']['parameter'] }}"
+                    :value="$telemetry['humidity']"
+                    unit="{{ $thresholds['moisture']['unit'] }}"
+                    :scaleMin="$thresholds['moisture']['scale_min']"
+                    :scaleMax="$thresholds['moisture']['scale_max']"
+                    :idealMin="$thresholds['moisture']['ideal_min']"
+                    :idealMax="$thresholds['moisture']['ideal_max']"
+                    :status="$evaluations['moisture']['status']"
+                    :statusLabel="$evaluations['moisture']['label']"
                     icon="droplets"
-                    sublabel="Volumetric water (VWC)"
-                    definition="Persentase volume pori tanah yang terisi air untuk kelangsungan metabolisme dan transpirasi."
-                    importance="Menjaga turgor sel tanaman dan menjadi medium transportasi unsur hara dari perakaran."
-                    riskNote="Kekurangan memicu plasmolisis sel layu permanen, sedangkan kelebihan memicu busuk akar karena anoksia."
+                    sublabel="{{ $thresholds['moisture']['sublabel'] }}"
+                    definition="{{ $thresholds['moisture']['definition'] }}"
+                    importance="{{ $thresholds['moisture']['importance'] }}"
+                    riskNote="{{ $thresholds['moisture']['riskNote'] }}"
                 />
 
                 <!-- EC -->
                 <x-sensor-card
-                    parameter="Konduktivitas Listrik (EC)"
-                    :value="$ecVal"
-                    unit="µS/cm"
-                    :scaleMin="0"
-                    :scaleMax="4000"
-                    :idealMin="1000"
-                    :idealMax="2200"
-                    :status="$ecStatus"
-                    :statusLabel="$ecLabel"
+                    parameter="{{ $thresholds['ec']['parameter'] }}"
+                    :value="$telemetry['ec']"
+                    unit="{{ $thresholds['ec']['unit'] }}"
+                    :scaleMin="$thresholds['ec']['scale_min']"
+                    :scaleMax="$thresholds['ec']['scale_max']"
+                    :idealMin="$thresholds['ec']['ideal_min']"
+                    :idealMax="$thresholds['ec']['ideal_max']"
+                    :status="$evaluations['ec']['status']"
+                    :statusLabel="$evaluations['ec']['label']"
                     icon="gauge"
-                    sublabel="Indeks kepekatan pupuk"
-                    definition="Daya hantar listrik ion terlarut yang mengukur konsentrasi total garam pupuk pada media tanam."
-                    importance="Memandu presisi dosis pemupukan fertigasi agar sesuai ambang batas toleransi fisiologis."
-                    riskNote="EC terlalu tinggi menyebabkan osmosis balik (akar terbakar), sedangkan EC rendah menandakan nutrisi defisit."
+                    sublabel="{{ $thresholds['ec']['sublabel'] }}"
+                    definition="{{ $thresholds['ec']['definition'] }}"
+                    importance="{{ $thresholds['ec']['importance'] }}"
+                    riskNote="{{ $thresholds['ec']['riskNote'] }}"
                 />
 
                 <!-- Suhu Tanah -->
                 <x-sensor-card
-                    parameter="Suhu Tanah"
-                    :value="$tempVal"
-                    unit="°C"
-                    :scaleMin="10"
-                    :scaleMax="45"
-                    :idealMin="22"
-                    :idealMax="29"
-                    :status="$tempStatus"
-                    :statusLabel="$tempLabel"
+                    parameter="{{ $thresholds['temperature']['parameter'] }}"
+                    :value="$telemetry['temperature']"
+                    unit="{{ $thresholds['temperature']['unit'] }}"
+                    :scaleMin="$thresholds['temperature']['scale_min']"
+                    :scaleMax="$thresholds['temperature']['scale_max']"
+                    :idealMin="$thresholds['temperature']['ideal_min']"
+                    :idealMax="$thresholds['temperature']['ideal_max']"
+                    :status="$evaluations['temperature']['status']"
+                    :statusLabel="$evaluations['temperature']['label']"
                     icon="thermometer"
-                    sublabel="Aktivitas biologis tanah"
-                    definition="Derajat panas lapisan olah tanah yang mengatur laju respirasi akar dan kinetika kimia larutan tanah."
-                    importance="Menentukan kecepatan absorpsi air dan perkecambahan mikroba perombak bahan organik."
-                    riskNote="Suhu panas ekstrem memicu dormansi dan denaturasi enzim akar, sedangkan suhu dingin menghambat translokasi hara."
+                    sublabel="{{ $thresholds['temperature']['sublabel'] }}"
+                    definition="{{ $thresholds['temperature']['definition'] }}"
+                    importance="{{ $thresholds['temperature']['importance'] }}"
+                    riskNote="{{ $thresholds['temperature']['riskNote'] }}"
                 />
             </div>
         </div>
@@ -261,56 +228,56 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Nitrogen -->
                 <x-sensor-card
-                    parameter="Nitrogen Tersedia (N)"
-                    :value="$nVal"
-                    unit="mg/kg"
-                    :scaleMin="0"
-                    :scaleMax="200"
-                    :idealMin="40"
-                    :idealMax="120"
-                    :status="$nStatus"
-                    :statusLabel="$nLabel"
+                    parameter="{{ $thresholds['nitrogen']['parameter'] }}"
+                    :value="$telemetry['nitrogen']"
+                    unit="{{ $thresholds['nitrogen']['unit'] }}"
+                    :scaleMin="$thresholds['nitrogen']['scale_min']"
+                    :scaleMax="$thresholds['nitrogen']['scale_max']"
+                    :idealMin="$thresholds['nitrogen']['ideal_min']"
+                    :idealMax="$thresholds['nitrogen']['ideal_max']"
+                    :status="$evaluations['nitrogen']['status']"
+                    :statusLabel="$evaluations['nitrogen']['label']"
                     letter="N"
-                    sublabel="Pertumbuhan vegetatif"
-                    definition="Unsur hara makro esensial pembentuk asam amino, protein, dan molekul klorofil daun."
-                    importance="Mendorong pertumbuhan tunas baru, luas permukaan daun fotosintesis, dan akumulasi biomassa hijau."
-                    riskNote="Kekurangan nitrogen menyebabkan klorosis daun tua, sedangkan kelebihan nitrogen membuat jaringan tanaman sukulen dan rentan hama."
+                    sublabel="{{ $thresholds['nitrogen']['sublabel'] }}"
+                    definition="{{ $thresholds['nitrogen']['definition'] }}"
+                    importance="{{ $thresholds['nitrogen']['importance'] }}"
+                    riskNote="{{ $thresholds['nitrogen']['riskNote'] }}"
                 />
 
                 <!-- Fosfor -->
                 <x-sensor-card
-                    parameter="Fosfor Tersedia (P)"
-                    :value="$pVal"
-                    unit="mg/kg"
-                    :scaleMin="0"
-                    :scaleMax="100"
-                    :idealMin="25"
-                    :idealMax="60"
-                    :status="$pStatus"
-                    :statusLabel="$pLabel"
+                    parameter="{{ $thresholds['phosphorus']['parameter'] }}"
+                    :value="$telemetry['phosphorus']"
+                    unit="{{ $thresholds['phosphorus']['unit'] }}"
+                    :scaleMin="$thresholds['phosphorus']['scale_min']"
+                    :scaleMax="$thresholds['phosphorus']['scale_max']"
+                    :idealMin="$thresholds['phosphorus']['ideal_min']"
+                    :idealMax="$thresholds['phosphorus']['ideal_max']"
+                    :status="$evaluations['phosphorus']['status']"
+                    :statusLabel="$evaluations['phosphorus']['label']"
                     letter="P"
-                    sublabel="Energi dan perakaran"
-                    definition="Unsur hara makro primer untuk transfer energi adenosin trifosfat (ATP) dan pembelahan sel tanaman."
-                    importance="Mempercepat inisiasi perakaran awal, pembentukan primordia bunga, dan kematangan benih."
-                    riskNote="Kekurangan fosfor menghambat pertumbuhan akar dan memicu daun keunguan, sedangkan kelebihan fosfor mengganggu serapan unsur mikro."
+                    sublabel="{{ $thresholds['phosphorus']['sublabel'] }}"
+                    definition="{{ $thresholds['phosphorus']['definition'] }}"
+                    importance="{{ $thresholds['phosphorus']['importance'] }}"
+                    riskNote="{{ $thresholds['phosphorus']['riskNote'] }}"
                 />
 
                 <!-- Kalium -->
                 <x-sensor-card
-                    parameter="Kalium Tersedia (K)"
-                    :value="$kVal"
-                    unit="mg/kg"
-                    :scaleMin="0"
-                    :scaleMax="300"
-                    :idealMin="100"
-                    :idealMax="200"
-                    :status="$kStatus"
-                    :statusLabel="$kLabel"
+                    parameter="{{ $thresholds['potassium']['parameter'] }}"
+                    :value="$telemetry['potassium']"
+                    unit="{{ $thresholds['potassium']['unit'] }}"
+                    :scaleMin="$thresholds['potassium']['scale_min']"
+                    :scaleMax="$thresholds['potassium']['scale_max']"
+                    :idealMin="$thresholds['potassium']['ideal_min']"
+                    :idealMax="$thresholds['potassium']['ideal_max']"
+                    :status="$evaluations['potassium']['status']"
+                    :statusLabel="$evaluations['potassium']['label']"
                     letter="K"
-                    sublabel="Kekebalan dan kualitas buah"
-                    definition="Aktivator enzim fisiologis, pengatur tekanan turgor stomata daun, dan translokasi asimilat."
-                    importance="Meningkatkan ketahanan terhadap cekaman kekeringan, memperkuat dinding sel, dan memperbaiki bobot hasil."
-                    riskNote="Kekurangan kalium memicu nekrosis tepi daun, sedangkan kelebihan kalium menghambat penyerapan kalsium dan magnesium."
+                    sublabel="{{ $thresholds['potassium']['sublabel'] }}"
+                    definition="{{ $thresholds['potassium']['definition'] }}"
+                    importance="{{ $thresholds['potassium']['importance'] }}"
+                    riskNote="{{ $thresholds['potassium']['riskNote'] }}"
                 />
 
                 <!-- Indeks Kesuburan (4th Card) -->
@@ -327,7 +294,7 @@
                             </span>
                         </div>
                         <div class="flex items-center gap-1.5 text-xs">
-                            <span class="w-1.5 h-1.5 rounded-full {{ $healthScore !== null ? 'bg-emerald-500' : 'bg-slate-300' }}"></span>
+                            <span class="w-2 h-2 rounded-full {{ $healthScore !== null ? 'bg-emerald-500' : 'bg-slate-300' }}"></span>
                             <span class="{{ $healthScore !== null ? 'text-emerald-700 font-medium' : 'text-slate-400' }}">
                                 {{ $healthScore !== null ? ($healthScore >= 80 ? 'Optimal Horti' : 'Perlu Kalibrasi') : 'Menunggu Telemetri' }}
                             </span>
@@ -349,7 +316,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         <!-- Kiri: Chart Tren Telemetri Utama -->
         <div class="lg:col-span-8">
-            <x-telemetry-chart :initialData="$chartData ?? []" />
+            <x-telemetry-chart :initialData="$chartData ?? []" :thresholds="$thresholds" />
         </div>
 
         <!-- Kanan: Aktuator Trainer Kit 4-Kanal -->

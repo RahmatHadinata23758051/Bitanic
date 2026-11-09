@@ -128,15 +128,21 @@
             <!-- Compact Reference Range Visualization -->
             <div class="space-y-1 pt-1.5 border-t border-slate-100">
                 <div class="text-[11px] text-slate-500 font-normal truncate">
-                    Rentang ideal: <span class="font-medium text-slate-700">{{ $idealMin }}–{{ $idealMax }} {{ $unit }}</span>
+                    @if($idealMin !== null && $idealMax !== null)
+                        Rentang ideal: <span class="font-medium text-slate-700">{{ $idealMin }}–{{ $idealMax }} {{ $unit }}</span>
+                    @else
+                        <span class="text-slate-400">Rentang belum dikonfigurasi</span>
+                    @endif
                 </div>
                 <div class="relative w-full h-1.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200/60">
                     <!-- Target Band (Zona Ideal) -->
-                    <div
-                        class="absolute top-0 bottom-0 bg-emerald-500/70 rounded-full"
-                        style="left: {{ max(0, $idealLeftPercent) }}%; width: {{ min(100, $idealWidthPercent) }}%;"
-                        title="Rentang ideal: {{ $idealMin }} - {{ $idealMax }} {{ $unit }}"
-                    ></div>
+                    @if($idealMin !== null && $idealMax !== null)
+                        <div
+                            class="absolute top-0 bottom-0 bg-emerald-500/70 rounded-full"
+                            style="left: {{ max(0, $idealLeftPercent) }}%; width: {{ min(100, $idealWidthPercent) }}%;"
+                            title="Rentang ideal: {{ $idealMin }} - {{ $idealMax }} {{ $unit }}"
+                        ></div>
+                    @endif
 
                     @if($hasValue)
                         <!-- Indicator Dot Posisi Nilai Riil (Hanya muncul jika ada data valid) -->
@@ -193,7 +199,11 @@
             <!-- Back Footer: Reference Range Strip -->
             <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
                 <span class="text-slate-500 font-medium">Rentang acuan:</span>
-                <span class="font-semibold text-emerald-800 font-mono">{{ $idealMin }} – {{ $idealMax }} {{ $unit }}</span>
+                @if($idealMin !== null && $idealMax !== null)
+                    <span class="font-semibold text-emerald-800 font-mono">{{ $idealMin }} – {{ $idealMax }} {{ $unit }}</span>
+                @else
+                    <span class="font-medium text-slate-400">Rentang belum dikonfigurasi</span>
+                @endif
             </div>
         </div>
     </div>
