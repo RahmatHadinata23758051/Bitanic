@@ -1,7 +1,11 @@
 @props([
     'initialData' => [],
     'chartId' => 'telemetryTrendChart',
-    'thresholds' => []
+    'thresholds' => [],
+    'heading' => 'Tren telemetri lahan',
+    'showAiButton' => true,
+    'enableRangeNavigation' => false,
+    'activeRange' => '24h',
 ])
 
 <div
@@ -10,7 +14,8 @@
         initialData: @js($initialData),
         thresholds: @js($thresholds),
         activeTab: 'ph', // 'ph' | 'moisture' | 'ec' | 'temperature' | 'npk'
-        activeRange: '24h',
+        activeRange: '{{ $activeRange }}',
+        enableRangeNavigation: {{ $enableRangeNavigation ? 'true' : 'false' }},
         chartInstance: null,
 
         parametersMeta: {
@@ -112,6 +117,12 @@
 
         switchRange(rangeKey) {
             this.activeRange = rangeKey;
+            if (this.enableRangeNavigation) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('range', rangeKey);
+                window.location.href = url.toString();
+                return;
+            }
             this.updateChart();
         },
 
@@ -239,10 +250,11 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2">
             <i data-lucide="line-chart" class="w-4 h-4 text-emerald-600"></i>
-            <h3 class="text-sm font-semibold text-slate-800">Tren telemetri lahan</h3>
+            <h3 class="text-sm font-semibold text-slate-800">{{ $heading }}</h3>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
+            @if($showAiButton)
             <!-- Repositioned Analisis AI Secondary Button -->
             <button
                 type="button"
@@ -253,6 +265,7 @@
                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-600"></i>
                 <span>Analisis AI</span>
             </button>
+            @endif
 
             <!-- Time Range Selector -->
             <div class="flex items-center p-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-mono">
