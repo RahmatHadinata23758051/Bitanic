@@ -64,7 +64,7 @@
                         id="school_id"
                         name="school_id"
                         onchange="this.form.submit()"
-                        class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
+                        class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] shadow-2xs cursor-pointer"
                     >
                         <option value="">Semua Sekolah</option>
                         @foreach($schools as $school)
@@ -88,10 +88,10 @@
                 <button
                     type="button"
                     @click="showInjectModal = true"
-                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#0c3c26] hover:bg-[#082819] text-white text-xs font-semibold shadow-2xs transition-colors"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition-colors"
                 >
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    <span>Suntik Frame</span>
+                    <i data-lucide="flask-conical" class="w-3.5 h-3.5 text-slate-500"></i>
+                    <span>Suntik Frame Simulasi</span>
                 </button>
             @endif
         </div>
@@ -99,9 +99,9 @@
 
     {{-- Flash Notifications --}}
     @if(session('success'))
-        <div class="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-900 flex items-start gap-3">
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-700 shrink-0 mt-0.5"></i>
-            <p class="text-xs text-emerald-800 leading-relaxed">{{ session('success') }}</p>
+        <div class="p-4 rounded-xl bg-leaf-50 border border-leaf-200 text-leaf-900 flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-leaf-700 shrink-0 mt-0.5"></i>
+            <p class="text-xs text-leaf-800 leading-relaxed">{{ session('success') }}</p>
         </div>
     @endif
 
@@ -112,7 +112,7 @@
         </div>
     @endif
 
-    {{-- 4 Stats Counters --}}
+    {{-- 4 Stats Counters (Strict Neutral Figures) --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-2xs">
             <span class="text-xs font-medium text-slate-500">Total Paket</span>
@@ -125,8 +125,8 @@
             <span class="text-xs font-medium text-slate-500">Informasi</span>
             <div class="mt-2 flex items-baseline gap-2">
                 <span class="text-2xl font-bold font-tabular text-slate-900">{{ number_format($stats['info']) }}</span>
-                <span class="inline-flex items-center gap-1 text-xs text-emerald-700">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span class="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0c3c26]"></span>
                     normal
                 </span>
             </div>
@@ -135,7 +135,7 @@
             <span class="text-xs font-medium text-slate-500">Peringatan</span>
             <div class="mt-2 flex items-baseline gap-2">
                 <span class="text-2xl font-bold font-tabular text-slate-900">{{ number_format($stats['warnings']) }}</span>
-                <span class="inline-flex items-center gap-1 text-xs {{ $stats['warnings'] > 0 ? 'text-amber-700' : 'text-slate-400' }}">
+                <span class="inline-flex items-center gap-1.5 text-xs text-slate-500">
                     @if($stats['warnings'] > 0)
                         <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                         perhatian
@@ -149,7 +149,7 @@
             <span class="text-xs font-medium text-slate-500">Frame Error</span>
             <div class="mt-2 flex items-baseline gap-2">
                 <span class="text-2xl font-bold font-tabular text-slate-900">{{ number_format($stats['errors']) }}</span>
-                <span class="inline-flex items-center gap-1 text-xs {{ $stats['errors'] > 0 ? 'text-rose-700' : 'text-slate-400' }}">
+                <span class="inline-flex items-center gap-1.5 text-xs text-slate-500">
                     @if($stats['errors'] > 0)
                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                         kegagalan
@@ -166,12 +166,12 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div>
                 <h2 class="text-sm font-bold text-slate-900 font-sans flex items-center gap-2">
-                    <i data-lucide="binary" class="w-4 h-4 text-emerald-700"></i>
+                    <i data-lucide="binary" class="w-4 h-4 text-slate-600"></i>
                     <span>Inspeksi Frame Modbus RS485</span>
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5">
                     <template x-if="selectedPacket">
-                        <span>Menganalisis frame dari perangkat <strong class="text-slate-700 font-mono" x-text="selectedKit"></strong> pada pukul <span x-text="selectedTime"></span> WIB</span>
+                        <span>Menganalisis frame dari perangkat <strong class="text-slate-800 font-mono" x-text="selectedKit"></strong> pada pukul <span class="font-tabular" x-text="selectedTime"></span> WIB</span>
                     </template>
                     <template x-if="!selectedPacket">
                         <span>Contoh struktur frame — bukan data perangkat (Referensi Modbus RTU Function Code 03h)</span>
@@ -196,27 +196,27 @@
             <div class="space-y-3">
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-medium text-slate-500">Raw Hex Payload:</span>
-                    <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded bg-slate-900 text-amber-300 select-all tracking-wider" x-text="selectedPacket"></span>
+                    <span class="font-mono text-xs font-medium px-2.5 py-1 rounded bg-slate-900 text-slate-100 select-all tracking-wider" x-text="selectedPacket"></span>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2 text-xs">
-                    <div class="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-800">
+                    <div class="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800">
                         <span class="text-[10px] text-slate-500 block">Slave ID</span>
-                        <span class="font-mono font-bold" x-text="parseHex(selectedPacket)?.slave || '—'"></span>
+                        <span class="font-mono font-bold text-slate-900" x-text="parseHex(selectedPacket)?.slave || '—'"></span>
                     </div>
-                    <div class="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-800">
+                    <div class="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800">
                         <span class="text-[10px] text-slate-500 block">Function Code</span>
-                        <span class="font-mono font-bold" x-text="parseHex(selectedPacket)?.fn || '—'"></span>
+                        <span class="font-mono font-bold text-slate-900" x-text="parseHex(selectedPacket)?.fn || '—'"></span>
                     </div>
-                    <div class="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-800">
+                    <div class="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800">
                         <span class="text-[10px] text-slate-500 block">Byte Count</span>
-                        <span class="font-mono font-bold" x-text="parseHex(selectedPacket)?.len || '—'"></span>
+                        <span class="font-mono font-bold text-slate-900" x-text="parseHex(selectedPacket)?.len || '—'"></span>
                     </div>
-                    <div class="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 flex-1 min-w-[200px]">
+                    <div class="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 flex-1 min-w-[200px]">
                         <span class="text-[10px] text-slate-500 block">Register Data (Sensor Payload)</span>
-                        <span class="font-mono font-bold tracking-wider" x-text="parseHex(selectedPacket)?.data || '—'"></span>
+                        <span class="font-mono font-bold tracking-wider text-slate-900" x-text="parseHex(selectedPacket)?.data || '—'"></span>
                     </div>
-                    <div class="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-800">
+                    <div class="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800">
                         <span class="text-[10px] text-slate-500 block">CRC16 (Low/High)</span>
                         <span class="font-mono font-bold text-slate-700" x-text="parseHex(selectedPacket)?.crc || '—'"></span>
                     </div>
@@ -234,7 +234,7 @@
             </div>
         </template>
 
-        {{-- Educational Reference Breakdown (Default State) --}}
+        {{-- Educational Reference Breakdown (Default State - High-contrast neutral text on dark chip) --}}
         <template x-if="!selectedPacket">
             <div class="space-y-3">
                 <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -252,23 +252,23 @@
                     </div>
                     <div class="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
                         <span class="text-[10px] text-slate-400 block mb-0.5">Lembap (M)</span>
-                        <span class="font-mono font-bold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded">01 9A</span>
+                        <span class="font-mono font-bold bg-slate-900 text-slate-100 px-1.5 py-0.5 rounded">01 9A</span>
                     </div>
                     <div class="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
                         <span class="text-[10px] text-slate-400 block mb-0.5">Suhu (T)</span>
-                        <span class="font-mono font-bold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded">00 28</span>
+                        <span class="font-mono font-bold bg-slate-900 text-slate-100 px-1.5 py-0.5 rounded">00 28</span>
                     </div>
                     <div class="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
                         <span class="text-[10px] text-slate-400 block mb-0.5">EC</span>
-                        <span class="font-mono font-bold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded">05 DC</span>
+                        <span class="font-mono font-bold bg-slate-900 text-slate-100 px-1.5 py-0.5 rounded">05 DC</span>
                     </div>
                     <div class="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
                         <span class="text-[10px] text-slate-400 block mb-0.5">pH</span>
-                        <span class="font-mono font-bold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded">00 1E</span>
+                        <span class="font-mono font-bold bg-slate-900 text-slate-100 px-1.5 py-0.5 rounded">00 1E</span>
                     </div>
                     <div class="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
                         <span class="text-[10px] text-slate-400 block mb-0.5">NPK</span>
-                        <span class="font-mono font-bold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded">00 78 ...</span>
+                        <span class="font-mono font-bold bg-slate-900 text-slate-100 px-1.5 py-0.5 rounded">00 78 ...</span>
                     </div>
                     <div class="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
                         <span class="text-[10px] text-slate-400 block mb-0.5">CRC16</span>
@@ -290,7 +290,7 @@
                 <h3 class="text-sm font-bold text-slate-900">Arsip Frame Diagnostik Serial</h3>
                 <p class="text-xs text-slate-500 mt-0.5">
                     @if($logs->isNotEmpty() && $logs->first()->recorded_at)
-                        Peristiwa diagnostik terakhir: <span class="font-medium text-slate-700">{{ $logs->first()->recorded_at->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i:s') }} WIB</span>
+                        Peristiwa diagnostik terakhir: <span class="font-medium text-slate-700 font-tabular">{{ $logs->first()->recorded_at->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i:s') }} WIB</span>
                     @else
                         Peristiwa diagnostik: <span class="text-slate-400">—</span>
                     @endif
@@ -308,7 +308,7 @@
                     id="kit_code"
                     name="kit_code"
                     onchange="this.form.submit()"
-                    class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
+                    class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] shadow-2xs cursor-pointer"
                 >
                     <option value="">Semua Perangkat</option>
                     @foreach($devices as $dev)
@@ -323,7 +323,7 @@
                     id="level"
                     name="level"
                     onchange="this.form.submit()"
-                    class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
+                    class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] shadow-2xs cursor-pointer"
                 >
                     <option value="">Semua Tingkat</option>
                     <option value="INFO" {{ $currentLevel === 'INFO' ? 'selected' : '' }}>INFO</option>
@@ -366,15 +366,15 @@
                             </td>
                             <td class="py-2.5 px-3 whitespace-nowrap">
                                 @if($log->level === 'ERROR')
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200/60">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-rose-50 text-rose-800 border border-rose-200/60">
                                         ERROR
                                     </span>
                                 @elseif($log->level === 'WARN')
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200/60">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/60">
                                         WARN
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
                                         INFO
                                     </span>
                                 @endif
@@ -387,24 +387,24 @@
                             </td>
                             <td class="py-2.5 px-3 whitespace-nowrap">
                                 @if(!empty($payload['injected_manually']))
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/60">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
                                         <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                         Simulasi Injeksi
                                     </span>
                                 @elseif(($payload['source'] ?? '') === 'sensor_gateway')
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/60">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-[#0c3c26]"></span>
                                         Gateway Sensor
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200/60">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                                         <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                                         Serial Ingress
                                     </span>
                                 @endif
                             </td>
                             <td class="py-2.5 px-3.5 whitespace-nowrap">
-                                <span class="font-mono text-xs font-medium tracking-wider bg-slate-900 text-amber-300 px-2.5 py-1 rounded select-all">
+                                <span class="font-mono text-xs font-medium tracking-wider bg-slate-900 text-slate-100 px-2.5 py-1 rounded select-all">
                                     {{ $log->packet_hex ?? '—' }}
                                 </span>
                             </td>
@@ -469,10 +469,10 @@
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div>
                         <h3 class="text-sm font-bold text-slate-900 font-sans">
-                            Suntik Frame Modbus RS485 Simulasi
+                            Suntik Frame Modbus RS485 (Simulasi)
                         </h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Pengujian parser aliran byte diagnostik laboratorium
+                            Pengujian diagnostik parser byte laboratorium tanpa transmisi fisik
                         </p>
                     </div>
                     <button
@@ -495,7 +495,7 @@
                                 id="inject_kit_code"
                                 name="kit_code"
                                 required
-                                class="mt-1 w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+                                class="mt-1 w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]"
                             >
                                 <option value="">Pilih Trainer Kit</option>
                                 @foreach($devices as $dev)
@@ -515,7 +515,7 @@
                                 placeholder="01 03 0E 01 A0 00 30 06 00 00 20 00 80 00 15 00 30 AA BB"
                                 value="01 03 0E 01 A0 00 30 06 00 00 20 00 80 00 15 00 30 AA BB"
                                 required
-                                class="mt-1 w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+                                class="mt-1 w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]"
                             >
                             <p class="text-[11px] text-slate-400 mt-1">Spasi akan dibersihkan otomatis oleh sistem.</p>
                         </div>
@@ -528,7 +528,7 @@
                                 id="inject_level"
                                 name="level"
                                 required
-                                class="mt-1 w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+                                class="mt-1 w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]"
                             >
                                 <option value="INFO">INFO — Transmisi Telemetri Normal</option>
                                 <option value="WARN">WARN — Peringatan Deviasi / Jangkauan</option>
@@ -537,8 +537,8 @@
                         </div>
                     </div>
 
-                    <div class="p-3 bg-amber-50 rounded-lg text-[11px] text-amber-800 leading-relaxed border border-amber-200">
-                        <strong>Transparansi Provenance:</strong> Frame ini akan dicatat sebagai <em>Simulasi Injeksi</em> tanpa memicu transmisi fisik atau mengubah status operasional perangkat keras asli.
+                    <div class="p-3 bg-slate-50 rounded-lg text-[11px] text-slate-600 leading-relaxed border border-slate-200">
+                        <strong class="text-slate-800">Transparansi Provenance:</strong> Frame ini akan dicatat sebagai <em>Simulasi Injeksi</em> tanpa memicu transmisi fisik atau mengubah status operasional perangkat keras asli.
                     </div>
 
                     <div class="flex items-center justify-end gap-2 pt-2">
