@@ -80,7 +80,7 @@ class UserDirectoryController extends Controller
 
         $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
         $activeSchool = $targetSchoolId ? School::find($targetSchoolId) : $user?->school;
-        $schoolName = $activeSchool?->name ?? ($isSuperuser ? 'Semua Sekolah (Agregat Global)' : 'SMK Pertanian Pembangunan Negeri 1 Sukaraja');
+        $schoolName = $activeSchool?->name ?? ($isSuperuser ? 'Semua Sekolah (Agregat Global)' : 'Sekolah Terdaftar');
 
         return view('pages.users.user-directory', [
             'users' => $users,

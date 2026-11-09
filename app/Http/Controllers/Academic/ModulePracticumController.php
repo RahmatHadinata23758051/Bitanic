@@ -8,7 +8,6 @@ use App\Actions\Practicum\SubmitStudentReportAction;
 use App\Http\Controllers\Controller;
 use App\Models\ModulePracticum;
 use App\Models\StudentReport;
-use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -80,10 +79,10 @@ class ModulePracticumController extends Controller
         ]);
 
         $module = ModulePracticum::findOrFail($id);
-        $user = Auth::user() ?? User::where('role', 'siswa')->first() ?? User::first();
+        $user = $request->user();
 
         if (! $user) {
-            return redirect()->back()->with('error', 'Silakan login terlebih dahulu untuk mengumpulkan LKS.');
+            return redirect()->route('login');
         }
 
         $action->execute($user, $module, [
@@ -112,10 +111,10 @@ class ModulePracticumController extends Controller
         ]);
 
         $report = StudentReport::with('module')->findOrFail($reportId);
-        $teacher = Auth::user() ?? User::where('role', 'guru')->first() ?? User::first();
+        $teacher = $request->user();
 
-        if (! $teacher) {
-            return redirect()->back()->with('error', 'Otorisasi guru diperlukan untuk memberikan nilai.');
+        if (! $teacher || (! $teacher->isTeacher() && ! $teacher->isSuperuser())) {
+            abort(403, 'Otorisasi guru diperlukan untuk memberikan nilai.');
         }
 
         $action->execute(

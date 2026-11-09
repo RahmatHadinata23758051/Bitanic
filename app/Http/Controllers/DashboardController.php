@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\School;
 use App\Models\StudentReport;
 use App\Models\UserProfile;
+use App\Services\Agronomy\AgronomicThresholdResolver;
 use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -16,7 +17,7 @@ class DashboardController extends Controller
     /**
      * Display the vocational LMS lab overview dashboard.
      */
-    public function index(Request $request, DeviceAvailabilityResolver $availability): View
+    public function index(Request $request, DeviceAvailabilityResolver $availability, AgronomicThresholdResolver $thresholdResolver): View
     {
         $user = $request->user();
         $isSuperuser = (bool) $user?->isSuperuser();
@@ -127,6 +128,11 @@ class DashboardController extends Controller
         }
 
         // 4. Evaluate system-wide anomalies (gated to live/fresh telemetry only)
+        $thresholds = $thresholdResolver->resolveForSchool($targetSchoolId);
+        $phCritLow = (float) ($thresholds['ph']['critical_low'] ?? 5.5);
+        $moistureCritLow = (float) ($thresholds['moisture']['critical_low'] ?? 30.0);
+        $ecMax = (float) ($thresholds['ec']['ideal_max'] ?? 2200.0);
+
         $anomalies = [];
         $affectedStationCodes = [];
         $hasFreshHardwareTelemetry = false;
@@ -149,42 +155,42 @@ class DashboardController extends Controller
 
             $hasFreshHardwareTelemetry = true;
 
-            if ($latest->ph !== null && (float) $latest->ph < 5.5) {
+            if ($latest->ph !== null && (float) $latest->ph < $phCritLow) {
                 $anomalies[] = [
                     'device' => $dev->code,
                     'bench' => $dev->bench_location ?? $dev->name,
                     'parameter' => 'pH Tanah',
                     'value' => number_format((float) $latest->ph, 2),
                     'severity' => 'critical',
-                    'message' => 'Kemasaman masam ekstrem (< 5.5). Risiko keracunan Al/Fe.',
+                    'message' => 'Kemasaman masam ekstrem (< '.$phCritLow.'). Risiko keracunan Al/Fe.',
                     'action' => 'Aplikasi dolomit/kapur pertanian 50g/m².',
                     'recorded_at' => $latest->recorded_at,
                     'provenance' => $latest->provenance,
                 ];
                 $affectedStationCodes[$dev->code] = true;
             }
-            if ($latest->humidity !== null && (float) $latest->humidity < 25.0) {
+            if ($latest->humidity !== null && (float) $latest->humidity < $moistureCritLow) {
                 $anomalies[] = [
                     'device' => $dev->code,
                     'bench' => $dev->bench_location ?? $dev->name,
                     'parameter' => 'Kadar Lengas',
                     'value' => number_format((float) $latest->humidity, 1).'%',
                     'severity' => 'critical',
-                    'message' => 'Tanah mendekati titik layu permanen (< 25%).',
+                    'message' => 'Tanah mendekati titik layu permanen (< '.$moistureCritLow.'%).',
                     'action' => 'Aktifkan pompa irigasi tetes.',
                     'recorded_at' => $latest->recorded_at,
                     'provenance' => $latest->provenance,
                 ];
                 $affectedStationCodes[$dev->code] = true;
             }
-            if ($latest->ec !== null && (float) $latest->ec > 2200) {
+            if ($latest->ec !== null && (float) $latest->ec > $ecMax) {
                 $anomalies[] = [
                     'device' => $dev->code,
                     'bench' => $dev->bench_location ?? $dev->name,
                     'parameter' => 'EC Salinitas',
                     'value' => number_format((float) $latest->ec, 0).' µS/cm',
                     'severity' => 'warning',
-                    'message' => 'Salinitas garam pupuk tinggi (> 2200 µS/cm).',
+                    'message' => 'Salinitas garam pupuk tinggi (> '.$ecMax.' µS/cm).',
                     'action' => 'Lakukan pembilasan air murni (leaching).',
                     'recorded_at' => $latest->recorded_at,
                     'provenance' => $latest->provenance,

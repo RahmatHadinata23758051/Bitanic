@@ -10,11 +10,9 @@ use App\Models\Device;
 use App\Models\ModulePracticum;
 use App\Models\School;
 use App\Models\StudentGroup;
-use App\Models\User;
 use App\Services\Hardware\DeviceAvailabilityResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class ActivityScheduleController extends Controller
@@ -168,7 +166,11 @@ class ActivityScheduleController extends Controller
             'end_time.required' => 'Jam selesai wajib diisi (format JJ:MM).',
         ]);
 
-        $creator = Auth::user() ?? User::where('role', 'guru')->first() ?? User::first();
+        $creator = $request->user();
+
+        if (! $creator) {
+            abort(403, 'Akses ditolak: sesi login diperlukan.');
+        }
 
         $action->execute($validated, $creator);
 
