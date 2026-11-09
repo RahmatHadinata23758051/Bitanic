@@ -2,97 +2,100 @@
 
 @section('content')
 <div class="space-y-6">
-    <!-- Header Banner -->
-    <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <!-- Unboxed Header & Contextual Toolbar matching approved Bitanic baseline -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="space-y-1">
-            <div class="flex items-center gap-2">
-                <span class="px-2.5 py-0.5 text-xs font-bold uppercase rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
-                    Kurikulum Vokasi Merdeka
-                </span>
-                <span class="text-xs text-slate-400">•</span>
-                <span class="text-xs font-semibold text-slate-600">SMK Pertanian ATPH 4.0</span>
-            </div>
-            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-                12 Modul Praktikum Pertanian Presisi (Precision Agriculture)
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight font-sans">
+                Modul Praktikum
             </h1>
-            <p class="text-xs sm:text-sm text-slate-600 max-w-3xl leading-relaxed">
-                Panduan praktikum terstruktur berbasis fenomena (*inquiry learning*) menggunakan BITANIC Trainer Kit, dari instalasi panel K3 hingga analisis panen brix berbasis data.
+            <p class="text-xs text-slate-500">
+                Materi dan panduan kegiatan praktikum pertanian presisi • 12 Modul Praktikum Pertanian Presisi
             </p>
         </div>
 
-        <div class="flex items-center gap-3 shrink-0">
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Modul</span>
-                <span class="text-2xl font-extrabold text-slate-900 font-mono">12</span>
+        <div class="flex items-center gap-3 shrink-0 flex-wrap">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-slate-200/80 text-xs font-medium text-slate-700 shadow-2xs">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="tabular-nums">{{ $modules->count() }} Modul Praktikum</span>
+                <span class="text-slate-300">•</span>
+                <span class="tabular-nums">{{ round($modules->sum('duration_minutes') / 60) }} Jam Praktikum</span>
             </div>
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Alokasi Waktu</span>
-                <span class="text-2xl font-extrabold text-emerald-700 font-mono">36 JP</span>
-            </div>
+
+            @if(Auth::check() && (Auth::user()->isGuru() || Auth::user()->isSuperuser()))
+                <a
+                    href="{{ url('/reports') }}"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors"
+                >
+                    <i data-lucide="file-check" class="w-4 h-4 text-slate-500"></i>
+                    <span>Laporan LKS Siswa</span>
+                </a>
+            @endif
         </div>
     </div>
 
     <!-- Modules Grid (12 Kartu) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
         @foreach($modules as $module)
             @php
                 $report = $userReports->get($module->id);
                 $isCompleted = $report && $report->status === 'graded';
                 $isSubmitted = $report && $report->status === 'submitted';
             @endphp
-            <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div class="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs hover:border-emerald-300 hover:shadow-xs transition-all flex flex-col justify-between space-y-4">
                 <div class="space-y-3">
-                    <!-- Top Card Header -->
-                    <div class="flex items-center justify-between">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-slate-100 text-slate-700">
-                            Pertemuan #{{ $module->meeting_number }}
+                    <!-- Top Card Header: Sequence & Subject Category -->
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-semibold text-slate-500 tabular-nums">
+                            Modul {{ str_pad($module->meeting_number, 2, '0', STR_PAD_LEFT) }}
                         </span>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700">
                             {{ $module->badge }}
                         </span>
                     </div>
 
                     <!-- Title & Subtitle -->
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-2">
+                    <div class="space-y-1">
+                        <h3 class="text-sm font-semibold text-slate-900 leading-snug line-clamp-2">
                             {{ $module->title }}
                         </h3>
-                        <p class="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                        <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                             {{ $module->subtitle }}
                         </p>
                     </div>
 
-                    <!-- Capaian Pembelajaran Excerpt -->
-                    <div class="p-2.5 rounded-lg bg-slate-50 text-[11px] text-slate-600 line-clamp-2">
-                        <span class="font-bold text-slate-800">Target:</span> {{ $module->capaian_pembelajaran }}
+                    <!-- Concise Learning Target Summary -->
+                    <div class="p-3 rounded-xl bg-slate-50/75 border border-slate-100 text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                        <span class="font-medium text-slate-800">Capaian:</span> {{ $module->capaian_pembelajaran }}
                     </div>
                 </div>
 
-                <!-- Footer Card -->
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <div class="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
+                <!-- Footer Card: Duration, Status, Action -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 text-xs text-slate-500 tabular-nums font-normal">
                         <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
-                        <span>{{ $module->duration_minutes }} Mnt</span>
+                        <span>{{ $module->duration_minutes }} menit</span>
                     </div>
 
-                    @if($isCompleted)
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 font-mono">
-                            <i data-lucide="check-circle" class="w-3 h-3"></i>
-                            <span>Nilai: {{ $report->final_grade }}</span>
-                        </span>
-                    @elseif($isSubmitted)
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 font-mono">
-                            Menunggu Nilai
-                        </span>
-                    @endif
+                    <div class="flex items-center gap-2">
+                        @if($isCompleted)
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 tabular-nums">
+                                <i data-lucide="check" class="w-3 h-3"></i>
+                                <span>Nilai: {{ $report->final_grade }}</span>
+                            </span>
+                        @elseif($isSubmitted)
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                Menunggu Nilai
+                            </span>
+                        @endif
 
-                    <a
-                        href="{{ route('modules.show', $module->id) }}"
-                        class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center gap-1 shadow-sm"
-                    >
-                        <span>Buka Modul</span>
-                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                    </a>
+                        <a
+                            href="{{ route('modules.show', $module->id) }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors shrink-0"
+                        >
+                            <span>Buka Modul</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         @endforeach
