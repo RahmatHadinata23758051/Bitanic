@@ -354,4 +354,121 @@ class AgronomyAnalyticsTenancyTest extends TestCase
 
         $this->assertIsBool($resp->viewData('isCustomizedThresholds'));
     }
+
+    public function test_analytics_renders_seven_parameter_mini_charts_and_reading_guide(): void
+    {
+        $resp = $this->actingAs($this->teacherA)->get('/analytics');
+        $resp->assertOk();
+
+        $panels = $resp->viewData('parameterPanels');
+        $this->assertIsArray($panels);
+        $this->assertCount(7, $panels);
+
+        foreach (['ph', 'moisture', 'ec', 'temperature', 'nitrogen', 'phosphorus', 'potassium'] as $k) {
+            $this->assertArrayHasKey($k, $panels);
+            $this->assertArrayHasKey('name', $panels[$k]);
+            $this->assertArrayHasKey('unit', $panels[$k]);
+            $this->assertArrayHasKey('latest_val', $panels[$k]);
+            $this->assertArrayHasKey('status', $panels[$k]);
+            $this->assertArrayHasKey('points', $panels[$k]);
+        }
+
+        // Assert UI strings for mini-charts and reading guide
+        $resp->assertSee('Semua parameter');
+        $resp->assertSee('Satu parameter');
+        $resp->assertSee('Cara membaca');
+        $resp->assertSee('Nilai terukur');
+        $resp->assertSee('Di luar rentang ideal');
+        $resp->assertSee('Rentang ideal');
+    }
+
+    public function test_analytics_sanitizes_physical_measurement_outliers(): void
+    {
+        // Insert an outlier reading with impossible physical values (pH 99, moisture 500)
+        TelemetryReading::create([
+            'device_id' => $this->deviceA1->id,
+            'provenance' => 'hardware',
+            'ph' => 99.0, // Impossible pH
+            'ec' => 1500.0,
+            'humidity' => 500.0, // Impossible moisture %
+            'temperature' => 25.0,
+            'nitrogen' => 80.0,
+            'phosphorus' => 40.0,
+            'potassium' => 120.0,
+            'recorded_at' => now()->subMinutes(1),
+        ]);
+
+        $resp = $this->actingAs($this->teacherA)->get('/analytics');
+        $resp->assertOk();
+
+        $panels = $resp->viewData('parameterPanels');
+        // pH and moisture from the outlier record must be sanitized to null
+        // so latest_val falls back to the previous valid reading or excludes outlier
+        $this->assertLessThanOrEqual(14.0, $panels['ph']['latest_val']);
+        $this->assertLessThanOrEqual(100.0, $panels['moisture']['latest_val']);
+    }
+
+    public function test_analytics_deduplicates_consecutive_replayed_timestamps(): void
+    {
+        $exactTime = now()->subMinutes(3);
+
+        // Insert duplicate records with identical recorded_at timestamp
+        TelemetryReading::create([
+            'device_id' => $this->deviceA1->id,
+            'provenance' => 'hardware',
+            'ph' => 6.6,
+            'ec' => 1550.0,
+            'humidity' => 55.0,
+            'temperature' => 25.5,
+            'nitrogen' => 82.0,
+            'phosphorus' => 41.0,
+            'potassium' => 122.0,
+            'recorded_at' => $exactTime,
+        ]);
+
+        TelemetryReading::create([
+            'device_id' => $this->deviceA1->id,
+            'provenance' => 'hardware',
+            'ph' => 6.6,
+            'ec' => 1550.0,
+            'humidity' => 55.0,
+            'temperature' => 25.5,
+            'nitrogen' => 82.0,
+            'phosphorus' => 41.0,
+            'potassium' => 122.0,
+            'recorded_at' => $exactTime,
+        ]);
+
+        $resp = $this->actingAs($this->teacherA)->get('/analytics');
+        $resp->assertOk();
+
+        // 2 readings from setUp + 1 unique deduplicated reading = 3
+        $this->assertEquals(3, $resp->viewData('readingCount'));
+    }
+
+    public function test_analytics_bivariate_regression_and_ideal_zone(): void
+    {
+        $resp = $this->actingAs($this->teacherA)->get('/analytics');
+        $resp->assertOk();
+
+        $correlations = $resp->viewData('correlations');
+        $this->assertCount(2, $correlations);
+
+        // In setUp there are 2 varying readings (6.5, 1500) and (6.8, 1600)
+        // Regression must be computed and not null
+        $this->assertNotNull($correlations[0]['regression']);
+        $this->assertArrayHasKey('slope', $correlations[0]['regression']);
+        $this->assertArrayHasKey('intercept', $correlations[0]['regression']);
+
+        // Check ideal zone coordinates
+        $this->assertArrayHasKey('x_ideal_min', $correlations[0]);
+        $this->assertArrayHasKey('x_ideal_max', $correlations[0]);
+        $this->assertArrayHasKey('y_ideal_min', $correlations[0]);
+        $this->assertArrayHasKey('y_ideal_max', $correlations[0]);
+
+        // Points must contain is_in_zone boolean
+        $this->assertNotEmpty($correlations[0]['points']);
+        $this->assertArrayHasKey('is_in_zone', $correlations[0]['points'][0]);
+        $this->assertIsBool($correlations[0]['points'][0]['is_in_zone']);
+    }
 }
