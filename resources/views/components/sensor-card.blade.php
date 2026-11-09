@@ -161,12 +161,12 @@
             </div>
         </div>
 
-        <!-- BACK SIDE: Agronomy Glossary (WHITE ON BOTH SIDES, No Emojis, No Truncation) -->
+        <!-- BACK SIDE: Agronomy Glossary (Ultra-Concise, No Scrolling) -->
         <div
-            class="absolute inset-0 backface-hidden rotate-y-180 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs group-hover:border-slate-300 transition-colors flex flex-col justify-between overflow-hidden text-slate-800"
+            class="absolute inset-0 backface-hidden rotate-y-180 p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs group-hover:border-slate-300 transition-colors flex flex-col justify-between overflow-hidden text-slate-800"
         >
             <!-- Back Header: Title & Clean Glosarium Badge -->
-            <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-1.5 shrink-0">
                 <h4 class="text-xs font-semibold text-slate-900 truncate" title="{{ $parameter }}">
                     {{ $parameter }}
                 </h4>
@@ -175,21 +175,17 @@
                 </span>
             </div>
 
-            <!-- Back Content: Educational Points (No Emoji, Concise, Legible) -->
-            <div class="space-y-1.5 text-xs text-slate-600 my-auto">
-                <p class="text-[11px] text-slate-600 leading-snug">
-                    {{ $definition }}
-                </p>
-
+            <!-- Back Content: Ultra-Concise Agronomic Points (Fits 200px Without Scroll) -->
+            <div class="space-y-2 text-xs text-slate-600 my-auto">
                 <div class="space-y-0.5">
-                    <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Mengapa penting</span>
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Fungsi</span>
                     <p class="text-[11px] text-slate-700 leading-snug">
-                        {{ $importanceText }}
+                        {{ $definition }}
                     </p>
                 </div>
 
                 <div class="space-y-0.5">
-                    <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Perlu diperhatikan</span>
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Risiko deviasi</span>
                     <p class="text-[11px] text-slate-700 leading-snug">
                         {{ $riskText }}
                     </p>
@@ -197,7 +193,7 @@
             </div>
 
             <!-- Back Footer: Reference Range Strip -->
-            <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px] shrink-0">
                 <span class="text-slate-500 font-medium">Rentang acuan:</span>
                 @if($idealMin !== null && $idealMax !== null)
                     <span class="font-semibold text-emerald-800 font-mono">{{ $idealMin }} – {{ $idealMax }} {{ $unit }}</span>

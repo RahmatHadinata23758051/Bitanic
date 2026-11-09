@@ -142,3 +142,4 @@ class AgronomicThresholdResolverTest extends TestCase
         $this->assertEquals(70, $scoreStressed);
     }
 }
+
