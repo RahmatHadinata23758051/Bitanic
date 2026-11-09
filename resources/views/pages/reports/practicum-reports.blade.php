@@ -45,37 +45,37 @@
     </div>
 
     <!-- Contextual Summary Strip (4 Cards) -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[11px] font-medium text-slate-500">Total Pengumpulan</div>
-            <div class="text-xl font-bold text-slate-900 font-tabular mt-0.5">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-medium text-slate-500">Total Pengumpulan</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
                 {{ number_format($stats['total'], 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">LKS</span>
             </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Seluruh modul praktikum</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Seluruh modul praktikum</div>
         </div>
 
-        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[11px] font-medium text-slate-500">Menunggu Review</div>
-            <div class="text-xl font-bold font-tabular mt-0.5 {{ $stats['submitted'] > 0 ? 'text-amber-700' : 'text-slate-700' }}">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-medium text-slate-500">Menunggu Review</div>
+            <div class="text-2xl font-semibold {{ $stats['submitted'] > 0 ? 'text-amber-700' : 'text-slate-900' }} tabular-nums mt-1">
                 {{ number_format($stats['submitted'], 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">LKS</span>
             </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Perlu verifikasi &amp; nilai guru</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Perlu verifikasi &amp; nilai guru</div>
         </div>
 
-        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[11px] font-medium text-slate-500">Selesai Dinilai</div>
-            <div class="text-xl font-bold font-tabular mt-0.5 {{ $stats['graded'] > 0 ? 'text-emerald-700' : 'text-slate-700' }}">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-medium text-slate-500">Selesai Dinilai</div>
+            <div class="text-2xl font-semibold {{ $stats['graded'] > 0 ? 'text-emerald-700' : 'text-slate-900' }} tabular-nums mt-1">
                 {{ number_format($stats['graded'], 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">LKS</span>
             </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Telah diberi skor rubrik</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Telah diberi skor rubrik</div>
         </div>
 
-        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <div class="text-[11px] font-medium text-slate-500">Rata-Rata Nilai</div>
-            <div class="text-xl font-bold text-slate-900 font-tabular mt-0.5">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-medium text-slate-500">Rata-Rata Nilai</div>
+            <div class="text-2xl font-semibold text-slate-900 tabular-nums mt-1">
                 {{ $stats['avg_grade'] !== null ? number_format($stats['avg_grade'], 1, ',', '.') : '—' }}
             </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Skala 0 – 100 (laporan dinilai)</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Skala 0 – 100 (laporan dinilai)</div>
         </div>
     </div>
 
@@ -153,7 +153,7 @@
                 <p class="text-[11px] text-slate-500">Penilaian rubrik 4-skala dan bukti telemetri sensor praktikum</p>
             </div>
             <div class="text-[11px] text-slate-500 font-medium">
-                Total data: <span class="font-semibold text-slate-800 font-tabular">{{ $reports->total() }}</span> laporan
+                Total data: <span class="font-semibold text-slate-800 tabular-nums">{{ $reports->total() }}</span> laporan
             </div>
         </div>
 
@@ -195,15 +195,15 @@
                             <td class="py-3 px-3">
                                 @if(!empty($snap))
                                     <div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-700 flex-wrap">
-                                        <span class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-tabular">pH: {{ $snap['ph'] ?? '-' }}</span>
-                                        <span class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-tabular">Lengas: {{ $snap['moisture'] ?? '-' }}%</span>
-                                        <span class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-tabular">EC: {{ $snap['ec'] ?? '-' }}</span>
+                                        <span class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 tabular-nums">pH: {{ $snap['ph'] ?? '-' }}</span>
+                                        <span class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 tabular-nums">Lengas: {{ $snap['moisture'] ?? '-' }}%</span>
+                                        <span class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 tabular-nums">EC: {{ $snap['ec'] ?? '-' }}</span>
                                     </div>
                                 @else
                                     <span class="text-slate-400 italic text-[11px]">Tidak ada snapshot</span>
                                 @endif
                             </td>
-                            <td class="py-3 px-3 whitespace-nowrap font-tabular text-[11px] text-slate-600 font-medium">
+                            <td class="py-3 px-3 whitespace-nowrap tabular-nums text-[11px] text-slate-600 font-medium">
                                 {{ $r->created_at ? $r->created_at->format('d/m/Y H:i') : '-' }} WIB
                             </td>
                             <td class="py-3 px-3 whitespace-nowrap">
@@ -221,7 +221,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3 px-3 font-tabular font-bold text-sm whitespace-nowrap">
+                            <td class="py-3 px-3 tabular-nums font-semibold text-sm whitespace-nowrap">
                                 @if($r->final_grade !== null)
                                     <span class="text-slate-900">{{ number_format($r->final_grade, 0) }}</span>
                                     <span class="text-xs text-slate-400 font-normal">/100</span>
@@ -242,12 +242,12 @@
                     @empty
                         <tr>
                             <td colspan="7" class="py-12 text-center text-slate-400">
-                                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center mx-auto mb-3">
                                     <i data-lucide="file-text" class="w-6 h-6"></i>
                                 </div>
-                                <h3 class="text-sm font-semibold text-slate-700">Belum ada laporan praktikum</h3>
+                                <h3 class="text-sm font-semibold text-slate-800">Belum Ada Laporan Praktikum</h3>
                                 <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                                    Belum ada laporan praktikum yang sesuai dengan filter yang dipilih.
+                                    Pengumpulan lembar kerja siswa akan terdaftar di sini setelah praktikan mengumpulkan LKS.
                                 </p>
                             </td>
                         </tr>
