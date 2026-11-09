@@ -20,6 +20,26 @@ class AgronomicThresholdResolverTest extends TestCase
         $this->resolver = new AgronomicThresholdResolver;
     }
 
+    public function test_default_form_thresholds_match_canonical_defaults(): void
+    {
+        $formDefaults = AgronomicThresholdResolver::defaultFormThresholds();
+
+        $this->assertEquals(6.0, $formDefaults['minPH']);
+        $this->assertEquals(7.2, $formDefaults['maxPH']);
+        $this->assertEquals(45.0, $formDefaults['minMoisture']);
+        $this->assertEquals(65.0, $formDefaults['maxMoisture']);
+        $this->assertEquals(1000.0, $formDefaults['minEC']);
+        $this->assertEquals(2200.0, $formDefaults['maxEC']);
+        $this->assertEquals(22.0, $formDefaults['minTemperature']);
+        $this->assertEquals(29.0, $formDefaults['maxTemperature']);
+        $this->assertEquals(40.0, $formDefaults['minNitrogen']);
+        $this->assertEquals(120.0, $formDefaults['maxNitrogen']);
+        $this->assertEquals(25.0, $formDefaults['minPhosphorus']);
+        $this->assertEquals(60.0, $formDefaults['maxPhosphorus']);
+        $this->assertEquals(100.0, $formDefaults['minPotassium']);
+        $this->assertEquals(200.0, $formDefaults['maxPotassium']);
+    }
+
     public function test_resolve_returns_all_seven_parameters_with_defaults(): void
     {
         $thresholds = $this->resolver->resolveForSchool(null);

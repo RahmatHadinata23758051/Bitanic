@@ -181,6 +181,31 @@ class AgronomicThresholdResolver
     ];
 
     /**
+     * Get default form threshold key-value pairs matching input field names.
+     *
+     * @return array<string, float>
+     */
+    public static function defaultFormThresholds(): array
+    {
+        return [
+            'minPH' => (float) self::DEFAULTS['ph']['ideal_min'],
+            'maxPH' => (float) self::DEFAULTS['ph']['ideal_max'],
+            'minMoisture' => (float) self::DEFAULTS['moisture']['ideal_min'],
+            'maxMoisture' => (float) self::DEFAULTS['moisture']['ideal_max'],
+            'minEC' => (float) self::DEFAULTS['ec']['ideal_min'],
+            'maxEC' => (float) self::DEFAULTS['ec']['ideal_max'],
+            'minTemperature' => (float) self::DEFAULTS['temperature']['ideal_min'],
+            'maxTemperature' => (float) self::DEFAULTS['temperature']['ideal_max'],
+            'minNitrogen' => (float) self::DEFAULTS['nitrogen']['ideal_min'],
+            'maxNitrogen' => (float) self::DEFAULTS['nitrogen']['ideal_max'],
+            'minPhosphorus' => (float) self::DEFAULTS['phosphorus']['ideal_min'],
+            'maxPhosphorus' => (float) self::DEFAULTS['phosphorus']['ideal_max'],
+            'minPotassium' => (float) self::DEFAULTS['potassium']['ideal_min'],
+            'maxPotassium' => (float) self::DEFAULTS['potassium']['ideal_max'],
+        ];
+    }
+
+    /**
      * Check if a given school has configured custom sensor thresholds.
      */
     public function isCustomizedForSchool(?int $schoolId): bool

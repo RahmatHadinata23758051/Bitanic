@@ -161,14 +161,14 @@
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[11px] text-slate-500 block mb-1">Min</label>
-                                <input type="number" step="0.1" name="thresholds[minPH]" value="{{ $th['minPH'] ?? 5.5 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
+                                <input type="number" step="0.1" name="thresholds[minPH]" value="{{ $th['minPH'] ?? 6.0 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                             <div>
                                 <label class="text-[11px] text-slate-500 block mb-1">Max</label>
                                 <input type="number" step="0.1" name="thresholds[maxPH]" value="{{ $th['maxPH'] ?? 7.2 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                         </div>
-                        <span class="text-[10px] text-slate-400 block">Acuan baku: 5.5 – 7.2</span>
+                        <span class="text-[10px] text-slate-400 block">Preset acuan: 6.0 – 7.2</span>
                     </div>
 
                     <!-- Lengas / Moisture -->
@@ -180,14 +180,14 @@
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[11px] text-slate-500 block mb-1">Min</label>
-                                <input type="number" step="1" name="thresholds[minMoisture]" value="{{ $th['minMoisture'] ?? 30 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
+                                <input type="number" step="1" name="thresholds[minMoisture]" value="{{ $th['minMoisture'] ?? 45 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                             <div>
                                 <label class="text-[11px] text-slate-500 block mb-1">Max</label>
-                                <input type="number" step="1" name="thresholds[maxMoisture]" value="{{ $th['maxMoisture'] ?? 75 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
+                                <input type="number" step="1" name="thresholds[maxMoisture]" value="{{ $th['maxMoisture'] ?? 65 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                         </div>
-                        <span class="text-[10px] text-slate-400 block">Acuan baku: 30% – 75%</span>
+                        <span class="text-[10px] text-slate-400 block">Preset acuan: 45% – 65%</span>
                     </div>
 
                     <!-- EC -->
@@ -199,14 +199,14 @@
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[11px] text-slate-500 block mb-1">Min</label>
-                                <input type="number" step="50" name="thresholds[minEC]" value="{{ $th['minEC'] ?? 800 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
+                                <input type="number" step="50" name="thresholds[minEC]" value="{{ $th['minEC'] ?? 1000 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                             <div>
                                 <label class="text-[11px] text-slate-500 block mb-1">Max</label>
                                 <input type="number" step="50" name="thresholds[maxEC]" value="{{ $th['maxEC'] ?? 2200 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                         </div>
-                        <span class="text-[10px] text-slate-400 block">Acuan baku: 800 – 2200 µS/cm</span>
+                        <span class="text-[10px] text-slate-400 block">Preset acuan: 1000 – 2200 µS/cm</span>
                     </div>
 
                     <!-- Suhu -->
@@ -225,7 +225,7 @@
                                 <input type="number" step="0.5" name="thresholds[maxTemperature]" value="{{ $th['maxTemperature'] ?? 29.0 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                         </div>
-                        <span class="text-[10px] text-slate-400 block">Acuan baku: 22.0 – 29.0 °C</span>
+                        <span class="text-[10px] text-slate-400 block">Preset acuan: 22.0 – 29.0 °C</span>
                     </div>
 
                     <!-- Nitrogen -->
@@ -244,7 +244,7 @@
                                 <input type="number" step="5" name="thresholds[maxNitrogen]" value="{{ $th['maxNitrogen'] ?? 120 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                         </div>
-                        <span class="text-[10px] text-slate-400 block">Acuan baku: 40 – 120 mg/kg</span>
+                        <span class="text-[10px] text-slate-400 block">Preset acuan: 40 – 120 mg/kg</span>
                     </div>
 
                     <!-- Fosfor -->
@@ -263,7 +263,7 @@
                                 <input type="number" step="5" name="thresholds[maxPhosphorus]" value="{{ $th['maxPhosphorus'] ?? 60 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                         </div>
-                        <span class="text-[10px] text-slate-400 block">Acuan baku: 25 – 60 mg/kg</span>
+                        <span class="text-[10px] text-slate-400 block">Preset acuan: 25 – 60 mg/kg</span>
                     </div>
 
                     <!-- Kalium -->
@@ -282,7 +282,7 @@
                                 <input type="number" step="5" name="thresholds[maxPotassium]" value="{{ $th['maxPotassium'] ?? 200 }}" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-tabular text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26]">
                             </div>
                         </div>
-                        <span class="text-[10px] text-slate-400 block">Acuan baku: 100 – 200 mg/kg</span>
+                        <span class="text-[10px] text-slate-400 block">Preset acuan: 100 – 200 mg/kg</span>
                     </div>
                 </div>
 

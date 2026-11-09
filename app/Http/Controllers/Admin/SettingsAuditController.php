@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\SchoolSetting;
+use App\Services\Agronomy\AgronomicThresholdResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -43,22 +44,7 @@ class SettingsAuditController extends Controller
 
         $setting = SchoolSetting::where('school_id', $schoolId)->first();
 
-        $defaultThresholds = [
-            'minMoisture' => 30.0,
-            'maxMoisture' => 75.0,
-            'minPH' => 5.5,
-            'maxPH' => 7.2,
-            'minEC' => 800,
-            'maxEC' => 2200,
-            'minTemperature' => 22.0,
-            'maxTemperature' => 29.0,
-            'minNitrogen' => 40.0,
-            'maxNitrogen' => 120.0,
-            'minPhosphorus' => 25.0,
-            'maxPhosphorus' => 60.0,
-            'minPotassium' => 100.0,
-            'maxPotassium' => 200.0,
-        ];
+        $defaultThresholds = AgronomicThresholdResolver::defaultFormThresholds();
 
         if (! $setting) {
             $setting = (object) [
