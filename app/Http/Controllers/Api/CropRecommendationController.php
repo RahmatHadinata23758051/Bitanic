@@ -18,7 +18,7 @@ class CropRecommendationController extends Controller
     {
         $user = $request->user() ?? Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Autentikasi diperlukan.',
@@ -29,7 +29,7 @@ class CropRecommendationController extends Controller
             'reading_id' => 'nullable|exists:telemetry_readings,id',
         ]);
 
-        if (!$subService->canConsumeAi($user)) {
+        if (! $subService->canConsumeAi($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Kuota AI habis atau masa langganan berakhir. Silakan upgrade paket langganan Anda.',
@@ -37,18 +37,34 @@ class CropRecommendationController extends Controller
         }
 
         $readingId = $request->input('reading_id');
-        $reading = $readingId ? TelemetryReading::find($readingId) : TelemetryReading::latest('recorded_at')->first();
+        if (! $readingId) {
+            $reading = $user->isSuperuser()
+                ? TelemetryReading::latest('recorded_at')->first()
+                : TelemetryReading::whereHas('device', fn ($q) => $q->where('school_id', $user->school_id))->latest('recorded_at')->first();
+        } else {
+            $reading = TelemetryReading::find($readingId);
+        }
 
-        if (!$reading) {
+        if (! $reading) {
             return response()->json([
                 'success' => false,
                 'message' => 'Data telemetri sensor belum tersedia untuk dianalisis.',
             ], 404);
         }
 
+        // Multi-tenant check: non-superuser cannot analyze telemetry from another school
+        if (! $user->isSuperuser() && $reading->device && $reading->device->school_id) {
+            if (! $user->school_id || (int) $reading->device->school_id !== (int) $user->school_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak: Anda tidak memiliki wewenang untuk menganalisis data sensor sekolah lain.',
+                ], 403);
+            }
+        }
+
         $ticketId = (string) Str::uuid();
 
-        Cache::put('crop_recommendation_' . $ticketId, [
+        Cache::put('crop_recommendation_'.$ticketId, [
             'status' => 'queued',
             'ticket_id' => $ticketId,
             'user_id' => $user->id,
@@ -69,24 +85,24 @@ class CropRecommendationController extends Controller
     {
         $user = $request->user() ?? Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Autentikasi diperlukan.',
             ], 401);
         }
 
-        $cacheKey = 'crop_recommendation_' . $ticketId;
+        $cacheKey = 'crop_recommendation_'.$ticketId;
         $data = Cache::get($cacheKey);
 
-        if (!$data) {
+        if (! $data) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tiket rekomendasi AI tidak ditemukan atau telah kedaluwarsa.',
             ], 404);
         }
 
-        if (isset($data['user_id']) && (int) $data['user_id'] !== (int) $user->id && !$user->isSuperuser()) {
+        if (isset($data['user_id']) && (int) $data['user_id'] !== (int) $user->id && ! $user->isSuperuser()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Akses ditolak: Anda tidak memiliki wewenang untuk memeriksa status tiket rekomendasi ini.',

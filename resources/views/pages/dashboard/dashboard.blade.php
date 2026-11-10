@@ -39,7 +39,7 @@
             <p class="text-sm text-slate-500 mt-1">Ringkasan aktivitas akademik dan kondisi laboratorium.</p>
         </div>
 
-        @if($isSuperuser)
+        @if($isSuperuser && $schools->isNotEmpty())
             <form id="dashboard-school-form" method="GET" action="{{ url('/') }}" class="w-full sm:w-auto sm:min-w-56 shrink-0">
                 <label class="text-xs font-medium text-slate-600 block mb-1" for="dashboard-school-filter">Cakupan sekolah</label>
                 <div class="relative">

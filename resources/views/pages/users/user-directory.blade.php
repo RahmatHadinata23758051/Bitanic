@@ -15,7 +15,7 @@
 
         <!-- School Scope / Selector -->
         <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
-            @if($isSuperuser)
+            @if(!empty($isSuperuser) && $schools->isNotEmpty())
                 <form method="GET" action="{{ url('/users-data') }}" class="flex items-center gap-2">
                     @if($currentRole)<input type="hidden" name="role" value="{{ $currentRole }}">@endif
                     @if($search !== '')<input type="hidden" name="q" value="{{ $search }}">@endif

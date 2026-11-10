@@ -9,6 +9,7 @@ use App\Models\Device;
 use App\Models\DeviceApiKey;
 use App\Models\School;
 use App\Services\Hardware\DeviceAvailabilityResolver;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,32 +20,15 @@ class TrainerKitManagerController extends Controller
     /**
      * Display the Trainer Kit fleet and hardware status.
      */
-    public function index(Request $request, DeviceAvailabilityResolver $resolver): View
+    public function index(Request $request, DeviceAvailabilityResolver $resolver, SchoolContextResolver $contextResolver): View
     {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
-        $schoolId = $user?->school_id;
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses Trainer Kit memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
-
-        if ($isSuperuser && $selectedSchoolId) {
-            $targetSchoolId = (int) $selectedSchoolId;
-        } else {
-            $targetSchoolId = $isSuperuser
-                ? null
-                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
-        }
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
 
         $kits = Device::with(['latestReading', 'activeApiKey', 'school'])
             ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
@@ -55,8 +39,8 @@ class TrainerKitManagerController extends Controller
         // Compute deterministic availability per device based on heartbeat
         $kits->getCollection()->transform(fn ($kit) => $resolver->applyToDevice($kit));
 
-        $canViewSensitiveMetadata = $user && ($user->isGuru() || $user->isSuperuser());
-        $canReboot = $user && ($user->isGuru() || $user->isSuperuser());
+        $canViewSensitiveMetadata = $user && ($user->isGuru() || $user->isSuperuser() || $user->isAdmin());
+        $canReboot = $user && ($user->isGuru() || $user->isSuperuser() || $user->isAdmin());
         $canRotateApiKey = (bool) $user?->isSuperuser();
 
         // Server-side metadata stripping for guests and students (QA-01)
@@ -78,7 +62,7 @@ class TrainerKitManagerController extends Controller
         return view('pages.kits.trainer-kits', [
             'kits' => $kits,
             'schools' => $schools,
-            'selectedSchoolId' => $targetSchoolId,
+            'selectedSchoolId' => $selectedSchoolId,
             'isSuperuser' => $isSuperuser,
             'canViewSensitiveMetadata' => $canViewSensitiveMetadata,
             'canReboot' => $canReboot,

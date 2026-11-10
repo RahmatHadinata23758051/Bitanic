@@ -8,6 +8,7 @@ use App\Models\Media;
 use App\Models\School;
 use App\Models\TelemetryReading;
 use App\Services\PlantConditionEvaluator;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -122,17 +123,15 @@ class PlantingMediaController extends Controller
 
     private function resolveSchoolId(Request $request): int
     {
-        $user = $request->user();
-        if (! $user || ! $user->school_id) {
-            abort(403, 'Akses media tanam memerlukan asosiasi sekolah yang valid.');
+        /** @var SchoolContextResolver $resolver */
+        $resolver = app(SchoolContextResolver::class);
+        $context = $resolver->resolve($request, $request->user());
+
+        if ($context->targetSchoolId !== null) {
+            return (int) $context->targetSchoolId;
         }
 
-        $school = School::whereKey($user->school_id)->where('status', 'active')->first();
-        if (! $school) {
-            abort(403, 'Akses media tanam memerlukan sekolah yang aktif.');
-        }
-
-        return (int) $school->id;
+        return (int) ($request->user()?->school_id ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
     }
 
     /** @return Collection<int, Device> */

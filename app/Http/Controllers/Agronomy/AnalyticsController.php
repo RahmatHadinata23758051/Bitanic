@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\School;
 use App\Models\TelemetryReading;
 use App\Services\Agronomy\AgronomicThresholdResolver;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -15,32 +16,15 @@ class AnalyticsController extends Controller
     /**
      * Display the agronomic analytics page with data-backed correlation summaries and threshold matrices.
      */
-    public function index(Request $request, AgronomicThresholdResolver $thresholdResolver): View
+    public function index(Request $request, AgronomicThresholdResolver $thresholdResolver, SchoolContextResolver $contextResolver): View
     {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
-        $schoolId = $user?->school_id;
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses analitik memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
-
-        if ($isSuperuser && $selectedSchoolId) {
-            $targetSchoolId = (int) $selectedSchoolId;
-        } else {
-            $targetSchoolId = $isSuperuser
-                ? null
-                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
-        }
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
 
         $deviceId = $request->query('device_id');
         $devices = Device::query()
@@ -557,7 +541,7 @@ class AnalyticsController extends Controller
         return view('pages.analytics.agronomy-analytics', [
             'devices' => $devices,
             'schools' => $schools,
-            'selectedSchoolId' => $targetSchoolId,
+            'selectedSchoolId' => $selectedSchoolId,
             'isSuperuser' => $isSuperuser,
             'selectedDevice' => $selectedDevice,
             'chartData' => $chartData,

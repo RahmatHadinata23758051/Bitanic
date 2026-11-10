@@ -113,7 +113,7 @@ class ModulePracticumController extends Controller
         $report = StudentReport::with('module')->findOrFail($reportId);
         $teacher = $request->user();
 
-        if (! $teacher || (! $teacher->isTeacher() && ! $teacher->isSuperuser())) {
+        if (! $teacher || (! $teacher->isTeacher() && ! $teacher->isSuperuser() && ! $teacher->isAdmin())) {
             abort(403, 'Otorisasi guru diperlukan untuk memberikan nilai.');
         }
 

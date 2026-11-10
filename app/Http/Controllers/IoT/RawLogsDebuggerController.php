@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\RawDataLog;
 use App\Models\School;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,32 +16,15 @@ class RawLogsDebuggerController extends Controller
     /**
      * Display the Raw Modbus RS485 Hex Stream Debugger.
      */
-    public function index(Request $request): View
+    public function index(Request $request, SchoolContextResolver $contextResolver): View
     {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
-        $schoolId = $user?->school_id;
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses debugger memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
-
-        if ($isSuperuser && $selectedSchoolId) {
-            $targetSchoolId = (int) $selectedSchoolId;
-        } else {
-            $targetSchoolId = $isSuperuser
-                ? null
-                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
-        }
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
 
         $devices = Device::query()
             ->where('is_active', true)
@@ -90,7 +74,7 @@ class RawLogsDebuggerController extends Controller
             'logs' => $logs,
             'devices' => $devices,
             'schools' => $schools,
-            'selectedSchoolId' => $targetSchoolId,
+            'selectedSchoolId' => $selectedSchoolId,
             'isSuperuser' => $isSuperuser,
             'stats' => $stats,
             'currentLevel' => $levelFilter,

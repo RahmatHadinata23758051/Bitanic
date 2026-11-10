@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Classroom;
 use App\Models\School;
 use App\Models\User;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -15,27 +16,16 @@ class CompetencyAssessmentController extends Controller
     /**
      * Display the student competency gradebook and practicum assessment overview.
      */
-    public function index(Request $request): View
+    public function index(Request $request, SchoolContextResolver $contextResolver): View
     {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
+        $context = $contextResolver->resolve($request, $user);
+
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
         $isStudent = (bool) $user?->isSiswa();
-        $schoolId = $user?->school_id;
-
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses asesmen kompetensi memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $targetSchoolId = ($isSuperuser && $selectedSchoolId)
-            ? (int) $selectedSchoolId
-            : (! $isSuperuser ? $schoolId : null);
 
         $classFilter = $request->query('class');
 
@@ -141,27 +131,15 @@ class CompetencyAssessmentController extends Controller
     /**
      * Export the student competency gradebook to CSV.
      */
-    public function exportCsv(Request $request): StreamedResponse
+    public function exportCsv(Request $request, SchoolContextResolver $contextResolver): StreamedResponse
     {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
+        $context = $contextResolver->resolve($request, $user);
+
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $isSuperuser = $context->isSuperuser;
         $isStudent = (bool) $user?->isSiswa();
-        $schoolId = $user?->school_id;
-
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Ekspor asesmen kompetensi memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $targetSchoolId = ($isSuperuser && $selectedSchoolId)
-            ? (int) $selectedSchoolId
-            : (! $isSuperuser ? $schoolId : null);
 
         $classFilter = $request->query('class');
 

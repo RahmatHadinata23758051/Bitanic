@@ -21,7 +21,7 @@
                 <span class="tabular-nums">{{ round($modules->sum('duration_minutes') / 60) }} Jam Praktikum</span>
             </div>
 
-            @if(Auth::check() && (Auth::user()->isGuru() || Auth::user()->isSuperuser()))
+            @if(Auth::check() && (Auth::user()->isGuru() || Auth::user()->isSuperuser() || Auth::user()->isAdmin()))
                 <a
                     href="{{ url('/reports') }}"
                     class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors"

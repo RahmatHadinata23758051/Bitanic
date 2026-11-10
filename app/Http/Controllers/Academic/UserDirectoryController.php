@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Academic;
 use App\Http\Controllers\Controller;
 use App\Models\School;
 use App\Models\User;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -13,26 +14,15 @@ class UserDirectoryController extends Controller
     /**
      * Display the school student and teacher directory.
      */
-    public function index(Request $request): View
+    public function index(Request $request, SchoolContextResolver $contextResolver): View
     {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
-        $schoolId = $user?->school_id;
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses direktori pengguna memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $targetSchoolId = ($isSuperuser && $selectedSchoolId)
-            ? (int) $selectedSchoolId
-            : (! $isSuperuser ? $schoolId : null);
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
 
         $role = $request->query('role');
         $search = trim((string) $request->query('q', ''));
@@ -78,9 +68,8 @@ class UserDirectoryController extends Controller
                 ->count(),
         ];
 
-        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
-        $activeSchool = $targetSchoolId ? School::find($targetSchoolId) : $user?->school;
-        $schoolName = $activeSchool?->name ?? ($isSuperuser ? 'Semua Sekolah (Agregat Global)' : 'Sekolah Terdaftar');
+        $schools = $context->schools;
+        $schoolName = $context->schoolName;
 
         return view('pages.users.user-directory', [
             'users' => $users,

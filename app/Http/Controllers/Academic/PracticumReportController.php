@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Academic;
 use App\Http\Controllers\Controller;
 use App\Models\Classroom;
 use App\Models\ModulePracticum;
-use App\Models\School;
 use App\Models\StudentReport;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -15,30 +15,19 @@ class PracticumReportController extends Controller
     /**
      * Display the student practicum worksheet (LKS) hub.
      */
-    public function index(Request $request): View
+    public function index(Request $request, SchoolContextResolver $contextResolver): View
     {
         $statusFilter = $request->query('status');
         $moduleIdFilter = $request->query('module_id');
         $classFilter = $request->query('class') ?? $request->query('classroom_id');
-        $selectedSchoolId = $request->query('school_id');
 
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
-        $schoolId = $user?->school_id;
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses laporan praktikum memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $targetSchoolId = ($isSuperuser && $selectedSchoolId)
-            ? (int) $selectedSchoolId
-            : (! $isSuperuser ? $schoolId : null);
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
 
         $baseQuery = StudentReport::query();
         if ($user?->isSiswa()) {
@@ -85,7 +74,7 @@ class PracticumReportController extends Controller
         $classrooms = Classroom::when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('name')
             ->get();
-        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
+        $schools = $context->schools;
 
         return view('pages.reports.practicum-reports', [
             'user' => $user,

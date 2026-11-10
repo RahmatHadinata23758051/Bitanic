@@ -8,6 +8,7 @@ use App\Models\School;
 use App\Models\TelemetryReading;
 use App\Services\Agronomy\AgronomicThresholdResolver;
 use App\Services\Hardware\DeviceAvailabilityResolver;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,31 +18,18 @@ class IotMonitoringController extends Controller
     /**
      * Display the real-time vocational IoT workstation (7-in-1 Modbus & Relay Controls).
      */
-    public function index(Request $request, DeviceAvailabilityResolver $resolver, AgronomicThresholdResolver $thresholdResolver): View
-    {
+    public function index(
+        Request $request,
+        DeviceAvailabilityResolver $resolver,
+        AgronomicThresholdResolver $thresholdResolver,
+        SchoolContextResolver $contextResolver
+    ): View {
         $deviceId = $request->query('device_id');
         $user = $request->user();
+        $context = $contextResolver->resolve($request, $user);
+        $targetSchoolId = $context->targetSchoolId;
+        $isSuperuser = $context->isSuperuser;
         $schoolId = $user?->school_id;
-        $isSuperuser = (bool) $user?->isSuperuser();
-
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses monitoring memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        if ($isSuperuser && $selectedSchoolId) {
-            $targetSchoolId = (int) $selectedSchoolId;
-        } else {
-            $targetSchoolId = $isSuperuser
-                ? null
-                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
-        }
 
         $query = Device::query()
             ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId));

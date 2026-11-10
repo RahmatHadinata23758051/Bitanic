@@ -42,7 +42,7 @@
                 <span>Ekspor CSV</span>
             </a>
 
-            @if(!empty($user) && ($user->isGuru() || $user->isSuperuser()))
+            @if(!empty($user) && ($user->isGuru() || $user->isSuperuser() || $user->isAdmin()))
                 <a
                     href="{{ url('/reports') }}"
                     class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors"

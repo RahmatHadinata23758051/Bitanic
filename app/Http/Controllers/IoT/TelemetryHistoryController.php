@@ -10,6 +10,7 @@ use App\Models\TelemetryReading;
 use App\Services\Agronomy\AgronomicThresholdResolver;
 use App\Services\Agronomy\AnomalyAlertEvaluator;
 use App\Services\Hardware\DeviceAvailabilityResolver;
+use App\Services\Tenancy\SchoolContextResolver;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -27,32 +28,16 @@ class TelemetryHistoryController extends Controller
         Request $request,
         AnomalyAlertEvaluator $evaluator,
         AgronomicThresholdResolver $thresholdResolver,
-        DeviceAvailabilityResolver $availabilityResolver
+        DeviceAvailabilityResolver $availabilityResolver,
+        SchoolContextResolver $contextResolver
     ): View {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
-        $schoolId = $user?->school_id;
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses riwayat telemetri memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
-
-        if ($isSuperuser && $selectedSchoolId) {
-            $targetSchoolId = (int) $selectedSchoolId;
-        } else {
-            $targetSchoolId = $isSuperuser
-                ? null
-                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
-        }
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
 
         $devices = Device::query()
             ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
@@ -175,31 +160,15 @@ class TelemetryHistoryController extends Controller
     public function exportCsv(
         Request $request,
         ExportTelemetryCsvAction $action,
-        AgronomicThresholdResolver $thresholdResolver
+        AgronomicThresholdResolver $thresholdResolver,
+        SchoolContextResolver $contextResolver
     ): StreamedResponse {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
-        $schoolId = $user?->school_id;
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Ekspor telemetri memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-
-        if ($isSuperuser && $selectedSchoolId) {
-            $targetSchoolId = (int) $selectedSchoolId;
-        } else {
-            $targetSchoolId = $isSuperuser
-                ? null
-                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
-        }
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $isSuperuser = $context->isSuperuser;
 
         $validationError = $this->validateFilterInputs($request);
         if ($validationError) {

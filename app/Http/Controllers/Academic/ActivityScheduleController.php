@@ -8,9 +8,9 @@ use App\Models\ActivitySchedule;
 use App\Models\Classroom;
 use App\Models\Device;
 use App\Models\ModulePracticum;
-use App\Models\School;
 use App\Models\StudentGroup;
 use App\Services\Hardware\DeviceAvailabilityResolver;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,22 +20,15 @@ class ActivityScheduleController extends Controller
     /**
      * Display practicum schedules timeline and trainer kit bench allocations.
      */
-    public function index(Request $request, DeviceAvailabilityResolver $availabilityResolver): View
+    public function index(Request $request, DeviceAvailabilityResolver $availabilityResolver, SchoolContextResolver $contextResolver): View
     {
         $user = $request->user();
-        $schoolId = $user?->school_id;
-        $isSuperuser = (bool) $user?->isSuperuser();
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser && ! $schoolId) {
-            abort(403, 'Akses jadwal praktikum memerlukan asosiasi sekolah yang valid.');
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $schools = $isSuperuser ? School::orderBy('name')->get() : collect();
-
-        $targetSchoolId = $isSuperuser
-            ? ($selectedSchoolId ? (int) $selectedSchoolId : null)
-            : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
 
         $schedules = ActivitySchedule::with(['device', 'participants.user', 'classroom', 'studentGroup', 'modulePracticum'])
             ->when($targetSchoolId !== null, fn ($q) => $q->where('school_id', $targetSchoolId))

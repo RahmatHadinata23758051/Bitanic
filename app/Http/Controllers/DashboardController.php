@@ -9,6 +9,7 @@ use App\Models\StudentReport;
 use App\Models\UserProfile;
 use App\Services\Agronomy\AgronomicThresholdResolver;
 use App\Services\Hardware\DeviceAvailabilityResolver;
+use App\Services\Tenancy\SchoolContextResolver;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -17,32 +18,19 @@ class DashboardController extends Controller
     /**
      * Display the vocational LMS lab overview dashboard.
      */
-    public function index(Request $request, DeviceAvailabilityResolver $availability, AgronomicThresholdResolver $thresholdResolver): View
-    {
+    public function index(
+        Request $request,
+        DeviceAvailabilityResolver $availability,
+        AgronomicThresholdResolver $thresholdResolver,
+        SchoolContextResolver $contextResolver
+    ): View {
         $user = $request->user();
-        $isSuperuser = (bool) $user?->isSuperuser();
-        $schoolId = $user?->school_id;
+        $context = $contextResolver->resolve($request, $user);
 
-        if ($user && ! $isSuperuser) {
-            if (! $schoolId) {
-                abort(403, 'Akses Dasbor memerlukan asosiasi sekolah yang valid.');
-            }
-            $school = $user->school;
-            if (! $school || $school->status !== 'active') {
-                abort(403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
-            }
-        }
-
-        $selectedSchoolId = $request->query('school_id');
-        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
-
-        if ($isSuperuser && $selectedSchoolId) {
-            $targetSchoolId = (int) $selectedSchoolId;
-        } else {
-            $targetSchoolId = $isSuperuser
-                ? null
-                : ($schoolId ?? School::query()->where('status', 'active')->orderBy('id')->value('id') ?? -1);
-        }
+        $targetSchoolId = $context->targetSchoolId;
+        $selectedSchoolId = $context->selectedSchoolId;
+        $schools = $context->schools;
+        $isSuperuser = $context->isSuperuser;
 
         // 1. Hardware fleet overview scoped to school
         $deviceQuery = Device::with(['latestReading', 'school'])
