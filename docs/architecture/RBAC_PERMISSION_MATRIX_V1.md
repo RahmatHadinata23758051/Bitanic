@@ -287,3 +287,4 @@ The matrix below documents all 59 Laravel routes and domain actions across the a
    - In `/reports` and `/assessment`, students are strictly limited to their own personal submissions and grades.
 4. **Hardware Safety Guardrail**:
    - Relay toggling, reboots, and sensor calibration downlinks remain simulation-only. No UI or endpoint shall report a physical hardware success until the lab gateway bidirectional ACK protocol is verified.
+

@@ -381,3 +381,4 @@ The following test suites and test cases must be implemented and verified in Pac
 | **`BulkImportExplicitTenancyTest`** | `TC-IMPR-01` | Teacher A in School 1 | Upload CSV without specifying school | Auto-binds imported students strictly to School 1. |
 | **`BulkImportExplicitTenancyTest`** | `TC-IMPR-02` | Superuser uploading CSV | Upload CSV without selecting school | Rejected with 422: Target school must be explicitly selected. |
 | **`Real Browser E2E (Playwright)`** | `TC-E2E-01` | Playwright Chromium | Full lifecycle: Superuser (null school) login & school switch | PASS across all 8 browser workflows. |
+
