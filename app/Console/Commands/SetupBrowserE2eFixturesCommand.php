@@ -125,8 +125,25 @@ class SetupBrowserE2eFixturesCommand extends Command
             ['type' => 'siswa', 'identifier_number' => '0091122334', 'class_grade' => 'XII ATPH 1', 'assigned_kit_id' => 'TK-01']
         );
 
+        // 4b. Siswa Sekolah B (for cross-school tenant verification)
+        $siswaB = User::updateOrCreate(
+            ['email' => 'siswa.b@smk.id'],
+            [
+                'name' => 'Siswa Rahasia Sekolah B',
+                'role' => 'siswa',
+                'school_id' => 2,
+                'password' => $password,
+                'email_verified_at' => now(),
+                'must_change_password' => false,
+            ]
+        );
+        UserProfile::updateOrCreate(
+            ['user_id' => $siswaB->id],
+            ['type' => 'siswa', 'identifier_number' => '0099999999', 'class_grade' => 'X ATPH B', 'assigned_kit_id' => 'TK-02']
+        );
+
         // 5. Hardware Fleet
-        $deviceA = Device::firstOrCreate(
+        $deviceA = Device::updateOrCreate(
             ['code' => 'TK-01'],
             [
                 'school_id' => 1,
@@ -137,7 +154,7 @@ class SetupBrowserE2eFixturesCommand extends Command
             ]
         );
 
-        Device::firstOrCreate(
+        Device::updateOrCreate(
             ['code' => 'TK-02'],
             [
                 'school_id' => 2,

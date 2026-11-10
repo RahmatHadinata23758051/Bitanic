@@ -19,18 +19,30 @@ class SecurityHardeningAndRebootTest extends TestCase
             'role' => 'admin',
             'email' => 'admin-role@example.test',
         ]);
+        $superuser = User::factory()->create([
+            'role' => 'superuser',
+            'email' => 'super-role@example.test',
+        ]);
         $device = Device::create([
+            'school_id' => $superuser->school_id,
             'code' => 'TK-ADMIN-ROT',
             'name' => 'Meja Rotasi Admin',
             'is_active' => true,
         ]);
         DeviceApiKey::generateForDevice($device);
 
+        // Admin can access own-school settings
         $this->actingAs($admin)
             ->get(route('settings.index'))
             ->assertOk();
 
+        // Admin is strictly denied platform-only API key rotation (403)
         $this->actingAs($admin)
+            ->post(route('kits.api-key.rotate', $device))
+            ->assertForbidden();
+
+        // True Superuser is authorized to rotate API key
+        $this->actingAs($superuser)
             ->post(route('kits.api-key.rotate', $device))
             ->assertRedirect(route('kits.index'))
             ->assertSessionHas('new_api_key');
