@@ -650,6 +650,39 @@ Finalized the foundational architecture contracts for fine-grained authorization
    - Established 5 explicit Product Owner decision points for sign-off prior to Pack B execution.
    - Formulated 11 acceptance test cases in `Acceptance Test Matrix for Pack B`.
 
+### 2.16 — Sprint 2 / Pack B: Role Separation, Tenant Provisioning Contract & Resource Policies (2026-11-11)
+
+Implemented and verified the complete Pack B engineering execution (`RBAC-02-03`, `RBAC-02-04`) adhering strictly to Approved Decisions DP-1 through DP-5:
+
+1. **Database Schema & Provisioning Hardening (`2026_01_01_000024_remove_default_school_id_and_support_admin_sekolah.php`)**:
+   - Additive DDL dropped PostgreSQL and SQLite default value on `users.school_id`.
+   - Added composite performance and tenancy index `idx_users_school_role` on `users(school_id, role)`.
+   - `User::booted()` strictly rejects tenant user creation (`admin_sekolah`, `admin`, `guru`, `siswa`) lacking explicit `school_id` with `\InvalidArgumentException`.
+   - `UserFactory` explicitly scopes test tenant fixtures while providing `superuser()` state with `school_id = null`.
+   - `BulkImportUsersAction` and `UserImportController` require explicit target school selection for superusers and enforce `$actor->school_id` for school administrators.
+
+2. **Canonical Role Separation & Superuser Decoupling (`RBAC-02-03`)**:
+   - Established `admin_sekolah` as canonical database role with dual-compatibility for legacy `admin` in `EnsureUserHasRole` and `User::isAdmin()`.
+   - Platform superuser decoupled from tenancy (`users.school_id = NULL`), allowing global school switching and platform-only operations (`/raw-logs`, `/trainer-kits/{device}/api-key/rotate`) without synthetic tenant pollution.
+   - `AuthController` allows superuser authentication with null school while enforcing active school verification for tenant accounts.
+   - Developed idempotent Artisan command `bitanic:migrate-school-admin-roles` with `--dry-run`, snapshot generation in `storage/app/rbac_migration_snapshots/`, and atomic `--rollback` functionality.
+
+3. **Fine-Grained Resource-Level Laravel Policies & Gates (`RBAC-02-04`)**:
+   - Created and registered 5 domain policies in `AppServiceProvider`:
+     - `ClassroomPolicy`: `viewAny`, `view`, `create`, `update`, `delete` (own-school guru/admin/superuser).
+     - `StudentReportPolicy`: `grade`, `requestRevision` (own-school guru/admin/superuser).
+     - `ActivitySchedulePolicy`: `manage` (own-school guru/admin/superuser).
+     - `PlantingMediaPolicy`: `manage` (own-school guru/admin/superuser).
+     - `DevicePolicy`: `reboot`, `calibrate` (own-school guru/admin/superuser), `rotateApiKey` (strictly superuser).
+   - Integrated controller authorizations across `ClassroomController`, `ModulePracticumController`, `ActivityScheduleController`, `PlantingMediaController`, and `TrainerKitManagerController`.
+
+4. **Multi-Driver Verification & E2E Evidence**:
+   - **SQLite In-Memory**: 438 passed, 5 skipped (2649 assertions) in 28.72s.
+   - **PostgreSQL 17 Isolated (`bitanic_test`)**: 439 passed, 4 skipped (2661 assertions) in 67.15s.
+   - **Browser E2E (Playwright Headless Chromium)**: 9/9 scenarios passed completely (Superuser, Admin Sekolah, Legacy Admin, Foreign Tampering, Directory, Gradebook, Direct URLs, Guru, Siswa).
+   - **Pint & Vite**: Code style passed cleanly; production assets built in 8.95s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |

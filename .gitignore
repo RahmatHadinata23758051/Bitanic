@@ -13,7 +13,7 @@ ARCHITECTURE.md
 architecture.md
 BACKLOG.md
 backlog.md
-docs/
+docs/*
 !docs/architecture/
 
 # ==============================================================================
@@ -71,6 +71,7 @@ Desktop.ini
 .idea/
 .vscode/
 .playwright-mcp/
+scratch/
 *.suo
 *.user
 *.userosscache

@@ -84,7 +84,7 @@ Bitanic separates **Authentication Identity** from **School Tenant Membership**.
                   │ • user_id (FK UNIQUE)         │            │         student_groups        │
                   │ • type (guru | siswa)         │            │                               │
                   │ • identifier_number           │            │ • Class enrollment            │
-                  │   (NISN / NIP)                │            │ • Workstation group           │
+                  │   (Nomor Induk, Opsional)     │            │ • Workstation group           │
                   │ • department, class_grade     │            │ • Assigned Trainer Kit        │
                   │ • attendance, grades          │            │                               │
                   └───────────────────────────────┘            └───────────────────────────────┘
@@ -174,8 +174,13 @@ A school's status is tracked via `schools.status` (`active`, `inactive`, `suspen
    - `users.email`: Globally unique across the entire platform database (`users_email_unique`).
    - `schools.npsn`: Globally unique Kemendikbudristek school identification number (`schools_npsn_unique`).
    - `schools.slug`: Globally unique URL slug (`schools_slug_unique`).
-2. **Tenant-Scoped Uniqueness**:
-   - `identifier_number` (NISN / NIP): Currently enforced in application logic. In Pack B, a composite index on `(school_id, identifier_number)` will be established to allow different schools to maintain their local numbering systems without collision.
+2. **Generic Identifier Policy (DP-4 Approved Revision)**:
+   - **NISN is NOT mandatory for Bitanic MVP**: Student enrollment and user accounts do NOT require a national NISN.
+   - The platform utilizes the existing generic column `user_profiles.identifier_number`.
+   - This field remains strictly **OPTIONAL** ("Nomor Induk (Opsional)") across account creation, profile forms, and batch imports.
+   - No NISN-specific database constraints or mandatory validation rules shall be imposed.
+   - Do NOT duplicate `school_id` onto `user_profiles` solely to support identifier uniqueness.
+   - Backwards compatibility with existing import files, seeders, and historical student/teacher identifiers is 100% preserved without deleting or altering any existing values.
 3. **Foreign Key Constraints**:
    - `users.school_id` -> `schools.id`: `ON DELETE RESTRICT` (A school with active users cannot be dropped).
    - `user_profiles.user_id` -> `users.id`: `ON DELETE CASCADE`.
@@ -238,7 +243,7 @@ erDiagram
         bigint id PK
         bigint user_id FK "unique"
         string type "guru | siswa"
-        string identifier_number "NISN / NIP"
+        string identifier_number "Nomor Induk, nullable"
         bigint classroom_id FK "nullable"
         bigint student_group_id FK "nullable"
         string class_grade
@@ -254,12 +259,16 @@ erDiagram
 -- BITANIC PACK B DDL SPECIFICATION (Zero-Downtime Additive Migration)
 -- ============================================================================
 
--- 1. Add comment and check constraint for role values
--- Note: 'admin' is maintained as backward-compatible synonym during phased migration
+-- 1. Remove database-level column default on users.school_id
+--    (Eliminates database-level default school assignment)
+ALTER TABLE users ALTER COLUMN school_id DROP DEFAULT;
+
+-- 2. Add check constraint for role values supporting both legacy and target roles
+--    Note: 'admin' is maintained as backward-compatible synonym during phased migration
 ALTER TABLE users ADD CONSTRAINT check_user_role 
 CHECK (role IN ('superuser', 'admin', 'admin_sekolah', 'guru', 'siswa'));
 
--- 2. Ensure school_id foreign key has explicit RESTRICT on delete
+-- 3. Ensure school_id foreign key has explicit RESTRICT on delete
 ALTER TABLE users 
 DROP CONSTRAINT IF EXISTS users_school_id_foreign;
 
@@ -268,21 +277,8 @@ ADD CONSTRAINT users_school_id_foreign
 FOREIGN KEY (school_id) REFERENCES schools(id) 
 ON DELETE RESTRICT;
 
--- 3. Add composite tenant index for user lookups by school and role
+-- 4. Add composite tenant index for user lookups by school and role
 CREATE INDEX IF NOT EXISTS idx_users_school_role ON users (school_id, role);
-
--- 4. Add school_id to user_profiles for high-performance tenant reporting and scoped NISN uniqueness
-ALTER TABLE user_profiles 
-ADD COLUMN IF NOT EXISTS school_id BIGINT NULL;
-
-UPDATE user_profiles up
-SET school_id = u.school_id
-FROM users u
-WHERE up.user_id = u.id AND up.school_id IS NULL;
-
--- 5. Add composite index on (school_id, identifier_number) in user_profiles
-CREATE INDEX IF NOT EXISTS idx_user_profiles_school_identifier 
-ON user_profiles (school_id, identifier_number);
 ```
 
 ---
@@ -301,7 +297,7 @@ To prevent breaking active vocational lab workflows, the migration from legacy `
                                        │
 ┌──────────────────────────────────────▼──────────────────────────────────────┐
 │ PHASE 2: ADDITIVE SCHEMA & DUAL-ROLE COMPATIBILITY (Pack B)                 │
-│ • Run additive migration adding check_user_role supporting 'admin_sekolah'  │
+│ • Run additive migration dropping school_id default & supporting roles      │
 │ • Update EnsureUserHasRole to treat 'admin' and 'admin_sekolah' as synon.   │
 │ • Update User::isAdmin() and User::isSchoolAdmin() to support both values   │
 │ • Remove implicit slug fallback in User::booted(); throw validation error   │
@@ -324,43 +320,41 @@ To prevent breaking active vocational lab workflows, the migration from legacy `
 ```
 
 ### Rollback Plan
-If any anomaly occurs during Phase 3, the rollback command:
-```sql
-UPDATE users SET role = 'admin' WHERE role = 'admin_sekolah';
-UPDATE users SET school_id = 1 WHERE role = 'superuser' AND school_id IS NULL;
+If any anomaly occurs during Phase 3, the rollback procedure is executed via:
+```bash
+php artisan bitanic:migrate-school-admin-roles --rollback
+```
+The command restores each affected user's exact captured pre-migration `role` and `school_id` from the persistent recovery snapshot file (`storage/app/rbac_migration_snapshot_*.json`) or transaction log. 
+
+**Critical Safety Gate**: Rollback **never** arbitrarily assigns platform superusers to any default school (`school_id = 1`). Exact captured state recovery guarantees data integrity.
 ```
 instantly restores 100% backward compatibility with the legacy codebase.
 
 ---
 
-## 10. Explicit Product Owner Decision Points (Deliverable 5)
+## 10. Explicit Product Owner Decision Points — APPROVED (Pack B Execution)
 
-The Product Owner must review and approve the following 5 strategic decisions before Pack B execution begins:
+The Product Owner has reviewed and approved the following 5 strategic decisions:
 
 ### Decision Point 1: Database Role Value for School Administrator
-- **Option 1A (Recommended)**: Adopt `'admin_sekolah'` in the database. Cleanly reflects vocational terminology in Indonesian, distinguishes tenant admin from platform superuser, and eliminates ambiguity.
-- **Option 1B**: Retain `'admin'` in the database and use application-level aliases (`isAdmin()`, `isSchoolAdmin()`).
-- *Recommendation*: **Option 1A** executed via Phase 2/3 dual-role compatibility.
+- **STATUS: APPROVED (Option 1A)**: Adopt `'admin_sekolah'` as the canonical database role. Support legacy `'admin'` during dual-compatibility phase without granting platform-level privileges.
 
 ### Decision Point 2: Superuser School Association
-- **Option 2A (Recommended)**: Allow `users.school_id = NULL` for platform superusers. Update `AuthController` to permit null-school login for superusers.
-- **Option 2B**: Create a permanent synthetic institution record in `schools` table (e.g. `npsn = 'BITANIC-HQ'`, `name = 'Makerindo Bitanic Platform HQ'`) and assign superusers to this HQ tenant.
-- *Recommendation*: **Option 2A**. Null is mathematically and architecturally cleaner, avoiding synthetic school records in school statistics and reports.
+- **STATUS: APPROVED (Option 2A)**: Platform superusers have `school_id = NULL`. No synthetic school or fictional platform tenant. `AuthController` updated to allow superuser login with null school.
 
 ### Decision Point 3: Removal of Silent `User::booted()` Fallback
-- **Option 3A (Recommended)**: Remove the automatic assignment of `smk-ppn-1-sukaraja`. Require explicit `school_id` during user creation; throw an exception if omitted for non-superusers.
-- **Option 3B**: Retain the fallback only in local development / testing environments (`APP_ENV !== 'production'`), but disable it in production.
-- *Recommendation*: **Option 3A**. Explicit is always safer than implicit in multi-tenant systems. Seeders and test factories will supply explicit school IDs.
+- **STATUS: APPROVED (Option 3A)**: Remove all implicit default-school assignment (`smk-ppn-1-sukaraja` / `School::first()`). Require explicit validated `school_id` during tenant user creation and bulk imports.
 
-### Decision Point 4: NISN / Student Identifier Uniqueness Scope
-- **Option 4A (Recommended)**: Scope NISN / NIP uniqueness to `(school_id, identifier_number)`.
-- **Option 4B**: Enforce global uniqueness on `identifier_number` across all schools.
-- *Recommendation*: **Option 4A**. While national NISN is theoretically unique, real-world schools frequently have data entry quirks, legacy numbering, or temporary test numbers that should not block another school.
+### Decision Point 4: Student Identifier Policy (Revised PO Decision)
+- **STATUS: APPROVED (Revised PO Decision)**:
+  - **NISN is NOT mandatory for Bitanic MVP**.
+  - Retain generic existing field `user_profiles.identifier_number`.
+  - Keep this field strictly **OPTIONAL** ("Nomor Induk (Opsional)").
+  - Do NOT introduce mandatory NISN fields, NISN-specific uniqueness constraints, or duplicate `school_id` on `user_profiles`.
+  - Retain 100% backward compatibility with existing import columns and stored historical identifiers without deleting data.
 
 ### Decision Point 5: Multi-School Instructor Architecture
-- **Option 5A (Recommended)**: Single-school strict membership for MVP. Teachers with dual appointments use separate school email credentials.
-- **Option 5B**: Immediately implement full `school_memberships` pivot table in Pack B.
-- *Recommendation*: **Option 5A**. Avoid premature complexity. 100% of current vocational pilot users are bound to a single institution.
+- **STATUS: APPROVED (Option 5A)**: Single-school strict membership for MVP (`users.school_id`). Multi-school pivot tables deferred to future post-MVP federation roadmap.
 
 ---
 
