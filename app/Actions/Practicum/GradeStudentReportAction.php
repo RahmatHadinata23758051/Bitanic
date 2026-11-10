@@ -26,9 +26,9 @@ class GradeStudentReportAction
         ?string $feedback = null,
         ?string $adjustmentReason = null
     ): StudentReport {
-        // 1. Role verification: Only teachers and superusers can grade
-        if (! ($teacher->isGuru() || $teacher->isSuperuser())) {
-            throw new AuthorizationException('Hanya guru atau superuser yang memiliki kewenangan menilai laporan.');
+        // 1. Role verification: Teachers, admins, and superusers can grade
+        if (! ($teacher->isGuru() || $teacher->isSuperuser() || $teacher->isAdmin())) {
+            throw new AuthorizationException('Hanya guru, admin sekolah, atau superuser yang memiliki kewenangan menilai laporan.');
         }
 
         $module = $report->module;
@@ -36,7 +36,7 @@ class GradeStudentReportAction
             throw new InvalidArgumentException('Target practicum module does not exist.');
         }
 
-        // 2. Cross-school tenancy protection: Guru cannot grade reports from other schools
+        // 2. Cross-school tenancy protection: Guru/admin cannot grade reports from other schools
         $student = $report->user;
         if (! $teacher->isSuperuser()) {
             if (! $teacher->school_id || ! $student?->school_id || (int) $student->school_id !== (int) $teacher->school_id) {

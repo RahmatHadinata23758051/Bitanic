@@ -21,8 +21,8 @@ class SubscriptionService
      */
     public function hasActiveSubscription(User $user): bool
     {
-        // Superuser selalu memiliki akses penuh tanpa batas
-        if ($user->isSuperuser()) {
+        // Superuser dan legacy admin selalu memiliki akses penuh tanpa batas operasional
+        if ($user->isSuperuser() || $user->isAdmin()) {
             return true;
         }
 
@@ -41,7 +41,7 @@ class SubscriptionService
      */
     public function canConsumeAi(User $user): bool
     {
-        if ($user->isSuperuser()) {
+        if ($user->isSuperuser() || $user->isAdmin()) {
             return true;
         }
 
@@ -52,7 +52,7 @@ class SubscriptionService
             ->latest('id')
             ->first();
 
-        if (!$subscription) {
+        if (! $subscription) {
             return false;
         }
 
@@ -75,7 +75,7 @@ class SubscriptionService
      */
     public function consumeAi(User $user): void
     {
-        if ($user->isSuperuser()) {
+        if ($user->isSuperuser() || $user->isAdmin()) {
             return;
         }
 
@@ -107,7 +107,7 @@ class SubscriptionService
             ->latest('id')
             ->first();
 
-        if (!$subscription) {
+        if (! $subscription) {
             return 0;
         }
 

@@ -123,10 +123,10 @@ Route::post('/raw-logs/inject', [RawLogsDebuggerController::class, 'inject'])
 
 // 12. Pengaturan Laboratorium & Log Aktivitas (Audit Trail)
 Route::get('/settings', [SettingsAuditController::class, 'index'])
-    ->middleware(['auth', 'role:superuser'])
+    ->middleware(['auth', 'role:superuser,admin'])
     ->name('settings.index');
 Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool'])
-    ->middleware(['auth', 'role:superuser'])
+    ->middleware(['auth', 'role:superuser,admin'])
     ->name('settings.update');
 
 // Manajemen Media Tanam (Null-Safe & Tenant-Isolated)

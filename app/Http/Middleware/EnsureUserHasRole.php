@@ -11,8 +11,7 @@ class EnsureUserHasRole
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     * @param  string  ...$roles
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
@@ -26,13 +25,9 @@ class EnsureUserHasRole
             return redirect()->guest(route('login'))->with('error', 'Silakan login terlebih dahulu.');
         }
 
-        // Both privileged admin roles receive explicit access to superuser-only routes.
         $allowedRoles = $roles;
-        if (in_array('superuser', $allowedRoles, true)) {
-            $allowedRoles[] = 'admin';
-        }
 
-        // Superusers and admins inherit teacher routes, but not vice versa.
+        // Superusers and admins inherit teacher routes within their tenant, but not vice versa.
         if (in_array('guru', $allowedRoles, true)) {
             $allowedRoles[] = 'superuser';
             $allowedRoles[] = 'admin';
@@ -41,7 +36,7 @@ class EnsureUserHasRole
         if (! in_array($user->role, array_unique($allowedRoles), true)) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Akses ditolak. Peran Anda (' . $user->role . ') tidak memiliki izin untuk tindakan ini.',
+                    'message' => 'Akses ditolak. Peran Anda ('.$user->role.') tidak memiliki izin untuk tindakan ini.',
                 ], 403);
             }
 
