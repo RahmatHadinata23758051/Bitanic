@@ -74,7 +74,7 @@ The following gaps exist between the current codebase and the locked Architectur
 
 | # | Architecture Dimension | Target Locked Baseline v1.0 | Current Implementation State | Gap Severity | Action / Resolution Path |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **G-01** | **School Admin Role Separation** | Dedicated `admin_sekolah` role strictly scoped to their tenant. Cannot access global platform settings or other schools. | **Audited at HEAD `fe9e441` in `RbacBoundaryVerificationTest`**: `EnsureUserHasRole` line 32 expands `superuser` to `['superuser', 'admin']` and `User::isSuperuser()` returns `true` for `admin`. Consequently, legacy admin inherits superuser capabilities (accessing `/settings`, `/trainer-kits/{device}/api-key/rotate`, and cross-school `?school_id=` query parameters). However, cross-school mutations (`kits.api-key.rotate`, `kits.reboot`, `kits.calibration`) are strictly fail-closed with HTTP 403. | **High (Architecture Debt)** | Quantified and covered with regression tests in `RbacBoundaryVerificationTest`. Full split to dedicated `admin_sekolah` deferred to `ARCH-RBAC-01` per PO directive. |
+| **G-01** | **School Admin Role Separation** | Dedicated `admin_sekolah` role strictly scoped to their tenant. Cannot access global platform settings or other schools. | **Secured in Sprint 1 (`SEC-ADMIN-TENANT-READ`)**: Separated `User::isSuperuser()` to strictly check `role === 'superuser'`. Legacy `admin` now strictly scoped via `SchoolContextResolver`. Cross-school read queries (`?school_id=2`) strictly fail closed with HTTP 403 across all 10 controllers, gradebooks, and exports. School switcher is hidden unless `$isSuperuser && $schools->isNotEmpty()`. Platform operations (`kits.api-key.rotate`, `rawlogs.inject`) strictly restricted to superusers (`role:superuser`), while `/settings` allows own-school admin (`role:superuser,admin`). Full DB migration to distinct `admin_sekolah` role value deferred to `ARCH-RBAC-01`. | **Tenant Isolation Closed; DB Role Deferred** | Verified via `RbacBoundaryVerificationTest` (14/14 tests, 111 assertions on SQLite & PostgreSQL) and Playwright Browser E2E suite (8/8 scenarios PASS). |
 | **G-02** | **Trainer Kit Master Catalog** | Global physical hardware inventory with serial numbers, MAC addresses, batch production records, and school assignment lifecycle. | Devices exist directly in `devices` table linked via `school_id`. No global master serial repository exists. | **Medium (Commercial Scope)** | Deferred to `DATA-MASTER-01` and future hardware inventory release. |
 | **G-03** | **School License & Warranty Model** | 1 School = 1 Commercial License, 1-Year Hardware Warranty, automated expiration reminders, grace periods. | No licensing or warranty tables exist. School tenancy is controlled via `status = 'active'` flag on `schools`. | **Deferred (Commercial)** | Explicitly deferred by PO directive. Midtrans SaaS routes retired under `LEGACY-01`. |
 | **G-04** | **Hardware Downlink & Physical Actuator ACK** | Bidirectional Modbus/RS485 transport over lab gateway with cryptographically verified frame delivery and hardware ACK for relay/reboot. | Soft-reboot and calibration are software-only simulations. UI explicitly flags them as simulated. Physical actuation is fail-closed. | **Accepted Constraint (Hardware Safe)** | Fully compliant with Hardware Safety Gate. Remains simulation-only until ESP32 firmware audit is conducted. |
@@ -114,16 +114,19 @@ The following gaps exist between the current codebase and the locked Architectur
 ## 6. Verification & Quality Gates
 
 This architecture baseline is backed by exhaustive automated and end-to-end evidence:
-- **Unit & Feature Suite**: 408 passed, 0 failures, 5 skipped (2,505 assertions) on SQLite in-memory (`php artisan test`).
+- **Unit & Feature Suite**: 418 passed, 0 failures, 5 skipped (2,593 assertions) on SQLite in-memory (`php artisan test`).
 - **Role & Tenancy E2E Acceptance Suite**: `tests/Feature/RbacAndMultiTenantAcceptanceTest.php` (8 tests, 147 assertions) verifying all 5 roles, cross-school IDOR rejection, academic lifecycles, and hardware safeguards.
-- **RBAC Boundary Verification**: `tests/Feature/RbacBoundaryVerificationTest.php` (4 tests, 24 assertions) auditing legacy admin privilege inheritance and cross-school boundary enforcement against Architecture Baseline v1.0.
-- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 5 end-to-end user journeys:
-  1. *Guest*: Dashboard, IoT monitoring, module catalog, /assessment authentication gate (PASS).
-  2. *Siswa*: Authentication, module viewing, LKS submission, own reports hub, honest unassessed gradebook state, logout (PASS).
-  3. *Guru*: Authentication, classroom management, scheduling, gradebook review, verified CSV export, media tanam, directory search, logout (PASS).
-  4. *Admin*: Authentication, school settings & audit trail inspection, trainer kit fleet management, logout (PASS).
-  5. *Superuser*: Authentication, multi-school global dashboard, raw Modbus RS485 debugger stream, logout (PASS).
-- **PostgreSQL 17.6 Concurrency & Locking**: `PostgresIntegrationAndConcurrencyTest` (9 tests, 69 assertions) and `PostgresScheduleConcurrencyRaceTest` (1 test, 12 assertions) on isolated `bitanic_test`.
+- **RBAC Boundary Verification & Tenant Isolation Suite**: `tests/Feature/RbacBoundaryVerificationTest.php` (14 tests, 111 assertions across SQLite and PostgreSQL) verifying separation of superuser identity, isolation of legacy admin to assigned school, fail-closed rejection of hostile cross-school query tampering (`?school_id=2`, `?school_id=99999`, `?school_id=abc`, `?school_id[]=1`), and isolation across all 10 read-surface controllers.
+- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 8 comprehensive end-to-end user scenarios:
+  1. *Superuser School Switching & Multi-School Access* (PASS).
+  2. *Admin Same-School Dashboard & Absence of School Switcher* (PASS).
+  3. *Admin Foreign-School Selector Tampering Fail-Closed 403* (PASS).
+  4. *Admin Foreign-School Directory Search Isolation* (PASS).
+  5. *Admin Foreign-School Gradebook & Export Access Rejection* (PASS).
+  6. *Admin Unauthorized Direct URLs & Hardware Mutation Rejection* (PASS).
+  7. *Normal Guru Workflow & Tenant Protection* (PASS).
+  8. *Normal Siswa Workflow & Tenant Protection* (PASS).
+- **PostgreSQL 17.6 Concurrency & Locking**: `PostgresIntegrationAndConcurrencyTest` (9 tests, 69 assertions), `RbacBoundaryVerificationTest` (14 tests, 111 assertions), and `RbacAndMultiTenantAcceptanceTest` (8 tests, 147 assertions) on isolated `bitanic_test`.
 - **Code Style & Formatting**: Laravel Pint passed on all newly added and modified files.
 - **Frontend Assets**: Vite production build succeeded (93 kB CSS, 1.87 MB JS).
 - **Baseline Immutability**: `upi-edge/` and `dump_upiedge.sql` preserved with zero modifications.

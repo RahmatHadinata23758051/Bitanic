@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use App\Services\Hardware\DeviceAvailabilityResolver;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -56,7 +59,7 @@ class Device extends Model
         });
     }
 
-    public function school(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function school(): BelongsTo
     {
         return $this->belongsTo(School::class);
     }
@@ -94,7 +97,7 @@ class Device extends Model
     /**
      * Get the currently active calibration profile for a given parameter at a point in time.
      */
-    public function getActiveCalibrationProfile(string $parameter, ?\Carbon\CarbonInterface $at = null): ?SensorCalibrationProfile
+    public function getActiveCalibrationProfile(string $parameter, ?CarbonInterface $at = null): ?SensorCalibrationProfile
     {
         $moment = $at ?? now();
 
@@ -112,9 +115,9 @@ class Device extends Model
     /**
      * Compute real-time online status via the centralized availability resolver.
      */
-    public function isOnline(?\Carbon\CarbonInterface $now = null): bool
+    public function isOnline(?CarbonInterface $now = null): bool
     {
-        return app(\App\Services\Hardware\DeviceAvailabilityResolver::class)->isOnline($this, $now);
+        return app(DeviceAvailabilityResolver::class)->isOnline($this, $now);
     }
 
     /**
@@ -122,6 +125,6 @@ class Device extends Model
      */
     public function getComputedStatusAttribute(): string
     {
-        return app(\App\Services\Hardware\DeviceAvailabilityResolver::class)->status($this);
+        return app(DeviceAvailabilityResolver::class)->status($this);
     }
 }

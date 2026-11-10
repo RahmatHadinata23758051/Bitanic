@@ -20,7 +20,6 @@ use Illuminate\View\View;
  * Web routes to this controller have been disabled. The controller, its actions,
  * and all associated models/migrations/data are preserved intact for historic
  * reference and potential future re-activation. Do NOT delete.
- *
  * @see routes/web.php — subscription routes commented out
  * @see App\Actions\Payment\CreateMidtransSnapTransactionAction
  * @see App\Services\SubscriptionService
@@ -72,7 +71,7 @@ class SubscriptionCheckoutController extends Controller
 
         $user = Auth::user() ?? User::where('role', 'guru')->first() ?? User::first();
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('subscription.index')->with('error', 'Silakan login terlebih dahulu untuk berlangganan.');
         }
 
@@ -91,7 +90,7 @@ class SubscriptionCheckoutController extends Controller
 
         if ($result['payment']->status === 'settlement') {
             return redirect()->route('subscription.index')
-                ->with('success', 'Paket ' . $plan->name . ' berhasil diaktifkan.');
+                ->with('success', 'Paket '.$plan->name.' berhasil diaktifkan.');
         }
 
         return redirect()->route('subscription.index', [

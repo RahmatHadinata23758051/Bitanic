@@ -597,6 +597,37 @@ Addressed the three outstanding Product Owner acceptance issues with full test e
    - Vite Production Build: PASS (93.12 kB CSS, 1,875.93 kB JS).
    - Baseline Assets: `upi-edge/` and `dump_upiedge.sql` 100% clean and untouched.
 
+### 2.14 — Sprint 1: P0 Tenant Isolation & RBAC Security Hardening (2026-11-11)
+
+Addressed confirmed cross-school read vulnerability (`SEC-ADMIN-TENANT-READ`, `ARCH-RBAC-01`) per Architecture Baseline v1.0:
+
+1. **Identity & Role Semantics Separation**:
+   - `User::isSuperuser()` now strictly returns `$this->role === 'superuser'` (no longer aliases `admin`).
+   - Added explicit helper methods `isAdmin(): bool` and `isSchoolAdmin(): bool` returning `$this->role === 'admin'`.
+   - `EnsureUserHasRole` middleware no longer expands `superuser` to include `admin`.
+   - Platform routes (`kits.api-key.rotate`, `rawlogs.inject`) remain strictly `role:superuser`.
+   - School settings routes (`/settings`, `/settings/school`) updated to `role:superuser,admin` so legacy admin can manage own school settings.
+
+2. **Centralized Tenancy Resolution Engine (`SchoolContextResolver`)**:
+   - Created `app/Services/Tenancy/SchoolContextResolver.php` and `ResolvedSchoolContext.php`.
+   - **Superuser**: Multi-school selector, active school validation, fail-closed (HTTP 404) on malformed, non-numeric, or nonexistent school IDs; global platform view when parameter omitted.
+   - **Authenticated Non-Superuser (Admin, Guru, Siswa)**: Bound strictly to assigned active `school_id`. Any query tampering (`?school_id=2`, `?school_id=99999`, `?school_id=abc`, `?school_id[]=1`) strictly aborts with HTTP 403 Forbidden fail-closed.
+   - **Guest**: Bound strictly to default active school, sanitized metadata, empty school collection.
+   - Wired across all 10 read-surface controllers: `DashboardController`, `UserDirectoryController`, `CompetencyAssessmentController` (and CSV export), `TrainerKitManagerController`, `IotMonitoringController`, `TelemetryHistoryController` (and CSV export), `AnalyticsController`, `ActivityScheduleController`, `RawLogsDebuggerController`, `PracticumReportController`, `PlantingMediaController`, and `CropRecommendationController`.
+
+3. **UI Selector Protection & Preserved Operational Actions**:
+   - School switcher dropdown in `dashboard.blade.php` and `user-directory.blade.php` strictly guarded by `@if($isSuperuser && $schools->isNotEmpty())`.
+   - Preserved operational grading and revision actions for legacy admin (`GradeStudentReportAction`, `AuthorizeReportRevisionAction`, `ModulePracticumController`, `SubscriptionService`).
+
+4. **Quality Gates & End-to-End Validation**:
+   - `RbacBoundaryVerificationTest` (14 tests, 111 assertions): 100% PASS on both SQLite and PostgreSQL 17 (`bitanic_test`).
+   - `RbacAndMultiTenantAcceptanceTest` (8 tests, 147 assertions): 100% PASS on PostgreSQL.
+   - Full PHPUnit Suite (SQLite): 418 passed, 0 failures, 5 skipped (2,593 assertions).
+   - Real Browser Playwright E2E Suite (`tests/Browser/e2e_playwright_test.py`): **8/8 Scenarios PASS** (Superuser school switching, Admin same-school dashboard, Admin selector tampering fail-closed 403, Admin directory search isolation, Admin foreign gradebook & CSV rejection 403, Admin unauthorized mutation rejection 403, Normal Guru workflow, Normal Siswa workflow).
+   - Laravel Pint: PASS.
+   - Vite Production Build: PASS.
+   - Baseline Assets: `upi-edge/` and `dump_upiedge.sql` 100% clean and untouched.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |

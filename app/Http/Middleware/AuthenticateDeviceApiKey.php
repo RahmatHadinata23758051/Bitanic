@@ -12,13 +12,13 @@ class AuthenticateDeviceApiKey
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         $rawKey = $request->header('X-Device-Key');
 
-        if (!$rawKey) {
+        if (! $rawKey) {
             return response()->json([
                 'success' => false,
                 'message' => 'Missing or invalid X-Device-Key header.',
@@ -28,7 +28,7 @@ class AuthenticateDeviceApiKey
         $keyHash = hash('sha256', trim($rawKey));
         $apiKey = DeviceApiKey::with('device')->where('key_hash', $keyHash)->first();
 
-        if (!$apiKey) {
+        if (! $apiKey) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized: Invalid device API key.',
@@ -43,7 +43,7 @@ class AuthenticateDeviceApiKey
         }
 
         $device = $apiKey->device;
-        if (!$device || !$device->is_active) {
+        if (! $device || ! $device->is_active) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized: Device is inactive or disabled.',
