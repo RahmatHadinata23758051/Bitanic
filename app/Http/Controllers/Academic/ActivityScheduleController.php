@@ -165,6 +165,8 @@ class ActivityScheduleController extends Controller
             abort(403, 'Akses ditolak: sesi login diperlukan.');
         }
 
+        $this->authorize('manage', ActivitySchedule::class);
+
         $action->execute($validated, $creator);
 
         return redirect()->route('schedules.index')
@@ -183,6 +185,8 @@ class ActivityScheduleController extends Controller
         $schedule = ActivitySchedule::query()
             ->when(! $isSuperuser, fn ($query) => $query->where('school_id', $schoolId ?: -1))
             ->findOrFail($id);
+
+        $this->authorize('manage', $schedule);
 
         $schedule->delete();
 

@@ -17,6 +17,7 @@ class ClassroomController extends Controller
 {
     public function index(Request $request): View
     {
+        $this->authorize('viewAny', Classroom::class);
         $schoolId = $request->user()->school_id;
         if (! $schoolId) {
             abort(403, 'Akses kelas memerlukan asosiasi sekolah yang valid.');
@@ -38,6 +39,7 @@ class ClassroomController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Classroom::class);
         $schoolId = $request->user()->school_id;
         if (! $schoolId) {
             abort(403, 'Pembuatan kelas memerlukan asosiasi sekolah yang valid.');
@@ -59,6 +61,7 @@ class ClassroomController extends Controller
     public function update(Request $request, Classroom $classroom): RedirectResponse
     {
         $this->authorizeClassroom($request, $classroom);
+        $this->authorize('update', $classroom);
         $schoolId = $request->user()->school_id;
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('classrooms')->where('school_id', $schoolId)->ignore($classroom->id)],
@@ -76,6 +79,7 @@ class ClassroomController extends Controller
     public function destroy(Request $request, Classroom $classroom): RedirectResponse
     {
         $this->authorizeClassroom($request, $classroom);
+        $this->authorize('delete', $classroom);
         if ($classroom->profiles()->exists()) {
             return back()->withErrors(['classroom' => 'Kelas masih memiliki siswa. Pindahkan alokasi siswa sebelum menghapus kelas.']);
         }
@@ -167,7 +171,12 @@ class ClassroomController extends Controller
 
     private function authorizeClassroom(Request $request, Classroom $classroom): void
     {
-        $schoolId = $request->user()->school_id;
+        $user = $request->user();
+        if ($user && $user->isSuperuser()) {
+            return;
+        }
+
+        $schoolId = $user?->school_id;
         abort_unless($schoolId && (int) $classroom->school_id === (int) $schoolId, 404);
     }
 

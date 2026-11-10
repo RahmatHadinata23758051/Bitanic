@@ -39,6 +39,7 @@ class PlantingMediaController extends Controller
 
     public function store(Request $request, PlantConditionEvaluator $evaluator): RedirectResponse
     {
+        $this->authorize('manage', Media::class);
         $schoolId = $this->resolveSchoolId($request);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -76,6 +77,7 @@ class PlantingMediaController extends Controller
     {
         $schoolId = $this->resolveSchoolId($request);
         $media = Media::where('school_id', $schoolId)->findOrFail($id);
+        $this->authorize('manage', $media);
         $devices = $this->devicesForSchool($schoolId);
 
         return view('pages.media.edit', compact('media', 'devices'));
@@ -85,6 +87,7 @@ class PlantingMediaController extends Controller
     {
         $schoolId = $this->resolveSchoolId($request);
         $media = Media::where('school_id', $schoolId)->findOrFail($id);
+        $this->authorize('manage', $media);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'plants' => ['required', 'array', 'min:1', 'max:20'],
@@ -116,6 +119,7 @@ class PlantingMediaController extends Controller
     {
         $schoolId = $this->resolveSchoolId($request);
         $media = Media::where('school_id', $schoolId)->findOrFail($id);
+        $this->authorize('manage', $media);
         $media->delete();
 
         return redirect()->route('media.index')->with('success', 'Media tanam berhasil dihapus.');

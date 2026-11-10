@@ -110,12 +110,10 @@ class ModulePracticumController extends Controller
             'adjustment_reason' => 'nullable|string|max:2000',
         ]);
 
-        $report = StudentReport::with('module')->findOrFail($reportId);
+        $report = StudentReport::with(['module', 'user'])->findOrFail($reportId);
         $teacher = $request->user();
 
-        if (! $teacher || (! $teacher->isTeacher() && ! $teacher->isSuperuser() && ! $teacher->isAdmin())) {
-            abort(403, 'Otorisasi guru diperlukan untuk memberikan nilai.');
-        }
+        $this->authorize('grade', $report);
 
         $action->execute(
             $report,
@@ -142,11 +140,9 @@ class ModulePracticumController extends Controller
         ]);
 
         $report = StudentReport::with(['module', 'user'])->findOrFail($reportId);
-        $teacher = Auth::user();
+        $teacher = $request->user();
 
-        if (! $teacher) {
-            return redirect()->back()->with('error', 'Otorisasi guru diperlukan.');
-        }
+        $this->authorize('requestRevision', $report);
 
         $action->execute($report, $teacher, $request->input('instructions'));
 

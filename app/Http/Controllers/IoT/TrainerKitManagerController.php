@@ -80,6 +80,7 @@ class TrainerKitManagerController extends Controller
      */
     public function reboot(Request $request, Device $device): RedirectResponse
     {
+        $this->authorize('reboot', $device);
         $user = $request->user();
 
         // Fail-closed tenant validation: device's school must exist and be active (QA-05)
@@ -88,10 +89,7 @@ class TrainerKitManagerController extends Controller
             abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
         }
 
-        if (! $user || ! $user->school_id || (int) $device->school_id !== (int) $user->school_id) {
-            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk memutasi perangkat sekolah lain.');
-        }
-        abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+        abort_unless($user->isSuperuser() || ($user->school && $user->school->status === 'active'), 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
 
         // No command transport or physical ACK is currently implemented.
         // Record the simulated operation, but never claim the device rebooted or changed its heartbeat/status.
@@ -125,6 +123,7 @@ class TrainerKitManagerController extends Controller
         Device $device,
         CreateSensorCalibrationProfileAction $createCalibrationProfile
     ): RedirectResponse {
+        $this->authorize('calibrate', $device);
         $user = $request->user();
 
         // Fail-closed tenant validation: device's school must exist and be active (QA-05)
@@ -133,10 +132,7 @@ class TrainerKitManagerController extends Controller
             abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
         }
 
-        if (! $user || ! $user->school_id || (int) $device->school_id !== (int) $user->school_id) {
-            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk memutasi perangkat sekolah lain.');
-        }
-        abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
+        abort_unless($user->isSuperuser() || ($user->school && $user->school->status === 'active'), 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
 
         $validated = $request->validate([
             'phOffset' => 'required|numeric|between:-5,5',
@@ -204,18 +200,13 @@ class TrainerKitManagerController extends Controller
      */
     public function rotateApiKey(Request $request, Device $device): RedirectResponse
     {
-        $user = $request->user();
+        $this->authorize('rotateApiKey', $device);
 
         // Fail-closed tenant validation: device's school must exist and be active (QA-05)
         $school = $device->school ?? School::find($device->school_id);
         if (! $school || $school->status !== 'active') {
             abort(403, 'Aksi ditolak: sekolah perangkat tidak aktif atau belum terdaftar.');
         }
-
-        if (! $user || ! $user->school_id || (int) $device->school_id !== (int) $user->school_id) {
-            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk memutasi perangkat sekolah lain.');
-        }
-        abort_unless($user->school && $user->school->status === 'active', 403, 'Akses ditolak: sekolah Anda tidak aktif atau belum terdaftar.');
 
         $rotation = DeviceApiKey::rotateForDevice($device, $request->user());
 
