@@ -35,3 +35,4 @@ class ResolvedSchoolContext
         return $this->targetSchoolId === null;
     }
 }
+
