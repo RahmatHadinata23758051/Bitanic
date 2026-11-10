@@ -628,6 +628,28 @@ Addressed confirmed cross-school read vulnerability (`SEC-ADMIN-TENANT-READ`, `A
    - Vite Production Build: PASS.
    - Baseline Assets: `upi-edge/` and `dump_upiedge.sql` 100% clean and untouched.
 
+### 2.15 — Sprint 2 / Pack A: RBAC Permission Matrix & School Membership Contract (2026-11-11)
+
+Finalized the foundational architecture contracts for fine-grained authorization and multi-tenant membership (`RBAC-02-01`, `RBAC-02-02`):
+
+1. **RBAC Permission Matrix V1.0 (`docs/architecture/RBAC_PERMISSION_MATRIX_V1.md`)**:
+   - Comprehensive granular breakdown covering all 59 Laravel routes and domain actions.
+   - Distinct authorization rules across all 5 roles: `Superuser` (Platform plane), `Admin Sekolah` (Tenant plane), `Guru` (Vocational Instructor), `Siswa` (ATPH Student), and `Guest` (Public Sanitized).
+   - Detailed mapping for CRUD, user imports, CSV exports, school profile settings, rubric grading, device reboot/calibration, device API keys, telemetry history, AI Gemini queue, raw Modbus debugging, and audit logs.
+   - Strict enforcement: `Admin Sekolah` is permanently denied platform-wide operations (`kits.api-key.rotate`, `rawlogs.inject`) and foreign school data.
+
+2. **School Membership & Tenant Contract V1.0 (`docs/architecture/SCHOOL_MEMBERSHIP_TENANT_CONTRACT_V1.md`)**:
+   - Identified and addressed critical architectural liability in `User::booted()` (silent fallback to hardcoded `smk-ppn-1-sukaraja` or `School::first()`). Established that implicit fallback must not become the production provisioning rule.
+   - Canonical separation of Authentication Identity (`users`) from Tenant Association (`schools.id`).
+   - Comparative evaluation of Single-School Membership (Direct FK) vs. Multi-School Membership (Pivot `school_memberships`) against Indonesian SMK / Dapodik data standards and B2B SaaS requirements.
+   - Recommended Model C (Hybrid Evolutionary Architecture): Strict single-tenant direct FK for MVP with nullable superusers, paving the way for future federation without breaking existing relationships.
+   - Formalized lifecycle contracts: Superuser (`school_id = null`), Admin Sekolah (tenant locked), Teachers & Students (single school, class, group rosters), and inactive/suspended school fail-closed behavior across auth, sessions, API, and hardware ingestion.
+   - Documented Account Transfer, graduation, and referential integrity (`RESTRICT` on delete, composite indexing).
+   - Designed Target Multi-Tenant ERD (Mermaid) and additive DDL migration specification.
+   - Formulated 4-Phase zero-downtime migration strategy and rollback plan.
+   - Established 5 explicit Product Owner decision points for sign-off prior to Pack B execution.
+   - Formulated 11 acceptance test cases in `Acceptance Test Matrix for Pack B`.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |
