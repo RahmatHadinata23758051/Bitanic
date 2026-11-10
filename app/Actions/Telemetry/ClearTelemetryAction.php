@@ -16,18 +16,18 @@ class ClearTelemetryAction
      */
     public function execute(Device $device, array $filters = []): int
     {
-        if (!$device->exists || empty($device->id)) {
+        if (! $device->exists || empty($device->id)) {
             throw new InvalidArgumentException('Target device must be an existing persisted model.');
         }
 
         $query = TelemetryReading::where('device_id', $device->id);
 
-        if (!empty($filters['start_date'])) {
-            $query->where('recorded_at', '>=', $filters['start_date'] . ' 00:00:00');
+        if (! empty($filters['start_date'])) {
+            $query->where('recorded_at', '>=', $filters['start_date'].' 00:00:00');
         }
 
-        if (!empty($filters['end_date'])) {
-            $query->where('recorded_at', '<=', $filters['end_date'] . ' 23:59:59');
+        if (! empty($filters['end_date'])) {
+            $query->where('recorded_at', '<=', $filters['end_date'].' 23:59:59');
         }
 
         return $query->delete();

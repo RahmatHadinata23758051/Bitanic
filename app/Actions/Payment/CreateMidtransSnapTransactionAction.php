@@ -21,13 +21,11 @@ class CreateMidtransSnapTransactionAction
     /**
      * Create a payment record and obtain Midtrans Snap token.
      *
-     * @param User $user
-     * @param SubscriptionPlan $plan
      * @return array{payment: PaymentHistory, snap_token: string|null, redirect_url: string|null}
      */
     public function execute(User $user, SubscriptionPlan $plan): array
     {
-        $orderId = 'BITANIC-' . now()->format('YmdHis') . '-' . strtoupper(Str::random(6));
+        $orderId = 'BITANIC-'.now()->format('YmdHis').'-'.strtoupper(Str::random(6));
         $amount = (float) $plan->price;
 
         $payment = PaymentHistory::create([
@@ -82,7 +80,7 @@ class CreateMidtransSnapTransactionAction
                     'price' => (int) $amount,
                     'quantity' => 1,
                     'name' => substr($plan->name, 0, 50),
-                ]
+                ],
             ],
         ];
 
@@ -104,14 +102,14 @@ class CreateMidtransSnapTransactionAction
                     'raw_response' => $body,
                 ]);
             } else {
-                Log::warning("Midtrans Snap API returned non-200 for Order ID {$orderId}: " . $response->body());
+                Log::warning("Midtrans Snap API returned non-200 for Order ID {$orderId}: ".$response->body());
                 // Fallback deterministic sandbox token untuk development/testing offline
-                $snapToken = 'SANDBOX-TOKEN-' . md5($orderId);
+                $snapToken = 'SANDBOX-TOKEN-'.md5($orderId);
                 $payment->update(['snap_token' => $snapToken]);
             }
         } catch (\Throwable $e) {
-            Log::warning("Midtrans Snap connection failed, using sandbox fallback token: " . $e->getMessage());
-            $snapToken = 'SANDBOX-TOKEN-' . md5($orderId);
+            Log::warning('Midtrans Snap connection failed, using sandbox fallback token: '.$e->getMessage());
+            $snapToken = 'SANDBOX-TOKEN-'.md5($orderId);
             $payment->update(['snap_token' => $snapToken]);
         }
 

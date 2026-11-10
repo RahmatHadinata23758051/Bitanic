@@ -15,8 +15,11 @@ class MidtransWebhookTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected SubscriptionPlan $plan;
+
     protected PaymentHistory $payment;
+
     protected string $serverKey = 'SB-Mid-server-test-key-12345';
 
     protected function setUp(): void
@@ -30,6 +33,7 @@ class MidtransWebhookTest extends TestCase
             'email' => 'guru.pay@bitanic.test',
             'password' => bcrypt('password'),
             'role' => 'guru',
+            'school_id' => 1,
         ]);
 
         $this->plan = SubscriptionPlan::create([
@@ -78,7 +82,7 @@ class MidtransWebhookTest extends TestCase
         $orderId = $this->payment->order_id;
         $statusCode = '200';
         $grossAmount = '50000.00';
-        $validSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $this->serverKey);
+        $validSignature = hash('sha512', $orderId.$statusCode.$grossAmount.$this->serverKey);
 
         $payload = [
             'order_id' => $orderId,
@@ -115,7 +119,7 @@ class MidtransWebhookTest extends TestCase
         $orderId = $this->payment->order_id;
         $statusCode = '200';
         $grossAmount = '50000.00';
-        $validSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $this->serverKey);
+        $validSignature = hash('sha512', $orderId.$statusCode.$grossAmount.$this->serverKey);
 
         $payload = [
             'order_id' => $orderId,

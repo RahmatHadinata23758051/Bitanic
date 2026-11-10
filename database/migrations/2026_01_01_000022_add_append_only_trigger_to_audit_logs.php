@@ -15,7 +15,7 @@ return new class extends Migration
         $driver = DB::getDriverName();
 
         if ($driver === 'pgsql') {
-            DB::unprepared(<<<SQL
+            DB::unprepared(<<<'SQL'
                 CREATE OR REPLACE FUNCTION trg_audit_logs_append_only()
                 RETURNS TRIGGER AS $$
                 BEGIN
@@ -34,7 +34,7 @@ return new class extends Migration
                 EXECUTE FUNCTION trg_audit_logs_append_only();
             SQL);
         } elseif ($driver === 'sqlite') {
-            DB::unprepared(<<<SQL
+            DB::unprepared(<<<'SQL'
                 CREATE TRIGGER IF NOT EXISTS trg_audit_logs_prevent_update
                 BEFORE UPDATE ON audit_logs
                 BEGIN
@@ -58,12 +58,12 @@ return new class extends Migration
         $driver = DB::getDriverName();
 
         if ($driver === 'pgsql') {
-            DB::unprepared(<<<SQL
+            DB::unprepared(<<<'SQL'
                 DROP TRIGGER IF EXISTS trg_prevent_audit_logs_mutation ON audit_logs;
                 DROP FUNCTION IF EXISTS trg_audit_logs_append_only();
             SQL);
         } elseif ($driver === 'sqlite') {
-            DB::unprepared(<<<SQL
+            DB::unprepared(<<<'SQL'
                 DROP TRIGGER IF EXISTS trg_audit_logs_prevent_update;
                 DROP TRIGGER IF EXISTS trg_audit_logs_prevent_delete;
             SQL);

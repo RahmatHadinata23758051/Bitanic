@@ -15,7 +15,6 @@ use App\Models\UserProfile;
 use App\Models\UserSubscription;
 use Database\Seeders\ModulePracticumSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class CorrectiveSprintIntegrityTest extends TestCase
@@ -222,7 +221,7 @@ class CorrectiveSprintIntegrityTest extends TestCase
             'recorded_at' => now()->subHours(2),
         ]);
 
-        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id=' . $device->id);
+        $response = $this->actingAs($teacher)->get('/iot-monitoring?device_id='.$device->id);
         $response->assertOk();
         $response->assertDontSee('Streaming Modbus Aktif');
         $response->assertSee('Telemetri Terakhir (Stale / Offline)');

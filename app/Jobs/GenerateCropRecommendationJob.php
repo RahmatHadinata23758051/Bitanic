@@ -29,7 +29,9 @@ class GenerateCropRecommendationJob implements ShouldQueue
     public int $tries = 2;
 
     public User $user;
+
     public TelemetryReading $reading;
+
     public string $ticketId;
 
     /**
@@ -48,7 +50,7 @@ class GenerateCropRecommendationJob implements ShouldQueue
     public function handle(): void
     {
         // Update ticket status to in-progress
-        $cacheKey = 'crop_recommendation_' . $this->ticketId;
+        $cacheKey = 'crop_recommendation_'.$this->ticketId;
         Cache::put($cacheKey, [
             'status' => 'processing',
             'ticket_id' => $this->ticketId,
@@ -68,7 +70,7 @@ class GenerateCropRecommendationJob implements ShouldQueue
 
         $recommendationData = null;
 
-        if (!empty($apiKey)) {
+        if (! empty($apiKey)) {
             try {
                 $recommendationData = $this->callGeminiApi($apiKey, $n, $p, $k, $ec, $ph, $temp, $humid);
             } catch (\Throwable $e) {
@@ -77,7 +79,7 @@ class GenerateCropRecommendationJob implements ShouldQueue
         }
 
         // Graceful deterministic fallback
-        if (!$recommendationData) {
+        if (! $recommendationData) {
             $recommendationData = $this->generateDeterministicAgronomyRecommendation($n, $p, $k, $ec, $ph, $temp, $humid);
         }
 
@@ -101,7 +103,7 @@ class GenerateCropRecommendationJob implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         Log::error("GenerateCropRecommendationJob failed for ticket {$this->ticketId}: {$exception->getMessage()}");
-        Cache::put('crop_recommendation_' . $this->ticketId, [
+        Cache::put('crop_recommendation_'.$this->ticketId, [
             'status' => 'failed',
             'ticket_id' => $this->ticketId,
             'user_id' => $this->user->id,

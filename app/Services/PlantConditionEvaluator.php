@@ -37,7 +37,7 @@ class PlantConditionEvaluator
                 continue;
             }
 
-            if (!$hasTelemetry) {
+            if (! $hasTelemetry) {
                 $kondisi = "Data telemetri sensor stasiun belum tercatat. Menggunakan estimasi agronomi tanah standar (pH: {$ph}, Kelembapan: {$humid}%, Suhu: {$temp}°C). Disarankan menghubungkan stasiun sensor untuk pantauan presisi {$plantName}.";
             } else {
                 $phStatus = $ph < 5.5 ? 'asam' : ($ph > 7.5 ? 'basa' : 'ideal');

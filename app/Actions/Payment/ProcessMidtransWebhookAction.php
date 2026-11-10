@@ -36,10 +36,11 @@ class ProcessMidtransWebhookAction
         $serverKey = config('midtrans.server_key', env('MIDTRANS_SERVER_KEY', ''));
 
         // 1. Verifikasi Signature Key SHA-512
-        $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+        $expectedSignature = hash('sha512', $orderId.$statusCode.$grossAmount.$serverKey);
 
-        if (!hash_equals($expectedSignature, $receivedSignature)) {
+        if (! hash_equals($expectedSignature, $receivedSignature)) {
             Log::warning("Midtrans Webhook: Invalid signature for Order ID {$orderId}. Expected {$expectedSignature}, got {$receivedSignature}");
+
             return [
                 'success' => false,
                 'code' => 403,
@@ -51,8 +52,9 @@ class ProcessMidtransWebhookAction
         // 2. Ambil catatan pembayaran
         $payment = PaymentHistory::with(['user', 'plan'])->where('order_id', $orderId)->first();
 
-        if (!$payment) {
+        if (! $payment) {
             Log::warning("Midtrans Webhook: Payment record not found for Order ID {$orderId}");
+
             return [
                 'success' => false,
                 'code' => 404,
@@ -66,6 +68,7 @@ class ProcessMidtransWebhookAction
 
         if ($payment->isSettled() && $isSuccessStatus) {
             Log::info("Midtrans Webhook: Order ID {$orderId} already settled. Idempotent response returned.");
+
             return [
                 'success' => true,
                 'code' => 200,

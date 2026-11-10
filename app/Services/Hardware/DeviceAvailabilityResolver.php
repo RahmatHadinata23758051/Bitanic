@@ -15,14 +15,14 @@ class DeviceAvailabilityResolver
     public function getTimeoutSeconds(?Device $device = null): int
     {
         // 1. Per-device specific configuration
-        if ($device && !empty($device->connection_config['heartbeat_timeout_seconds'])) {
+        if ($device && ! empty($device->connection_config['heartbeat_timeout_seconds'])) {
             return (int) $device->connection_config['heartbeat_timeout_seconds'];
         }
 
         // 2. Per-school specific configuration
         if ($device && $device->school_id) {
             $school = $device->relationLoaded('school') ? $device->school : $device->school()->first();
-            if ($school && !empty($school->settings['heartbeat_timeout_seconds'])) {
+            if ($school && ! empty($school->settings['heartbeat_timeout_seconds'])) {
                 return (int) $school->settings['heartbeat_timeout_seconds'];
             }
         }
@@ -36,7 +36,7 @@ class DeviceAvailabilityResolver
      */
     public function isOnline(Device $device, ?CarbonInterface $now = null, ?int $overrideTimeout = null): bool
     {
-        if (!$device->is_active || !$device->last_seen_at) {
+        if (! $device->is_active || ! $device->last_seen_at) {
             return false;
         }
 
@@ -52,7 +52,7 @@ class DeviceAvailabilityResolver
      */
     public function status(Device $device, ?CarbonInterface $now = null, ?int $overrideTimeout = null): string
     {
-        if (!$device->is_active) {
+        if (! $device->is_active) {
             return 'offline';
         }
 
@@ -82,7 +82,7 @@ class DeviceAvailabilityResolver
     /**
      * Apply computed availability to a collection of devices.
      *
-     * @param Collection<int, Device> $devices
+     * @param  Collection<int, Device>  $devices
      * @return Collection<int, Device>
      */
     public function applyToCollection($devices, ?CarbonInterface $now = null): Collection

@@ -39,6 +39,7 @@ class SimulateSensorTelemetryCommand extends Command
 
         if ($devices->isEmpty()) {
             $this->error('Tidak ada meja trainer kit aktif yang ditemukan.');
+
             return self::FAILURE;
         }
 
@@ -89,7 +90,7 @@ class SimulateSensorTelemetryCommand extends Command
         $elapsed = round(microtime(true) - $startTime, 3);
         $throughput = $elapsed > 0 ? round($count / $elapsed, 1) : $count;
 
-        $this->info("Simulasi berhasil diselesaikan!");
+        $this->info('Simulasi berhasil diselesaikan!');
         $this->table(
             ['Metrik', 'Nilai'],
             [

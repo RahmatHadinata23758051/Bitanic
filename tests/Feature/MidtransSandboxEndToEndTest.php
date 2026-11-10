@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\PaymentHistory;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
-use App\Models\UserSubscription;
 use Database\Seeders\SubscriptionPlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -21,7 +20,7 @@ class MidtransSandboxEndToEndTest extends TestCase
     {
         parent::setUp();
 
-        if (!Route::has('subscription.index') || !Route::has('subscription.checkout')) {
+        if (! Route::has('subscription.index') || ! Route::has('subscription.checkout')) {
             $this->markTestSkipped('Legacy SaaS subscription routes are disabled under LEGACY-01.');
         }
 
@@ -104,7 +103,7 @@ class MidtransSandboxEndToEndTest extends TestCase
 
         // 2. Midtrans Webhook Callback dengan SHA512 Signature sah
         $grossAmount = number_format((float) $payment->amount, 2, '.', '');
-        $signature = hash('sha512', $orderId . '200' . $grossAmount . $this->serverKey);
+        $signature = hash('sha512', $orderId.'200'.$grossAmount.$this->serverKey);
 
         $webhookResponse = $this->postJson('/api/v1/payments/webhook', [
             'order_id' => $orderId,

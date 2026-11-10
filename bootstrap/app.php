@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\AuthenticateDeviceApiKey;
+use App\Http\Middleware\EnsurePasswordIsChanged;
+use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,10 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'device.key' => \App\Http\Middleware\AuthenticateDeviceApiKey::class,
-            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'device.key' => AuthenticateDeviceApiKey::class,
+            'role' => EnsureUserHasRole::class,
         ]);
-        $middleware->appendToGroup('web', \App\Http\Middleware\EnsurePasswordIsChanged::class);
+        $middleware->appendToGroup('web', EnsurePasswordIsChanged::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

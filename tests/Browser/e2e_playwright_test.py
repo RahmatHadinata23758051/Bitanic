@@ -131,6 +131,38 @@ def run_tests():
             context.close()
 
         # -------------------------------------------------------------
+        # SCENARIO 2B: LEGACY ADMIN COMPATIBILITY SESSION
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 2B] Legacy Admin Compatibility Session...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "legacyadmin@smk.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+            assert "/login" not in page.url, "Login failed for legacy admin"
+            print("  ✓ Legacy Admin logged in successfully")
+
+            resp_settings = page.goto(f"{BASE_URL}/settings")
+            assert resp_settings.status == 200, f"Expected 200 for settings, got {resp_settings.status}"
+            print("  ✓ Legacy Admin successfully accessed own-school settings (HTTP 200)")
+
+            logout_btn = page.locator("form[action*='logout'] button")
+            if logout_btn.count() > 0:
+                logout_btn.first.click()
+                page.wait_for_load_state("networkidle")
+            print("  ✓ Legacy Admin logged out successfully")
+
+            results["Scenario 2B: Legacy Admin Compatibility"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 2B Failed: {e}")
+            results["Scenario 2B: Legacy Admin Compatibility"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
         # SCENARIO 3: ADMIN FOREIGN-SCHOOL SELECTOR TAMPERING (FAIL-CLOSED 403)
         # -------------------------------------------------------------
         print("\n[SCENARIO 3] Admin Foreign-School Selector Tampering (Fail-Closed 403)...")

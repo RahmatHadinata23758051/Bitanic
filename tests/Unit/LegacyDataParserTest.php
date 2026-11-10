@@ -10,7 +10,7 @@ class LegacyDataParserTest extends TestCase
     public function test_it_parses_simple_insert_statement(): void
     {
         $sql = 'INSERT INTO `users` VALUES (1,\'Super User\',\'admin@gmail.com\',NULL,\'$2y$12$hash\',\'superuser\');';
-        $parser = new LegacyDataParser();
+        $parser = new LegacyDataParser;
         $rows = $parser->parseInsertRows($sql, 'users');
 
         $this->assertCount(1, $rows);
@@ -20,7 +20,7 @@ class LegacyDataParserTest extends TestCase
     public function test_it_parses_multiple_rows_with_escaped_quotes_and_json(): void
     {
         $sql = "INSERT INTO `test` VALUES (1,'Nama 1','[\"1\"]',100),(2,'Nama 2','[{\"a\": 2}]',NULL);";
-        $parser = new LegacyDataParser();
+        $parser = new LegacyDataParser;
         $rows = $parser->parseInsertRows($sql, 'test');
 
         $this->assertCount(2, $rows);
@@ -37,13 +37,13 @@ class LegacyDataParserTest extends TestCase
 
     public function test_it_extracts_users_from_actual_dump_file(): void
     {
-        $dumpPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'dump_upiedge.sql';
-        if (!file_exists($dumpPath)) {
-            $this->markTestSkipped('dump_upiedge.sql not found at expected location: ' . $dumpPath);
+        $dumpPath = dirname(__DIR__, 3).DIRECTORY_SEPARATOR.'dump_upiedge.sql';
+        if (! file_exists($dumpPath)) {
+            $this->markTestSkipped('dump_upiedge.sql not found at expected location: '.$dumpPath);
         }
 
         $sql = file_get_contents($dumpPath);
-        $parser = new LegacyDataParser();
+        $parser = new LegacyDataParser;
         $users = $parser->parseInsertRows($sql, 'users');
 
         $this->assertCount(4, $users);
@@ -60,13 +60,13 @@ class LegacyDataParserTest extends TestCase
 
     public function test_it_extracts_sensor_readings_from_actual_dump_file(): void
     {
-        $dumpPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'dump_upiedge.sql';
-        if (!file_exists($dumpPath)) {
-            $this->markTestSkipped('dump_upiedge.sql not found at expected location: ' . $dumpPath);
+        $dumpPath = dirname(__DIR__, 3).DIRECTORY_SEPARATOR.'dump_upiedge.sql';
+        if (! file_exists($dumpPath)) {
+            $this->markTestSkipped('dump_upiedge.sql not found at expected location: '.$dumpPath);
         }
 
         $sql = file_get_contents($dumpPath);
-        $parser = new LegacyDataParser();
+        $parser = new LegacyDataParser;
         $sensors = $parser->parseInsertRows($sql, 'filtered_fix_stations');
 
         $this->assertGreaterThan(500, count($sensors));

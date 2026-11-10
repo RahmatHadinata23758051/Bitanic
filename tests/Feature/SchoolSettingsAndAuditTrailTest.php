@@ -6,9 +6,10 @@ use App\Models\AuditLog;
 use App\Models\School;
 use App\Models\SchoolSetting;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\QueryException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -634,10 +635,10 @@ class SchoolSettingsAndAuditTrailTest extends TestCase
 
     public function test_no_operational_routes_exist_for_audit_mutation_or_deletion(): void
     {
-        $this->assertFalse(\Illuminate\Support\Facades\Route::has('audit.destroy'));
-        $this->assertFalse(\Illuminate\Support\Facades\Route::has('audit.delete'));
-        $this->assertFalse(\Illuminate\Support\Facades\Route::has('audit.update'));
-        $this->assertFalse(\Illuminate\Support\Facades\Route::has('audit_logs.destroy'));
+        $this->assertFalse(Route::has('audit.destroy'));
+        $this->assertFalse(Route::has('audit.delete'));
+        $this->assertFalse(Route::has('audit.update'));
+        $this->assertFalse(Route::has('audit_logs.destroy'));
     }
 
     public function test_guest_is_redirected_to_login_on_settings_routes(): void

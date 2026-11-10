@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Actions\Telemetry\ClearTelemetryAction;
 use App\Models\Device;
 use App\Models\TelemetryReading;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -53,7 +52,7 @@ class ClearTelemetryTest extends TestCase
         $this->assertDatabaseCount('telemetry_readings', 5);
 
         // Execute clear action only for Device A
-        $action = new ClearTelemetryAction();
+        $action = new ClearTelemetryAction;
         $deletedCount = $action->execute($deviceA);
 
         $this->assertEquals(3, $deletedCount);
@@ -98,7 +97,7 @@ class ClearTelemetryTest extends TestCase
         $this->assertDatabaseCount('telemetry_readings', 2);
 
         // Delete only data older than yesterday
-        $action = new ClearTelemetryAction();
+        $action = new ClearTelemetryAction;
         $deletedCount = $action->execute($device, [
             'end_date' => now()->subDay()->toDateString(),
         ]);

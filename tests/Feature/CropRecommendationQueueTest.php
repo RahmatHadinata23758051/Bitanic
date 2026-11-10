@@ -8,7 +8,6 @@ use App\Models\SubscriptionPlan;
 use App\Models\TelemetryReading;
 use App\Models\User;
 use App\Models\UserSubscription;
-use App\Services\SubscriptionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -19,7 +18,9 @@ class CropRecommendationQueueTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Device $device;
+
     protected TelemetryReading $reading;
 
     protected function setUp(): void
@@ -31,6 +32,7 @@ class CropRecommendationQueueTest extends TestCase
             'email' => 'guru.test@bitanic.test',
             'password' => bcrypt('password'),
             'role' => 'guru',
+            'school_id' => 1,
         ]);
 
         $this->device = Device::create([
@@ -117,7 +119,7 @@ class CropRecommendationQueueTest extends TestCase
         $job = new GenerateCropRecommendationJob($this->user, $this->reading, $ticketId);
         $job->handle();
 
-        $cachedData = Cache::get('crop_recommendation_' . $ticketId);
+        $cachedData = Cache::get('crop_recommendation_'.$ticketId);
         $this->assertNotNull($cachedData);
         $this->assertEquals('completed', $cachedData['status']);
         $this->assertArrayHasKey('recommendations', $cachedData);

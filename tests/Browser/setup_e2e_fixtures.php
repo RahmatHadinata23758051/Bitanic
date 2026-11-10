@@ -119,4 +119,3 @@ TelemetryReading::create([
 ]);
 
 echo "E2E_FIXTURES_SETUP_COMPLETE\n";
-

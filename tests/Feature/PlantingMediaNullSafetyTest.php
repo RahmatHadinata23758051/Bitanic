@@ -18,7 +18,7 @@ class PlantingMediaNullSafetyTest extends TestCase
         // Pastikan tabel telemetri kosong total
         $this->assertEquals(0, TelemetryReading::count());
 
-        $evaluator = new PlantConditionEvaluator();
+        $evaluator = new PlantConditionEvaluator;
         $results = $evaluator->evaluate(['Cabai', 'Tomat'], null);
 
         $this->assertIsArray($results);
@@ -38,6 +38,7 @@ class PlantingMediaNullSafetyTest extends TestCase
             'email' => 'guru@bitanic.test',
             'password' => bcrypt('password'),
             'role' => 'guru',
+            'school_id' => 1,
         ]);
 
         $response = $this->actingAs($user)->post('/media', [

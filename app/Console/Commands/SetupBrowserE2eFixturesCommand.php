@@ -63,7 +63,7 @@ class SetupBrowserE2eFixturesCommand extends Command
             [
                 'name' => 'Super Administrator Bitanic',
                 'role' => 'superuser',
-                'school_id' => 1,
+                'school_id' => null,
                 'password' => $password,
                 'email_verified_at' => now(),
                 'must_change_password' => false,
@@ -74,12 +74,12 @@ class SetupBrowserE2eFixturesCommand extends Command
             ['type' => 'guru', 'identifier_number' => 'SU-001', 'department' => 'IT Admin']
         );
 
-        // 2. Admin
+        // 2. Admin Sekolah (Canonical) & Legacy Admin (Compatibility)
         $adm = User::updateOrCreate(
             ['email' => 'admin@smk.id'],
             [
                 'name' => 'M. Fikri Nurhakim, S.Kom.',
-                'role' => 'admin',
+                'role' => 'admin_sekolah',
                 'school_id' => 1,
                 'password' => $password,
                 'email_verified_at' => now(),
@@ -89,6 +89,22 @@ class SetupBrowserE2eFixturesCommand extends Command
         UserProfile::updateOrCreate(
             ['user_id' => $adm->id],
             ['type' => 'guru', 'identifier_number' => 'ADM-001', 'department' => 'Teknisi Lab']
+        );
+
+        $legacyAdm = User::updateOrCreate(
+            ['email' => 'legacyadmin@smk.id'],
+            [
+                'name' => 'Legacy Admin Bitanic',
+                'role' => 'admin',
+                'school_id' => 1,
+                'password' => $password,
+                'email_verified_at' => now(),
+                'must_change_password' => false,
+            ]
+        );
+        UserProfile::updateOrCreate(
+            ['user_id' => $legacyAdm->id],
+            ['type' => 'guru', 'identifier_number' => 'ADM-LEGACY', 'department' => 'Teknisi Lab']
         );
 
         // 3. Guru

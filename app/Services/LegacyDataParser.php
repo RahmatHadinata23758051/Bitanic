@@ -15,7 +15,7 @@ class LegacyDataParser
         // Cari baris/blok yang dimulai dengan INSERT INTO `tableName` VALUES
         $pattern = "/INSERT\s+INTO\s+[`\"]?{$escapedTableName}[`\"]?\s+VALUES\s*(.+?);/is";
 
-        if (!preg_match_all($pattern, $sql, $matches)) {
+        if (! preg_match_all($pattern, $sql, $matches)) {
             return [];
         }
 
@@ -88,6 +88,7 @@ class LegacyDataParser
                                     break;
                             }
                             $i += 2;
+
                             continue;
                         }
                     } elseif ($char === "'") {
@@ -95,11 +96,13 @@ class LegacyDataParser
                         if ($i + 1 < $len && $values[$i + 1] === "'") {
                             $token .= "'";
                             $i += 2;
+
                             continue;
                         }
                         // Selesai string
                         $inString = false;
                         $i++;
+
                         continue;
                     }
                     $token .= $char;
@@ -110,6 +113,7 @@ class LegacyDataParser
                         $isString = true;
                         $token = '';
                         $i++;
+
                         continue;
                     } elseif ($char === ',' || $char === ')') {
                         // Selesai satu kolom
@@ -124,12 +128,14 @@ class LegacyDataParser
                             break;
                         }
                         $i++;
+
                         continue;
                     } elseif ($char === ' ' || $char === "\n" || $char === "\r" || $char === "\t") {
                         if (strlen($token) > 0) {
                             $token .= $char;
                         }
                         $i++;
+
                         continue;
                     } else {
                         $token .= $char;

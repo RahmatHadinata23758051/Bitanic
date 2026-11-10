@@ -7,6 +7,7 @@ use App\Models\ModulePracticum;
 use App\Models\StudentReport;
 use App\Models\TelemetryReading;
 use App\Models\User;
+use App\Models\UserProfile;
 use Database\Seeders\ModulePracticumSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -48,7 +49,7 @@ class ModulePracticumTest extends TestCase
         $student = User::factory()->create([
             'role' => 'siswa',
         ]);
-        \App\Models\UserProfile::create([
+        UserProfile::create([
             'user_id' => $student->id,
             'type' => 'siswa',
             'assigned_kit_id' => 'TRAINER-KIT-01',
@@ -178,7 +179,7 @@ class ModulePracticumTest extends TestCase
     public function test_student_submission_scopes_telemetry_to_allocated_device_with_evidence_link(): void
     {
         $student = User::factory()->create(['role' => 'siswa']);
-        \App\Models\UserProfile::create([
+        UserProfile::create([
             'user_id' => $student->id,
             'type' => 'siswa',
             'assigned_kit_id' => 'TK-LAB-01',
@@ -247,7 +248,7 @@ class ModulePracticumTest extends TestCase
     public function test_student_lks_submission_records_honest_empty_state_without_telemetry(): void
     {
         $student = User::factory()->create(['role' => 'siswa']);
-        \App\Models\UserProfile::create([
+        UserProfile::create([
             'user_id' => $student->id,
             'type' => 'siswa',
             'assigned_kit_id' => 'TK-EMPTY',

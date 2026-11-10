@@ -177,7 +177,7 @@ class PracticumReportHubTest extends TestCase
         $all->assertSee('Siswa Cianjur');
 
         // Filtered superuser only sees target school
-        $filtered = $this->actingAs($superuser)->get('/reports?school_id=' . $schoolA->id);
+        $filtered = $this->actingAs($superuser)->get('/reports?school_id='.$schoolA->id);
         $filtered->assertOk();
         $filtered->assertSee('Siswa Sukaraja');
         $filtered->assertDontSee('Siswa Cianjur');
@@ -252,7 +252,7 @@ class PracticumReportHubTest extends TestCase
         $resRevNeeded->assertDontSee('BadgeBetaUnique');
 
         // Filter module_id
-        $resMod2 = $this->actingAs($teacher)->get('/reports?module_id=' . $mod2->id);
+        $resMod2 = $this->actingAs($teacher)->get('/reports?module_id='.$mod2->id);
         $resMod2->assertOk();
         $resMod2->assertSee('BadgeBetaUnique');
         $resMod2->assertDontSee('BadgeAlphaUnique');

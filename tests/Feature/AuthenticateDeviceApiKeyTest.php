@@ -18,6 +18,7 @@ class AuthenticateDeviceApiKeyTest extends TestCase
 
         Route::middleware('device.key')->post('/test/iot-ingest', function () {
             $device = request()->attributes->get('device');
+
             return response()->json([
                 'success' => true,
                 'device_code' => $device->code,

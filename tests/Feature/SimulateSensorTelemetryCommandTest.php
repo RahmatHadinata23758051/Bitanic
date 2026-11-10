@@ -46,8 +46,8 @@ class SimulateSensorTelemetryCommandTest extends TestCase
         // Must have at least some readings with non-empty threshold flags or out-of-range pH
         $anomalyCount = TelemetryReading::where(function ($q) {
             $q->where('ph', '<', 5.0)
-              ->orWhere('ec', '>', 2400)
-              ->orWhere('humidity', '<', 40.0);
+                ->orWhere('ec', '>', 2400)
+                ->orWhere('humidity', '<', 40.0);
         })->count();
 
         $this->assertGreaterThan(0, $anomalyCount);
