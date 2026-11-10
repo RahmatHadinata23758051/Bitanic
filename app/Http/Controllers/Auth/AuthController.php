@@ -56,11 +56,12 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+        $isSuperuser = $user instanceof User && $user->isSuperuser();
         $schoolIsActive = $user instanceof User
             && $user->school_id !== null
             && $user->school()->where('status', 'active')->exists();
 
-        if (! $schoolIsActive) {
+        if (! $isSuperuser && ! $schoolIsActive) {
             Auth::logout();
             RateLimiter::hit($throttleKey, 60);
 
@@ -80,7 +81,7 @@ class AuthController extends Controller
         }
 
         // Redirect sesuai peran pengguna vokasi
-        if ($user && $user->isSuperuser()) {
+        if ($user && ($user->isSuperuser() || $user->isAdmin())) {
             return redirect()->intended(route('dashboard'));
         }
 

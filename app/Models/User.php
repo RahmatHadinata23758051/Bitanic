@@ -59,8 +59,14 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::creating(function (User $user) {
+            // Platform superusers do not have an assigned vocational school
+            if ($user->role === 'superuser') {
+                return;
+            }
+
+            // Tenant accounts (admin_sekolah, admin, guru, siswa) must have explicit school_id
             if (empty($user->school_id)) {
-                $user->school_id = School::where('slug', 'smk-ppn-1-sukaraja')->value('id') ?? School::first()?->id;
+                throw new \InvalidArgumentException('Akun pengguna institusi ('.($user->role ?? 'tenant').') wajib memiliki asosiasi sekolah (school_id).');
             }
         });
     }
@@ -105,12 +111,12 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return in_array($this->role, ['admin', 'admin_sekolah'], true);
     }
 
     public function isSchoolAdmin(): bool
     {
-        return $this->role === 'admin';
+        return in_array($this->role, ['admin', 'admin_sekolah'], true);
     }
 
     public function isGuru(): bool

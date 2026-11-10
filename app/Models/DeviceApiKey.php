@@ -93,10 +93,10 @@ class DeviceApiKey extends Model
         }
 
         if ($actor) {
-            if (! $actor->school_id || (int) $device->school_id !== (int) $actor->school_id) {
+            if ($actor->school_id && (int) $device->school_id !== (int) $actor->school_id) {
                 throw new InvalidArgumentException('Pengguna tidak memiliki wewenang untuk merotasi kunci perangkat sekolah lain.');
             }
-            if (! $actor->school || $actor->school->status !== 'active') {
+            if ($actor->school_id && (! $actor->school || $actor->school->status !== 'active')) {
                 throw new InvalidArgumentException('Rotasi kunci API ditolak: sekolah pengguna tidak aktif atau belum terdaftar.');
             }
         }

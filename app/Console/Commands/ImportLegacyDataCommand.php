@@ -8,6 +8,7 @@ use App\Models\DeviceApiKey;
 use App\Models\Media;
 use App\Models\PaymentHistory;
 use App\Models\ScheduleParticipant;
+use App\Models\School;
 use App\Models\SensorThreshold;
 use App\Models\SubscriptionPlan;
 use App\Models\TelemetryReading;
@@ -18,6 +19,7 @@ use App\Services\LegacyDataParser;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class ImportLegacyDataCommand extends Command
@@ -50,11 +52,13 @@ class ImportLegacyDataCommand extends Command
         if (app()->environment('production')) {
             if ($this->option('fresh')) {
                 $this->error('Operasi --fresh DILARANG KERAS pada environment production demi integritas dan keamanan data!');
+
                 return Command::FAILURE;
             }
 
-            if (!$this->option('force')) {
+            if (! $this->option('force')) {
                 $this->error('Aplikasi berjalan pada environment production. Operasi import legacy memerlukan flag --force.');
+
                 return Command::FAILURE;
             }
         }
@@ -62,14 +66,15 @@ class ImportLegacyDataCommand extends Command
         $customPath = $this->option('path');
         $filePath = $customPath
             ? (str_starts_with($customPath, '/') || str_contains($customPath, ':\\') ? $customPath : base_path($customPath))
-            : dirname(base_path()) . DIRECTORY_SEPARATOR . 'dump_upiedge.sql';
+            : dirname(base_path()).DIRECTORY_SEPARATOR.'dump_upiedge.sql';
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             $this->error("Legacy SQL dump file not found at: {$filePath}");
+
             return Command::FAILURE;
         }
 
-        if ($this->option('fresh') && !app()->environment('production')) {
+        if ($this->option('fresh') && ! app()->environment('production')) {
             $this->warn('Running php artisan migrate:fresh before import...');
             $this->call('migrate:fresh', ['--force' => true]);
         }
@@ -115,6 +120,7 @@ class ImportLegacyDataCommand extends Command
             DB::rollBack();
             $this->error("ETL Migration Failed: {$e->getMessage()}");
             $this->error($e->getTraceAsString());
+
             return Command::FAILURE;
         }
     }
@@ -138,7 +144,7 @@ class ImportLegacyDataCommand extends Command
                 if (app()->environment('production')) {
                     $this->warn('Opsi --dev-passwords diabaikan pada environment production demi keamanan kredensial.');
                 } else {
-                    $password = \Illuminate\Support\Facades\Hash::make('password');
+                    $password = Hash::make('password');
                 }
             }
             $rawRole = $row[5] ?? 'siswa';
@@ -153,10 +159,12 @@ class ImportLegacyDataCommand extends Command
 
             $user = User::find($id);
             if (! $user) {
-                $user = new User();
+                $user = new User;
                 $user->id = $id;
             }
+            $defaultSchoolId = School::where('slug', 'smk-ppn-1-sukaraja')->value('id') ?? 1;
             $user->fill([
+                'school_id' => $role === 'superuser' ? null : $defaultSchoolId,
                 'name' => $name,
                 'email' => $email,
                 'email_verified_at' => $verifiedAt,
@@ -548,7 +556,7 @@ class ImportLegacyDataCommand extends Command
         }
 
         $device = Device::where('code', 'BTLP-UPI')->first();
-        if (!$device) {
+        if (! $device) {
             return 0;
         }
 
@@ -565,8 +573,9 @@ class ImportLegacyDataCommand extends Command
             $createdAt = $row[3] ? Carbon::parse($row[3]) : now();
 
             $samples = is_string($samplesRaw) ? json_decode($samplesRaw, true) : $samplesRaw;
-            if (!is_array($samples)) {
+            if (! is_array($samples)) {
                 $bar->advance();
+
                 continue;
             }
 
@@ -604,7 +613,7 @@ class ImportLegacyDataCommand extends Command
             $bar->advance();
         }
 
-        if (!empty($batch)) {
+        if (! empty($batch)) {
             TelemetryReading::insert($batch);
             $totalInserted += count($batch);
         }

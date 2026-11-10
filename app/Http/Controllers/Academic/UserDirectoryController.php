@@ -28,14 +28,14 @@ class UserDirectoryController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         $query = User::with('profile')
-            ->whereIn('role', ['siswa', 'guru', 'superuser', 'admin'])
+            ->whereIn('role', ['siswa', 'guru', 'superuser', 'admin', 'admin_sekolah'])
             ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
             ->orderBy('role')
             ->orderBy('name');
 
-        if ($role && in_array($role, ['siswa', 'guru', 'superuser', 'admin'], true)) {
-            if (in_array($role, ['superuser', 'admin'], true)) {
-                $query->whereIn('role', ['superuser', 'admin']);
+        if ($role && in_array($role, ['siswa', 'guru', 'superuser', 'admin', 'admin_sekolah'], true)) {
+            if (in_array($role, ['superuser', 'admin', 'admin_sekolah'], true)) {
+                $query->whereIn('role', ['superuser', 'admin', 'admin_sekolah']);
             } else {
                 $query->where('role', $role);
             }
@@ -63,7 +63,7 @@ class UserDirectoryController extends Controller
             'teachers' => User::where('role', 'guru')
                 ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
                 ->count(),
-            'admins' => User::whereIn('role', ['superuser', 'admin'])
+            'admins' => User::whereIn('role', ['superuser', 'admin', 'admin_sekolah'])
                 ->when($targetSchoolId, fn ($q) => $q->where('school_id', $targetSchoolId))
                 ->count(),
         ];

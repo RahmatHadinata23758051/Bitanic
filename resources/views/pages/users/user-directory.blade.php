@@ -75,7 +75,7 @@
             </a>
             <a
                 href="{{ url('/users-data?role=admin' . ($selectedSchoolId ? '&school_id=' . $selectedSchoolId : '')) }}"
-                class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors {{ in_array($currentRole, ['admin', 'superuser'], true) ? 'bg-[#0c3c26] text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors {{ in_array($currentRole, ['admin', 'admin_sekolah', 'superuser'], true) ? 'bg-[#0c3c26] text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
             >
                 Admin
             </a>
@@ -143,9 +143,9 @@
                                     <span class="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-slate-200 text-slate-800 border border-slate-300/60">
                                         Superuser
                                     </span>
-                                @elseif($u->role === 'admin')
+                                @elseif($u->role === 'admin_sekolah' || $u->role === 'admin')
                                     <span class="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-slate-200 text-slate-800 border border-slate-300/60">
-                                        Admin
+                                        {{ $u->role === 'admin_sekolah' ? 'Admin Sekolah' : 'Admin' }}
                                     </span>
                                 @elseif($u->role === 'siswa')
                                     <span class="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-slate-100 text-slate-700 border border-slate-200/60">

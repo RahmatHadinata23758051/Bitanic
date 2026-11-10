@@ -31,6 +31,13 @@ class EnsureUserHasRole
         if (in_array('guru', $allowedRoles, true)) {
             $allowedRoles[] = 'superuser';
             $allowedRoles[] = 'admin';
+            $allowedRoles[] = 'admin_sekolah';
+        }
+
+        // Dual-compatibility: Treat 'admin' and 'admin_sekolah' as interchangeable synonyms for tenant admin routes
+        if (in_array('admin', $allowedRoles, true) || in_array('admin_sekolah', $allowedRoles, true)) {
+            $allowedRoles[] = 'admin';
+            $allowedRoles[] = 'admin_sekolah';
         }
 
         if (! in_array($user->role, array_unique($allowedRoles), true)) {

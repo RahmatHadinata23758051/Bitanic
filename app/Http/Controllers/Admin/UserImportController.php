@@ -20,10 +20,15 @@ class UserImportController extends Controller
 
         $validated = $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt,xlsx', 'max:10240'],
+            'school_id' => ['nullable', 'integer', 'exists:schools,id'],
         ]);
 
+        $targetSchoolId = ($user && ! $user->isSuperuser())
+            ? $user->school_id
+            : ($request->input('school_id') ? (int) $request->input('school_id') : $user?->school_id);
+
         try {
-            $result = $action->preview($validated['file'], $user?->school_id);
+            $result = $action->preview($validated['file'], $targetSchoolId);
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (Throwable $exception) {
@@ -42,6 +47,7 @@ class UserImportController extends Controller
         }
 
         $validated = $request->validate([
+            'school_id' => ['nullable', 'integer', 'exists:schools,id'],
             'rows' => ['required', 'array', 'min:1', 'max:500'],
             'rows.*.name' => ['required', 'string', 'max:255'],
             'rows.*.email' => ['required', 'email', 'max:255'],
@@ -52,7 +58,11 @@ class UserImportController extends Controller
             'rows.*.assigned_kit' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $result = $action->execute($validated['rows'], $user?->school_id, $user);
+        $targetSchoolId = ($user && ! $user->isSuperuser())
+            ? $user->school_id
+            : ($request->input('school_id') ? (int) $request->input('school_id') : $user?->school_id);
+
+        $result = $action->execute($validated['rows'], $targetSchoolId, $user);
 
         return response()->json($result);
     }

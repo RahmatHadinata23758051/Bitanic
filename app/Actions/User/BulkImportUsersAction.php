@@ -159,7 +159,22 @@ class BulkImportUsersAction
             ]);
         }
 
-        $schoolId = $schoolId ?? ($actor?->school_id ?? School::where('slug', 'smk-ppn-1-sukaraja')->value('id') ?? School::first()?->id);
+        if ($actor && ! $actor->isSuperuser()) {
+            $schoolId = $actor->school_id;
+        }
+
+        if (! $schoolId) {
+            throw ValidationException::withMessages([
+                'school_id' => 'Target sekolah wajib dipilih untuk eksekusi impor pengguna.',
+            ]);
+        }
+
+        $school = School::where('id', $schoolId)->where('status', 'active')->first();
+        if (! $school) {
+            throw ValidationException::withMessages([
+                'school_id' => 'Sekolah target tidak aktif atau tidak ditemukan.',
+            ]);
+        }
 
         $this->validateExecutionRows($rows, $schoolId);
         $imported = [];
