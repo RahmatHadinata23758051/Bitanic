@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 BASE_URL = "http://127.0.0.1:8008"
 
 def run_tests():
-    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (8 SCENARIOS) ===")
+    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (15 SCENARIOS) ===")
     results = {}
 
     with sync_playwright() as p:
@@ -659,6 +659,264 @@ def run_tests():
         except Exception as e:
             print(f"  ✗ Scenario 12 Failed: {e}")
             results["Scenario 12: Strict RBAC Denied Actions"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 13: SUPERUSER DATA MASTER WILAYAH (MASTER-03-01)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 13] Superuser Data Master Wilayah (Provinsi, Kab/Kota, Kecamatan)...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            # 13.1 Login as Superuser
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "superuser@bitanic.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+            assert "/login" not in page.url, "Login failed for superuser"
+
+            # 13.2 Verify Sidebar Data Master navigation links
+            assert page.locator("a[href*='/master/regions']").count() > 0, "Superuser must see Wilayah master in sidebar"
+            assert page.locator("a[href*='/master/schools']").count() > 0, "Superuser must see Sekolah master in sidebar"
+            print("  ✓ Superuser verified presence of Data Master navigation links in sidebar")
+
+            # 13.3 Visit Region Master Page
+            resp = page.goto(f"{BASE_URL}/master/regions")
+            assert resp.status == 200, f"Expected 200 for /master/regions, got {resp.status}"
+            content = page.content()
+            assert "Master Wilayah Indonesia" in content, "Expected Region Master title"
+            assert "Provinsi" in content and "38" in content, "Expected metadata displaying 38 Provinsi"
+            assert "JAWA BARAT" in content, "Expected JAWA BARAT in default province list"
+            print("  ✓ Superuser accessed Region Master page (38 Provinsi Kemendagri metadata verified)")
+
+            # 13.4 Level Tab Switching: Regencies (Kab/Kota)
+            resp_kab = page.goto(f"{BASE_URL}/master/regions?level=regencies&province_code=32&search=SUKABUMI")
+            assert resp_kab.status == 200
+            content_kab = page.content()
+            assert "KABUPATEN SUKABUMI" in content_kab or "KOTA SUKABUMI" in content_kab, "Expected Sukabumi in regencies"
+            assert "3202" in content_kab, "Expected code 3202 for Kabupaten Sukabumi"
+            print("  ✓ Superuser filtered and verified Kab/Kota (3202 KABUPATEN SUKABUMI)")
+
+            # 13.5 Level Tab Switching: Districts (Kecamatan)
+            resp_kec = page.goto(f"{BASE_URL}/master/regions?level=districts&regency_code=3202&search=SUKARAJA")
+            assert resp_kec.status == 200
+            content_kec = page.content()
+            assert "SUKARAJA" in content_kec, "Expected SUKARAJA in districts"
+            assert "3202170" in content_kec, "Expected code 3202170 for Sukaraja"
+            print("  ✓ Superuser filtered and verified Kecamatan (3202170 SUKARAJA)")
+
+            # 13.6 Cascading API Endpoints Verification
+            provinces_res = context.request.get(f"{BASE_URL}/api/regions/provinces")
+            assert provinces_res.status == 200
+            prov_json = provinces_res.json()
+            assert prov_json["success"] is True and len(prov_json["data"]) == 38, "Expected 38 provinces in API"
+
+            regencies_res = context.request.get(f"{BASE_URL}/api/regions/regencies?province_code=32")
+            assert regencies_res.status == 200
+            reg_json = regencies_res.json()
+            assert reg_json["success"] is True and any(r["code"] == "3202" for r in reg_json["data"]), "Expected 3202 in West Java regencies API"
+
+            districts_res = context.request.get(f"{BASE_URL}/api/regions/districts?regency_code=3202")
+            assert districts_res.status == 200
+            dist_json = districts_res.json()
+            assert dist_json["success"] is True and any(d["code"] == "3202170" for d in dist_json["data"]), "Expected 3202170 in Sukabumi districts API"
+            print("  ✓ Cascading API endpoints verified (/api/regions/provinces, /regencies, /districts)")
+
+            logout_btn = page.locator("form[action*='logout'] button")
+            if logout_btn.count() > 0:
+                logout_btn.first.click()
+                page.wait_for_load_state("networkidle")
+
+            results["Scenario 13: Superuser Data Master Wilayah"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 13 Failed: {e}")
+            results["Scenario 13: Superuser Data Master Wilayah"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 14: SUPERUSER MASTER SEKOLAH CRUD LIFECYCLE (MASTER-03-02)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 14] Superuser Master Sekolah CRUD Lifecycle...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            # 14.1 Login as Superuser
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "superuser@bitanic.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+
+            # 14.2 Visit Master Sekolah Index
+            resp = page.goto(f"{BASE_URL}/master/schools")
+            assert resp.status == 200, f"Expected 200 for /master/schools, got {resp.status}"
+            content = page.content()
+            assert "Master Sekolah" in content, "Expected Master Sekolah title"
+            assert "SMK Pertanian Pembangunan Negeri 1 Sukaraja" in content, "Expected baseline school in table"
+            print("  ✓ Superuser accessed Master Sekolah index (baseline school verified)")
+
+            # 14.3 Navigate to Create Form
+            page.click("a:has-text('Tambah Sekolah')")
+            page.wait_for_load_state("networkidle")
+            assert "/master/schools/create" in page.url, "Expected navigation to school create page"
+            print("  ✓ Superuser opened Tambah Sekolah form")
+
+            # 14.4 Fill Create Form with Cascading Selects
+            test_npsn = f"88{int(time.time()) % 1000000:06d}"
+            test_school_name = f"SMK Pertanian Test E2E {test_npsn}"
+            page.fill("#name", test_school_name)
+            page.fill("#npsn", test_npsn)
+            page.fill("#phone", "08123456789")
+            page.fill("#address", "Jl. Pendidikan Vokasi No. 10")
+
+            # Select Province: 32 (Jawa Barat)
+            page.select_option("#province_code", "32")
+            # Wait for regencies to load via Alpine.js fetch
+            page.wait_for_function("document.querySelectorAll('#regency_code option').length > 1")
+            page.select_option("#regency_code", "3202")
+            # Wait for districts to load via Alpine.js fetch
+            page.wait_for_function("document.querySelectorAll('#district_code option').length > 1")
+            page.select_option("#district_code", "3202170")
+            print("  ✓ Cascading Alpine.js selectors dynamically selected Provinsi 32 -> Kab 3202 -> Kec 3202170")
+
+            # Submit Create Form
+            page.click("button[type='submit']:has-text('Simpan Sekolah')")
+            page.wait_for_load_state("networkidle")
+            assert "/master/schools" in page.url and "/create" not in page.url, f"Expected redirect to index, got {page.url}"
+            content_after_create = page.content()
+            assert test_school_name in content_after_create, "Newly created school must appear in index"
+            print(f"  ✓ School created successfully with regional links ('{test_school_name}')")
+
+            # 14.5 Filter and Search Table
+            page.fill("input[name='search']", test_npsn)
+            page.click("button:has-text('Cari')")
+            page.wait_for_load_state("networkidle")
+            assert test_school_name in page.content(), f"Expected search result for NPSN {test_npsn}"
+            print("  ✓ Search filter by NPSN verified")
+
+            # 14.6 View School Detail
+            page.click("a[title='Detail Sekolah']")
+            page.wait_for_load_state("networkidle")
+            assert "/master/schools/" in page.url and "/edit" not in page.url, "Expected detail page URL"
+            content_detail = page.content()
+            assert test_school_name in content_detail, "Expected school name in detail view"
+            assert "KABUPATEN SUKABUMI" in content_detail, "Expected regional regency name in detail"
+            assert "SUKARAJA" in content_detail, "Expected district name in detail"
+            print("  ✓ Superuser inspected school detail view with regional breakdown")
+
+            # Extract created school ID from URL
+            school_url_parts = page.url.rstrip("/").split("/")
+            created_school_id = school_url_parts[-1]
+
+            # 14.7 Edit School
+            page.goto(f"{BASE_URL}/master/schools/{created_school_id}/edit")
+            page.wait_for_load_state("networkidle")
+            page.fill("#phone", "08999999999")
+            page.click("button[type='submit']:has-text('Simpan Perubahan')")
+            page.wait_for_load_state("networkidle")
+            # Navigate to detail page to verify updated phone
+            page.goto(f"{BASE_URL}/master/schools/{created_school_id}")
+            page.wait_for_load_state("networkidle")
+            assert "08999999999" in page.content(), "Updated phone number must appear on detail page"
+            print("  ✓ School edited and updated successfully")
+
+            # 14.8 Toggle Status (Active -> Inactive -> Active)
+            csrf_token = page.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers = {"X-CSRF-TOKEN": csrf_token, "Accept": "application/json"}
+            toggle_res = context.request.post(f"{BASE_URL}/master/schools/{created_school_id}/toggle-status", data={"_method": "PATCH"}, headers=headers)
+            assert toggle_res.status in [200, 302], f"Toggle status expected redirect/success, got {toggle_res.status}"
+            print("  ✓ School status toggled (active <-> inactive)")
+
+            # 14.9 Deletion Guard & Cleanup
+            # Delete new school (0 linked users/devices/schedules -> allowed)
+            delete_res = context.request.post(f"{BASE_URL}/master/schools/{created_school_id}", data={"_method": "DELETE"}, headers=headers)
+            assert delete_res.status in [200, 302], f"Expected success deleting unlinked school, got {delete_res.status}"
+
+            # Attempt to delete School 1 (has linked users/devices -> must be blocked)
+            delete_baseline_res = context.request.post(f"{BASE_URL}/master/schools/1", data={"_method": "DELETE"}, headers=headers)
+            assert delete_baseline_res.status in [200, 302], f"Expected redirect/block response, got {delete_baseline_res.status}"
+            assert "SMK Pertanian Pembangunan Negeri 1 Sukaraja" in delete_baseline_res.text(), "Baseline school must still exist in response"
+            print("  ✓ School deletion guard verified (audited & linked schools strictly protected)")
+
+            logout_btn = page.locator("form[action*='logout'] button")
+            if logout_btn.count() > 0:
+                logout_btn.first.click()
+                page.wait_for_load_state("networkidle")
+
+            results["Scenario 14: Superuser Master Sekolah CRUD Lifecycle"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 14 Failed: {e}")
+            results["Scenario 14: Superuser Master Sekolah CRUD Lifecycle"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 15: MASTER ROUTES SECURITY & ROLE ISOLATION
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 15] Master Routes Security & Role Isolation (Superuser-Only)...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            # 15.1 Login as Admin Sekolah
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "admin@smk.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+
+            # Extract CSRF token from authorized dashboard page
+            csrf_token = page.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            assert bool(csrf_token), "Expected valid CSRF token from authenticated dashboard"
+            headers = {"X-CSRF-TOKEN": csrf_token, "Accept": "application/json"}
+
+            # Verify absence of DATA MASTER in sidebar
+            sidebar_content = page.content()
+            assert "DATA MASTER" not in sidebar_content, "Admin Sekolah MUST NOT see 'DATA MASTER' sidebar group"
+            assert "/master/regions" not in sidebar_content, "Admin Sekolah MUST NOT see Region master link"
+            assert "/master/schools" not in sidebar_content, "Admin Sekolah MUST NOT see School master link"
+            print("  ✓ Admin Sekolah verified absence of DATA MASTER sidebar section")
+
+            # Direct GET /master/regions -> 403
+            resp_reg = page.goto(f"{BASE_URL}/master/regions")
+            assert resp_reg.status == 403, f"Expected 403 for Admin Sekolah on /master/regions, got {resp_reg.status}"
+
+            # Direct GET /master/schools -> 403
+            resp_sch = page.goto(f"{BASE_URL}/master/schools")
+            assert resp_sch.status == 403, f"Expected 403 for Admin Sekolah on /master/schools, got {resp_sch.status}"
+
+            # Direct mutation requests with CSRF
+            post_sch = context.request.post(f"{BASE_URL}/master/schools", data={"name": "Illegal School"}, headers=headers)
+            assert post_sch.status == 403, f"Expected 403 on POST /master/schools, got {post_sch.status}"
+
+            post_sync = context.request.post(f"{BASE_URL}/master/regions/sync", headers=headers)
+            assert post_sync.status == 403, f"Expected 403 on POST /master/regions/sync, got {post_sync.status}"
+            print("  ✓ Admin Sekolah direct master access and mutations strictly rejected with HTTP 403")
+
+            context.close()
+
+            # 15.2 Check Siswa Role in a dedicated context
+            context_siswa = browser.new_context()
+            page_siswa = context_siswa.new_page()
+            try:
+                page_siswa.goto(f"{BASE_URL}/login")
+                page_siswa.fill("#email", "siswa@smk.id")
+                page_siswa.fill("#password", "Password123!")
+                page_siswa.click("button[type='submit']")
+                page_siswa.wait_for_load_state("networkidle")
+
+                resp_siswa = page_siswa.goto(f"{BASE_URL}/master/schools")
+                assert resp_siswa.status == 403, f"Expected 403 for Siswa on /master/schools, got {resp_siswa.status}"
+                print("  ✓ Siswa direct master access strictly rejected with HTTP 403")
+            finally:
+                context_siswa.close()
+
+            results["Scenario 15: Master Routes Security & Role Isolation"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 15 Failed: {e}")
+            results["Scenario 15: Master Routes Security & Role Isolation"] = f"FAIL: {e}"
         finally:
             context.close()
 

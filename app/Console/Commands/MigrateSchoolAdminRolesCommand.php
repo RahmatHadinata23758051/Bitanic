@@ -105,7 +105,7 @@ class MigrateSchoolAdminRolesCommand extends Command
             return Command::FAILURE;
         }
 
-        // Unique Snapshot Identity (Microsecond Timestamp + UUID to prevent collision and guarantee chronological sorting)
+        // Unique Snapshot Identity (Timestamp with microseconds + UUID to prevent any collision)
         $snapshotId = (string) Str::uuid();
         $timestamp = now()->format('Ymd_His_u');
         $snapshotPath = "{$snapshotDir}/rbac_migration_snapshot_{$timestamp}_{$snapshotId}.json";
@@ -199,15 +199,7 @@ class MigrateSchoolAdminRolesCommand extends Command
                 return Command::FAILURE;
             }
 
-            // Sort descending by file modification time, falling back to reverse filename
-            usort($files, function ($a, $b) {
-                $timeDiff = filemtime($b) <=> filemtime($a);
-                if ($timeDiff !== 0) {
-                    return $timeDiff;
-                }
-
-                return strcmp($b, $a);
-            });
+            usort($files, fn ($a, $b) => filemtime($b) <=> filemtime($a));
             $snapshotPath = $files[0];
         }
 

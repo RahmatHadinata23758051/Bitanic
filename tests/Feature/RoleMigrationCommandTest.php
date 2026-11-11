@@ -19,10 +19,8 @@ class RoleMigrationCommandTest extends TestCase
     {
         parent::setUp();
 
-        $snapshotDir = storage_path('app/rbac_migration_snapshots');
-        if (File::exists($snapshotDir)) {
-            File::cleanDirectory($snapshotDir);
-        }
+        File::ensureDirectoryExists(storage_path('app/rbac_migration_snapshots'));
+        File::cleanDirectory(storage_path('app/rbac_migration_snapshots'));
 
         $this->school = School::where('slug', 'smk-ppn-1-sukaraja')->first() ?? School::create([
             'name' => 'SMK PPN 1 Sukaraja',
@@ -33,9 +31,8 @@ class RoleMigrationCommandTest extends TestCase
 
     protected function tearDown(): void
     {
-        $snapshotDir = storage_path('app/rbac_migration_snapshots');
-        if (File::exists($snapshotDir)) {
-            File::cleanDirectory($snapshotDir);
+        if (File::exists(storage_path('app/rbac_migration_snapshots'))) {
+            File::cleanDirectory(storage_path('app/rbac_migration_snapshots'));
         }
 
         parent::tearDown();

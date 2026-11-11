@@ -10,6 +10,7 @@ use App\Models\TelemetryReading;
 use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 
 class SetupBrowserE2eFixturesCommand extends Command
@@ -21,6 +22,9 @@ class SetupBrowserE2eFixturesCommand extends Command
     public function handle(): int
     {
         $this->info('Configuring browser E2E test database fixtures...');
+
+        // Synchronize Indonesian administrative regions
+        Artisan::call('bitanic:sync-indonesian-regions');
 
         $schoolA = School::firstOrCreate(
             ['id' => 1],
