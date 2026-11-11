@@ -88,4 +88,9 @@ class School extends Model
     {
         return $this->hasMany(TrainerKitHandover::class);
     }
+
+    public function license(): HasOne
+    {
+        return $this->hasOne(SchoolLicense::class, 'school_id');
+    }
 }
