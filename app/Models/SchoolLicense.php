@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\License\SchoolLicenseResolver;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -63,32 +64,28 @@ class SchoolLicense extends Model
         return $this->hasMany(SchoolLicenseLog::class, 'license_id')->latest('created_at');
     }
 
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(SchoolLicenseNotification::class, 'license_id')->latest('created_at');
+    }
+
     public function lastAuthorizedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'last_authorized_by');
     }
 
     /**
-     * Compute current license status based on date-only [start_date, expiration_date) convention.
-     * Pending before start_date, Active from start_date until day before expiration_date, Expired on/after expiration_date.
+     * Compute current license status based on date-only [start_date, expiration_date) convention
+     * and authorized term intervals (resolving inter-term gaps correctly).
      */
     public function getComputedStatusAttribute(): string
     {
-        if (! $this->start_date || ! $this->expiration_date) {
-            return self::STATUS_PENDING;
-        }
+        return app(SchoolLicenseResolver::class)->resolveStatus($this);
+    }
 
-        $today = Carbon::today();
-
-        if ($today->lt($this->start_date)) {
-            return self::STATUS_PENDING;
-        }
-
-        if ($today->gte($this->expiration_date)) {
-            return self::STATUS_EXPIRED;
-        }
-
-        return self::STATUS_ACTIVE;
+    public function getActiveTerm(?Carbon $date = null): ?SchoolLicenseTerm
+    {
+        return app(SchoolLicenseResolver::class)->resolve($this, $date)['active_term'];
     }
 
     public function getStatusLabelAttribute(): string
@@ -113,21 +110,11 @@ class SchoolLicense extends Model
 
     public function getDaysRemainingAttribute(): int
     {
-        if (! $this->start_date || ! $this->expiration_date) {
-            return 0;
-        }
-
-        $today = Carbon::today();
-
-        if ($today->gte($this->expiration_date)) {
-            return 0;
-        }
-
-        return (int) $today->diffInDays($this->expiration_date, false);
+        return app(SchoolLicenseResolver::class)->resolve($this)['days_remaining'];
     }
 
-    public function isActive(): bool
+    public function isActive(?Carbon $date = null): bool
     {
-        return $this->computed_status === self::STATUS_ACTIVE;
+        return app(SchoolLicenseResolver::class)->isActive($this, $date);
     }
 }
