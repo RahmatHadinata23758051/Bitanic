@@ -27,6 +27,7 @@ class SchoolTenancyTest extends TestCase
         $this->assertInstanceOf(School::class, $user->school);
 
         $device = Device::create([
+            'school_id' => $defaultSchool->id,
             'code' => 'TK-TENANCY-01',
             'name' => 'Meja Praktikum Tenancy 1',
             'connection_type' => 'wifi',

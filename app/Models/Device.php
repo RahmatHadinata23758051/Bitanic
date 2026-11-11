@@ -54,7 +54,10 @@ class Device extends Model
     {
         static::creating(function (Device $device) {
             if (empty($device->school_id)) {
-                $device->school_id = School::where('slug', 'smk-ppn-1-sukaraja')->value('id') ?? School::first()?->id;
+                $userSchoolId = auth()->user()?->school_id;
+                if (! empty($userSchoolId) && ! auth()->user()?->isSuperuser()) {
+                    $device->school_id = $userSchoolId;
+                }
             }
         });
     }

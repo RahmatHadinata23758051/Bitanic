@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\Device;
 use App\Models\DeviceApiKey;
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -50,7 +51,15 @@ class SecurityHardeningAndRebootTest extends TestCase
 
     public function test_device_api_key_hides_key_hash_and_supports_secure_generation(): void
     {
+        $school = School::where('slug', 'smk-ppn-1-sukaraja')->first() ?? School::create([
+            'npsn' => '20200001',
+            'name' => 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
+            'slug' => 'smk-ppn-1-sukaraja',
+            'status' => 'active',
+        ]);
+
         $device = Device::create([
+            'school_id' => $school->id,
             'code' => 'TK-KEY-01',
             'name' => 'Meja Test Key',
             'is_active' => true,

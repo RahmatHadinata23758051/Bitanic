@@ -176,13 +176,20 @@ class UserDirectoryController extends Controller
                 'phone' => ! empty($validated['phone']) ? trim($validated['phone']) : null,
             ]);
 
+            try {
+                $token = app('auth.password.broker')->createToken($user);
+                $user->sendPasswordResetNotification($token);
+            } catch (\Throwable $e) {
+                // Ignore mail transport issues in demo/offline environments
+            }
+
             AuditLog::create([
                 'school_id' => $targetSchoolId,
                 'user_id' => $currentUser->id,
                 'actor_name' => $currentUser->name,
                 'actor_role' => $currentUser->role,
                 'action' => 'Pendaftaran Akun Pengguna',
-                'details' => "Menambahkan akun baru: {$user->name} ({$user->email}, peran: {$user->role}). Kata sandi awal dihasilkan aman dan wajib diganti.",
+                'details' => "Menambahkan akun baru: {$user->name} ({$user->email}, peran: {$user->role}). Tautan aktivasi/setelan kata sandi dikirimkan secara aman.",
                 'ip_address' => request()->ip() ?? '127.0.0.1',
             ]);
         });
@@ -190,7 +197,7 @@ class UserDirectoryController extends Controller
         $redirectParams = $currentUser->isSuperuser() ? ['school_id' => $targetSchoolId] : [];
 
         return redirect()->route('users.index', $redirectParams)
-            ->with('success', "Akun {$validated['name']} berhasil didaftarkan dengan proteksi wajib ganti kata sandi.");
+            ->with('success', "Akun {$validated['name']} berhasil didaftarkan dan tautan aktivasi telah dikirimkan.");
     }
 
     /**
@@ -207,12 +214,28 @@ class UserDirectoryController extends Controller
             abort(403, 'Akses ditolak: Tidak dapat mengubah data pengguna sekolah lain.');
         }
 
+        // Security Hardening (P0): Tenant administrators manage guru/siswa only.
+        // Cannot grant, edit, deactivate or delete privileged administrator accounts.
+        if (! $currentUser->isSuperuser() && ($user->isSuperuser() || $user->isSchoolAdmin())) {
+            abort(403, 'Akses ditolak: Administrator sekolah tidak diizinkan mengubah akun administrator.');
+        }
+
+        // Users cannot change their own role
+        if ($currentUser->id === $user->id && $request->has('role') && $request->input('role') !== $user->role) {
+            abort(403, 'Akses ditolak: Anda tidak dapat mengubah peran akun Anda sendiri.');
+        }
+
         $targetSchoolId = $user->school_id ?? $currentUser->school_id;
+
+        // Role assignment: Tenant admins can only assign guru or siswa. Privileged role assignment requires superuser.
+        $allowedRoles = $currentUser->isSuperuser()
+            ? ['siswa', 'guru', 'admin_sekolah', 'admin']
+            : ['siswa', 'guru'];
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'role' => ['required', 'string', 'in:siswa,guru,admin_sekolah,admin'],
+            'role' => ['required', 'string', Rule::in($allowedRoles)],
             'identifier_number' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:50'],
             'department' => ['nullable', 'string', 'max:255'],
@@ -281,6 +304,11 @@ class UserDirectoryController extends Controller
             return back()->withErrors(['user' => 'Anda tidak dapat menonaktifkan akun Anda sendiri.']);
         }
 
+        // Security Hardening (P0): Tenant administrators cannot deactivate administrator accounts
+        if (! $currentUser->isSuperuser() && ($user->isSuperuser() || $user->isSchoolAdmin())) {
+            abort(403, 'Akses ditolak: Administrator sekolah tidak diizinkan menonaktifkan akun administrator.');
+        }
+
         $user->update(['is_active' => ! $user->is_active]);
         $statusLabel = $user->is_active ? 'diaktifkan' : 'dinonaktifkan';
 
@@ -313,6 +341,11 @@ class UserDirectoryController extends Controller
 
         if ($currentUser->id === $user->id) {
             return back()->withErrors(['user' => 'Anda tidak dapat menghapus akun Anda sendiri.']);
+        }
+
+        // Security Hardening (P0): Tenant administrators cannot delete administrator accounts
+        if (! $currentUser->isSuperuser() && ($user->isSuperuser() || $user->isSchoolAdmin())) {
+            abort(403, 'Akses ditolak: Administrator sekolah tidak diizinkan menghapus akun administrator.');
         }
 
         $hasReports = $user->studentReports()->exists();

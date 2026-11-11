@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\SensorData;
 use App\Models\Device;
 use App\Models\DeviceApiKey;
+use App\Models\School;
 use App\Models\SchoolSetting;
 use App\Models\SensorThreshold;
 use App\Models\TelemetryReading;
@@ -24,7 +25,15 @@ class TelemetryIngestTest extends TestCase
     {
         parent::setUp();
 
+        $school = School::where('slug', 'smk-ppn-1-sukaraja')->first() ?? School::create([
+            'npsn' => '20200001',
+            'name' => 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
+            'slug' => 'smk-ppn-1-sukaraja',
+            'status' => 'active',
+        ]);
+
         $this->device = Device::create([
+            'school_id' => $school->id,
             'code' => 'BTLP-TEST-STATION',
             'name' => 'Station Test Farm',
             'is_active' => true,

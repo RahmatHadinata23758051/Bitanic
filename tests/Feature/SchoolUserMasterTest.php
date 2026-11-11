@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\Device;
 use App\Models\School;
 use App\Models\User;
 use App\Models\UserProfile;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class SchoolUserMasterTest extends TestCase
@@ -396,5 +399,118 @@ class SchoolUserMasterTest extends TestCase
     {
         $response = $this->get(route('users.index'));
         $response->assertRedirect(route('login'));
+    }
+
+    public function test_tenant_admin_cannot_escalate_role_or_tamper_with_administrators(): void
+    {
+        // 1. Tenant admin cannot edit another administrator in their school
+        $anotherAdmin = User::create([
+            'name' => 'Co-Admin A',
+            'email' => 'coadmin.a@smk.id',
+            'password' => Hash::make('Secret123456!'),
+            'role' => 'admin_sekolah',
+            'school_id' => $this->schoolA->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->adminA)
+            ->put(route('users.update', $anotherAdmin), [
+                'name' => 'Hacked Admin',
+                'email' => 'coadmin.a@smk.id',
+                'role' => 'guru',
+            ])
+            ->assertForbidden();
+
+        // 2. Tenant admin cannot elevate a regular student/teacher to admin_sekolah or admin
+        $this->actingAs($this->adminA)
+            ->put(route('users.update', $this->siswaA), [
+                'name' => 'Elevated Student',
+                'email' => $this->siswaA->email,
+                'role' => 'admin_sekolah',
+            ])
+            ->assertSessionHasErrors(['role']);
+
+        $this->actingAs($this->adminA)
+            ->put(route('users.update', $this->siswaA), [
+                'name' => 'Elevated Student 2',
+                'email' => $this->siswaA->email,
+                'role' => 'admin',
+            ])
+            ->assertSessionHasErrors(['role']);
+
+        // 3. Tenant admin cannot change their own role
+        $this->actingAs($this->adminA)
+            ->put(route('users.update', $this->adminA), [
+                'name' => 'Admin Self Role Change',
+                'email' => $this->adminA->email,
+                'role' => 'guru',
+            ])
+            ->assertForbidden();
+
+        // 4. Tenant admin cannot deactivate an administrator
+        $this->actingAs($this->adminA)
+            ->patch(route('users.toggle-status', $anotherAdmin))
+            ->assertForbidden();
+
+        // 5. Tenant admin cannot delete an administrator
+        $this->actingAs($this->adminA)
+            ->delete(route('users.destroy', $anotherAdmin))
+            ->assertForbidden();
+
+        // 6. Superuser CAN assign admin_sekolah role to users
+        $this->actingAs($this->superuser)
+            ->put(route('users.update', $this->guruA), [
+                'name' => 'Promoted Guru',
+                'email' => $this->guruA->email,
+                'role' => 'admin_sekolah',
+            ])
+            ->assertRedirect();
+
+        $this->assertEquals('admin_sekolah', $this->guruA->fresh()->role);
+    }
+
+    public function test_single_user_store_dispatches_secure_activation_and_protects_credentials(): void
+    {
+        Notification::fake();
+
+        $response = $this->actingAs($this->adminA)
+            ->post(route('users.store'), [
+                'name' => 'Siswa Baru Onboarding',
+                'email' => 'onboarding.siswa@smk.id',
+                'role' => 'siswa',
+                'identifier_number' => null, // Optional NISN
+            ]);
+
+        $response->assertRedirect(route('users.index'));
+        $this->assertDatabaseHas('users', [
+            'email' => 'onboarding.siswa@smk.id',
+            'must_change_password' => true,
+            'is_active' => true,
+        ]);
+
+        $newUser = User::where('email', 'onboarding.siswa@smk.id')->firstOrFail();
+        Notification::assertSentTo($newUser, ResetPassword::class);
+
+        // Verify audit log does not leak initial password
+        $log = AuditLog::where('user_id', $this->adminA->id)
+            ->where('action', 'Pendaftaran Akun Pengguna')
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($log);
+        $this->assertStringNotContainsString($newUser->password, $log->details);
+        $this->assertStringContainsString('Tautan aktivasi/setelan kata sandi dikirimkan secara aman', $log->details);
+    }
+
+    public function test_device_booted_has_no_arbitrary_default_school_fallback(): void
+    {
+        // When unauthenticated or superuser creates device without school_id, it must remain null
+        $globalDevice = Device::create([
+            'code' => 'TK-UNASSIGNED-FACTORY-01',
+            'name' => 'Factory Floor Unassigned Kit',
+            'is_active' => true,
+        ]);
+
+        $this->assertNull($globalDevice->school_id);
     }
 }
