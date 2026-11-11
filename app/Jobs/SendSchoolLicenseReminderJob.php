@@ -3,14 +3,17 @@
 namespace App\Jobs;
 
 use App\Mail\SchoolLicenseExpirationReminderMail;
+use App\Models\SchoolLicense;
 use App\Models\SchoolLicenseLog;
 use App\Models\SchoolLicenseNotification;
 use App\Services\License\SchoolLicenseResolver;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -38,10 +41,49 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
      */
     public function handle(SchoolLicenseResolver $resolver): void
     {
-        // 1. Idempotency check: Do not re-send if already processed
-        if ($this->notification->isSent() || $this->notification->isSkipped()) {
+        // 1. Transaction-safe atomic claim to prevent concurrent worker execution
+        $claimed = DB::transaction(function () {
+            $notification = SchoolLicenseNotification::where('id', $this->notification->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $notification) {
+                return null;
+            }
+
+            // Already sent, skipped, or currently claimed by an active worker (< 5 min timeout)
+            if ($notification->isSent() || $notification->isSkipped()) {
+                return null;
+            }
+
+            if ($notification->isProcessing() && $notification->claimed_at && $notification->claimed_at->gt(now()->subMinutes(5))) {
+                return null;
+            }
+
+            // Stop retrying if max attempts (3x) reached
+            if ($notification->attempts >= 3) {
+                $notification->update([
+                    'status' => SchoolLicenseNotification::STATUS_FAILED,
+                    'error_message' => 'Batas maksimal percobaan pengiriman (3x) telah tercapai.',
+                ]);
+
+                return null;
+            }
+
+            $notification->update([
+                'status' => SchoolLicenseNotification::STATUS_PROCESSING,
+                'claimed_at' => now(),
+                'attempts' => $notification->attempts + 1,
+            ]);
+
+            return $notification;
+        });
+
+        if (! $claimed) {
             return;
         }
+
+        $this->notification = $claimed;
 
         $license = $this->notification->license()->with(['school', 'terms'])->first();
         if (! $license) {
@@ -53,13 +95,13 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
             return;
         }
 
-        // 2. Revalidate entitlement at execution time
-        // If license was already renewed, or is expired/not active, skip.
-        $resolution = $resolver->resolve($license);
+        // 2. Revalidate entitlement at execution time using Asia/Jakarta day boundary
+        $todayWib = Carbon::today('Asia/Jakarta');
+        $resolution = $resolver->resolve($license, $todayWib);
         $term = $this->notification->term ?? $resolution['active_term'];
 
-        // If the license is expired, or target term is superseded/inactive, or days remaining moved > 14
-        if ($resolution['status'] === 'expired') {
+        // If the license is expired, skip
+        if ($resolution['status'] === SchoolLicense::STATUS_EXPIRED) {
             $this->notification->update([
                 'status' => SchoolLicenseNotification::STATUS_SKIPPED,
                 'error_message' => 'Dilewati: Lisensi telah kedaluwarsa sebelum email dikirim.',
@@ -68,7 +110,17 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
             return;
         }
 
-        // Check if expiration date on the term or license is still the same as scheduled
+        // If license is not active, skip
+        if ($resolution['status'] !== SchoolLicense::STATUS_ACTIVE) {
+            $this->notification->update([
+                'status' => SchoolLicenseNotification::STATUS_SKIPPED,
+                'error_message' => "Dilewati: Lisensi tidak berstatus aktif ({$resolution['status']}).",
+            ]);
+
+            return;
+        }
+
+        // Check if expiration date on the term or license is still valid
         $expirationDate = $term?->expiration_date ?? $license->expiration_date;
         if (! $expirationDate) {
             $this->notification->update([
@@ -91,10 +143,13 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
             return;
         }
 
-        if ($daysRemaining < 0) {
+        // Stale H-14 job policy:
+        // If queue delay causes days_remaining to drop significantly below threshold (< 13 days),
+        // do not silently send misleading stale expiration info.
+        if ($daysRemaining < 13) {
             $this->notification->update([
                 'status' => SchoolLicenseNotification::STATUS_SKIPPED,
-                'error_message' => 'Dilewati: Lisensi telah melampaui tanggal kedaluwarsa.',
+                'error_message' => "Dilewati: Pengingat H-14 kedaluwarsa akibat keterlambatan antrean (sisa {$daysRemaining} hari).",
             ]);
 
             return;
@@ -116,12 +171,14 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
                 'license_id' => $license->id,
                 'action' => 'reminder_h14_sent',
                 'user_id' => null,
-                'details' => "Pengingat kedaluwarsa H-14 berhasil dikirim ke {$this->notification->recipient_email}",
+                'details' => "Pengingat kedaluwarsa H-14 berhasil dikirim ke {$this->notification->recipient_email} (Percobaan ke-{$this->notification->attempts})",
                 'reason' => 'Sistem otomatisasi pengingat lisensi Bitanic H-14',
             ]);
         } catch (Throwable $e) {
             Log::error('SendSchoolLicenseReminderJob failed', [
                 'notification_id' => $this->notification->id,
+                'recipient' => $this->notification->recipient_email,
+                'attempt' => $this->notification->attempts,
                 'error' => $e->getMessage(),
             ]);
 
@@ -130,7 +187,10 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
                 'error_message' => substr($e->getMessage(), 0, 1000),
             ]);
 
-            throw $e;
+            // Re-throw if under 3 attempts to allow queue driver retry
+            if ($this->notification->attempts < 3) {
+                throw $e;
+            }
         }
     }
 }

@@ -158,11 +158,35 @@
                 <p>Untuk memastikan kelangsungan kegiatan belajar mengajar dan asesmen praktikum vokasi pertanian, silakan berkoordinasi dengan Tim Kemitraan Bitanic Pusat untuk verifikasi administrasi dan otorisasi perpanjangan lisensi tahunan.</p>
             </div>
 
+            @php
+                $supportEmail = config('license.support_contact.email');
+                $supportPhone = config('license.support_contact.phone');
+                $supportUrl = config('license.support_contact.helpdesk_url') ?: config('app.url');
+                $hasContactDetails = ! empty($supportEmail) || ! empty($supportPhone);
+            @endphp
+
             <div class="contact-box">
-                <strong>Kontak Bantuan & Kemitraan Bitanic:</strong><br>
-                Email: <a href="mailto:admin@bitanic.id" style="color: #047857; text-decoration: underline;">admin@bitanic.id</a><br>
-                WhatsApp / Helpdesk: +62 812-3456-7890<br>
-                Portal Resmi: <a href="{{ config('app.url') }}" style="color: #047857; text-decoration: underline;">{{ config('app.url') }}</a>
+                <strong>Kontak Bantuan & Kemitraan:</strong><br>
+                @if($hasContactDetails)
+                    @if($supportEmail)
+                        Email: <a href="mailto:{{ $supportEmail }}" style="color: #047857; text-decoration: underline;">{{ $supportEmail }}</a><br>
+                    @endif
+                    @if($supportPhone)
+                        WhatsApp / Helpdesk: {{ $supportPhone }}<br>
+                    @endif
+                    @if($supportUrl)
+                        Portal Resmi: <a href="{{ $supportUrl }}" style="color: #047857; text-decoration: underline;">{{ $supportUrl }}</a>
+                    @endif
+                @else
+                    <p style="margin: 4px 0 0 0; color: #475569;">
+                        Silakan hubungi administrator sistem atau tim kemitraan resmi institusi Anda untuk pengurusan administrasi perpanjangan lisensi.
+                    </p>
+                    @if($supportUrl)
+                        <div style="margin-top: 6px;">
+                            Portal Resmi: <a href="{{ $supportUrl }}" style="color: #047857; text-decoration: underline;">{{ $supportUrl }}</a>
+                        </div>
+                    @endif
+                @endif
             </div>
         </div>
         <div class="footer">

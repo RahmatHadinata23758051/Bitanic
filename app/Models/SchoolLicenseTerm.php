@@ -19,6 +19,14 @@ class SchoolLicenseTerm extends Model
 
     public const TYPE_TERM_CORRECTION = 'term_correction';
 
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_EXPIRED = 'expired';
+
+    public const STATUS_SUPERSEDED = 'superseded';
+
     protected $fillable = [
         'license_id',
         'term_number',

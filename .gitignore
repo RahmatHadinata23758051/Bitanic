@@ -35,6 +35,7 @@ upi-edge/
 .env.local
 .env.*.local
 .env.browser_e2e
+.env.pgsql_testing
 !.env.example
 
 # ==============================================================================
@@ -62,6 +63,7 @@ package-lock.json.bak
 .phpstorm.meta.php
 _ide_helper.php
 _ide_helper_models.php
+check_db.php
 
 # ==============================================================================
 # OS & IDE Workspace Artifacts

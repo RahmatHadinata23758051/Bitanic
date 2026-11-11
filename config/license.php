@@ -16,6 +16,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Automated License Reminders Feature Flag
+    |--------------------------------------------------------------------------
+    |
+    | When set to false (default safe rollout), reminder checks and simulations
+    | (--dry-run) operate normally, but real emails are not dispatched.
+    | Set to true once mail service and recipient lists are verified.
+    |
+    */
+    'reminders_enabled' => (bool) env('LICENSE_REMINDERS_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Automated Reminder Threshold
     |--------------------------------------------------------------------------
     |
@@ -32,11 +44,12 @@ return [
     |
     | Contact information displayed on expiration notice screens and reminder
     | emails for school administrators to request license renewals.
+    | If not configured, safe generic institutional instructions are shown.
     |
     */
     'support_contact' => [
-        'email' => env('LICENSE_SUPPORT_EMAIL', 'admin@bitanic.id'),
-        'phone' => env('LICENSE_SUPPORT_PHONE', '+62 812-3456-7890'),
-        'helpdesk_url' => env('LICENSE_SUPPORT_URL', 'https://bitanic.id/bantuan'),
+        'email' => env('LICENSE_SUPPORT_EMAIL', null),
+        'phone' => env('LICENSE_SUPPORT_PHONE', null),
+        'helpdesk_url' => env('LICENSE_SUPPORT_URL', null),
     ],
 ];

@@ -12,6 +12,8 @@ class SchoolLicenseNotification extends Model
 
     public const STATUS_QUEUED = 'queued';
 
+    public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_SENT = 'sent';
 
     public const STATUS_FAILED = 'failed';
@@ -32,6 +34,8 @@ class SchoolLicenseNotification extends Model
         'channel',
         'status',
         'scheduled_for',
+        'claimed_at',
+        'attempts',
         'sent_at',
         'error_message',
         'payload',
@@ -39,6 +43,8 @@ class SchoolLicenseNotification extends Model
 
     protected $casts = [
         'scheduled_for' => 'date',
+        'claimed_at' => 'datetime',
+        'attempts' => 'integer',
         'sent_at' => 'datetime',
         'payload' => 'array',
     ];
@@ -61,6 +67,11 @@ class SchoolLicenseNotification extends Model
     public function isSent(): bool
     {
         return $this->status === self::STATUS_SENT;
+    }
+
+    public function isProcessing(): bool
+    {
+        return $this->status === self::STATUS_PROCESSING;
     }
 
     public function isQueued(): bool

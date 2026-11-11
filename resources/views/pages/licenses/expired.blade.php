@@ -67,13 +67,27 @@
             </div>
 
             {{-- Support & Helpdesk --}}
+            @php
+                $supportEmail = config('license.support_contact.email');
+                $supportPhone = config('license.support_contact.phone');
+                $hasContact = ! empty($supportEmail) || ! empty($supportPhone);
+            @endphp
             <div class="pt-4 border-t border-slate-100 text-xs text-slate-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
                     <span class="font-medium text-slate-700">Pusat Bantuan Kemitraan:</span><br>
-                    <a href="mailto:{{ config('license.support_contact.email', 'admin@bitanic.id') }}" class="text-emerald-700 hover:underline">
-                        {{ config('license.support_contact.email', 'admin@bitanic.id') }}
-                    </a>
-                    • {{ config('license.support_contact.phone', '+62 812-3456-7890') }}
+                    @if($hasContact)
+                        @if($supportEmail)
+                            <a href="mailto:{{ $supportEmail }}" class="text-emerald-700 hover:underline">
+                                {{ $supportEmail }}
+                            </a>
+                        @endif
+                        @if($supportEmail && $supportPhone) • @endif
+                        @if($supportPhone)
+                            <span>{{ $supportPhone }}</span>
+                        @endif
+                    @else
+                        <span>Silakan berkoordinasi dengan administrator sistem atau tim kemitraan resmi institusi Anda.</span>
+                    @endif
                 </div>
             </div>
 

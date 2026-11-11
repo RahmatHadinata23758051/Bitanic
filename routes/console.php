@@ -10,4 +10,5 @@ Artisan::command('inspire', function () {
 
 Schedule::command('bitanic:check-license-reminders')
     ->dailyAt('07:00')
+    ->timezone('Asia/Jakarta')
     ->description('Periksa dan kirim email pengingat H-14 lisensi LMS sekolah');
