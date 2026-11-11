@@ -935,6 +935,46 @@ Implemented and verified the complete Sprint 5 / Pack B engineering delivery (`L
    - **Vite Production Build**: 98.38 kB CSS, 1,875.93 kB JS built in 38.02s.
    - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
 
+### 2.7.6 — Release Readiness & Hardening: Scheduler Timezone, Atomic Email Claiming, and Deployment Runbook (2026-11-12)
+
+Implemented and verified the complete Final Integration & Release Readiness delivery (`RELEASE-READINESS-01`):
+
+1. **Scheduler Timezone Determinism (`Asia/Jakarta`)**:
+   - `routes/console.php`: Explicitly configured the daily reminder scheduler task to pin `Asia/Jakarta` at 07:00 WIB (`dailyAt('07:00')->timezone('Asia/Jakarta')`). Deterministically converts to 00:00 UTC on underlying server clock without disturbing global application timezone (`APP_TIMEZONE=UTC`).
+   - `DispatchSchoolLicenseRemindersAction` & `SendSchoolLicenseReminderJob`: Anchored calendar day boundary evaluations to `Carbon::today('Asia/Jakarta')`.
+   - Verified by `tests/Feature/SchoolLicenseReleaseReadinessAndHardeningTest.php` (tests 1 & 2).
+
+2. **Atomic Email Delivery Claiming & Worker Mutex**:
+   - Additive migration `2026_11_12_000001_add_claiming_and_attempts_to_school_license_notifications_table.php` added `claimed_at`, `attempts`, and composite index `['status', 'claimed_at']`.
+   - `SendSchoolLicenseReminderJob`: Row-level claiming with pessimistic locking (`lockForUpdate()`) inside `DB::transaction()`. Sets `status = 'processing'`, records `claimed_at = now()`, and increments `attempts`. Completely eliminates concurrent worker duplicate deliveries.
+   - Stale Delayed Job Policy: Jobs delayed in queue where `days_remaining < 13` are safely marked `skipped` with explicit reason ("Dilewati: Pengingat H-14 kedaluwarsa akibat keterlambatan antrean"), preventing outdated notifications after delay.
+   - Resilient Retry Policy: Increments attempts on SMTP transport exceptions, records durable failure state (`status = failed`, `error_message`), and re-throws only up to 3 tries.
+   - Verified by `tests/Feature/SchoolLicenseReleaseReadinessAndHardeningTest.php` (tests 3, 4, 5).
+
+3. **Safe Production Mail Configuration & Rollout Gates**:
+   - Replaced unverified placeholder contacts (`admin@bitanic.id`, `+62 812-3456-7890`) with dynamic nullable configurations in `config/license.php`.
+   - Safe Generic Notice: When support contacts are null/empty, both email notifications and suspension screens render institutional fallback guidance ("Hubungi administrator sistem atau dinas pendidikan terkait").
+   - Added `LICENSE_REMINDERS_ENABLED=false` safety rollout flag in `config/license.php` (tested: `--dry-run` remains functional).
+   - Log warning emitted on production when `support_contact.email` is empty.
+   - Verified by `tests/Feature/SchoolLicenseReleaseReadinessAndHardeningTest.php` (tests 6 & 7).
+
+4. **License Middleware Security Hardening & Telemetry Independence**:
+   - `EnsureSchoolLicenseIsValid`: Added fail-closed checks for authenticated non-Superuser accounts lacking `school_id` (`invalid_tenant`) or belonging to an inactive school (`inactive_school`). Returns HTTP 403 (JSON) or logs out and redirects to login with an explicit flash message.
+   - Preserves Superuser platform access, unauthenticated login paths, allowlisted routes, and completely unblocks IoT hardware telemetry API ingress (`/api/v1/telemetry/ingest`, `/rsc-data`).
+   - Verified by `tests/Feature/SchoolLicenseReleaseReadinessAndHardeningTest.php` (tests 8, 9, 10).
+
+5. **Production Deployment Runbook**:
+   - Authored comprehensive staging & production runbook at `docs/runbooks/PRODUCTION_DEPLOYMENT_RUNBOOK.md` detailing cron configuration, supervisor daemon workers, database backup/rollback procedures, verification checklists, and rollout activation sequences.
+   - Updated `docs/runbooks/LICENSE_ENFORCEMENT_RUNBOOK.md` to reference `Asia/Jakarta` cron and safe nullable contact defaults.
+
+6. **Exhaustive Dual-Driver Test Gates & Quality Verification**:
+   - **SQLite In-Memory Full Suite**: 576 passed, 0 failures, 5 skipped (3,279 assertions) in 77.79s.
+   - **PostgreSQL 17.6 Full Suite (`bitanic_test`)**: 577 passed, 0 failures, 4 skipped (3,291 assertions) in 143.52s.
+   - **Real Browser E2E Interaction Test Suite**: All 26 scenarios passed completely (100% PASS) on Playwright Headless Chromium.
+   - **Laravel Pint**: 100% clean formatting (`./vendor/bin/pint --test`).
+   - **Vite Production Build**: 98.43 kB CSS, 1,875.93 kB JS built in 21.72s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |

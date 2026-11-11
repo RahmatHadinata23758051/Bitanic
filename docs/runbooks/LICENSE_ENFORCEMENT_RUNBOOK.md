@@ -24,12 +24,16 @@ Add the following environment variables to your `.env` configuration:
 # Enable or disable LMS license enforcement (defaults to false for safe deployment)
 LICENSE_ENFORCEMENT_ENABLED=false
 
+# Enable or disable automated H-14 reminder email dispatches (defaults to false for safe deployment)
+LICENSE_REMINDERS_ENABLED=false
+
 # Threshold in days for automated email expiration reminders (default: 14)
 LICENSE_REMINDER_DAYS=14
 
 # Official support contact details displayed on suspension screens & notification emails
-LICENSE_SUPPORT_EMAIL=admin@bitanic.id
-LICENSE_SUPPORT_PHONE="+62 812-3456-7890"
+# (Defaults to null; when null, safe generic institutional instructions are rendered)
+LICENSE_SUPPORT_EMAIL="support@bitanic.id"
+LICENSE_SUPPORT_PHONE="+62 811-xxxx-xxxx"
 LICENSE_SUPPORT_URL="https://bitanic.id/bantuan"
 ```
 
@@ -44,9 +48,9 @@ Ensure the Laravel scheduler runs every minute on the production server crontab:
 * * * * * cd /path/to/bitanic-app && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-The reminder checker is scheduled to run daily at 07:00 WIB:
+The reminder checker is scheduled to run daily at 07:00 WIB (00:00 UTC) with explicit timezone configuration:
 ```php
-Schedule::command('bitanic:check-license-reminders')->dailyAt('07:00');
+Schedule::command('bitanic:check-license-reminders')->dailyAt('07:00')->timezone('Asia/Jakarta');
 ```
 
 ### 3.2 Queue Worker Setup
