@@ -33,12 +33,7 @@ class EnsureSchoolLicenseIsValid
             return $next($request);
         }
 
-        // 4. Accounts without school association bypass
-        if (! $user->school_id) {
-            return $next($request);
-        }
-
-        // 5. Allowlist: Routes and paths that must always remain accessible
+        // 4. Allowlist: Routes and paths that must always remain accessible for all users
         if (
             $request->routeIs(
                 'logout',
@@ -51,9 +46,39 @@ class EnsureSchoolLicenseIsValid
             return $next($request);
         }
 
-        // 6. Check school license entitlement
+        // 5. Fail-closed: Authenticated non-Superuser accounts must have valid school association
+        if (! $user->school_id) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Identitas tenant institusi tidak valid atau belum terasosiasi dengan sekolah resmi.',
+                    'license_status' => 'invalid_tenant',
+                ], 403);
+            }
+
+            auth()->logout();
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'Akun pengguna Anda tidak terasosiasi dengan institusi sekolah yang sah.']);
+        }
+
+        // 6. Check school existence and active status
         $school = $user->school;
-        $license = $school?->license;
+        if (! $school || $school->status !== 'active') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Institusi sekolah akun Anda tidak aktif atau tidak ditemukan pada sistem.',
+                    'license_status' => 'inactive_school',
+                ], 403);
+            }
+
+            auth()->logout();
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'Institusi sekolah akun Anda saat ini tidak berstatus aktif.']);
+        }
+
+        // 7. Check school license entitlement
+        $license = $school->license;
 
         // If no license exists or status is not expired, allow (safe rollout)
         if (! $license) {
