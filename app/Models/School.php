@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -18,6 +19,9 @@ class School extends Model
         'address',
         'city',
         'province',
+        'province_code',
+        'regency_code',
+        'district_code',
         'phone',
         'status',
         'settings',
@@ -28,6 +32,21 @@ class School extends Model
         return [
             'settings' => 'array',
         ];
+    }
+
+    public function provinceRelation(): BelongsTo
+    {
+        return $this->belongsTo(Province::class, 'province_code', 'code');
+    }
+
+    public function regencyRelation(): BelongsTo
+    {
+        return $this->belongsTo(Regency::class, 'regency_code', 'code');
+    }
+
+    public function districtRelation(): BelongsTo
+    {
+        return $this->belongsTo(District::class, 'district_code', 'code');
     }
 
     public function users(): HasMany

@@ -6,11 +6,13 @@ use App\Models\ActivitySchedule;
 use App\Models\Classroom;
 use App\Models\Device;
 use App\Models\Media;
+use App\Models\School;
 use App\Models\StudentReport;
 use App\Policies\ActivitySchedulePolicy;
 use App\Policies\ClassroomPolicy;
 use App\Policies\DevicePolicy;
 use App\Policies\PlantingMediaPolicy;
+use App\Policies\SchoolPolicy;
 use App\Policies\StudentReportPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -35,5 +37,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ActivitySchedule::class, ActivitySchedulePolicy::class);
         Gate::policy(Media::class, PlantingMediaPolicy::class);
         Gate::policy(Device::class, DevicePolicy::class);
+        Gate::policy(School::class, SchoolPolicy::class);
     }
 }

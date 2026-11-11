@@ -6,6 +6,8 @@ use App\Http\Controllers\Academic\CompetencyAssessmentController;
 use App\Http\Controllers\Academic\ModulePracticumController;
 use App\Http\Controllers\Academic\PracticumReportController;
 use App\Http\Controllers\Academic\UserDirectoryController;
+use App\Http\Controllers\Admin\RegionMasterController;
+use App\Http\Controllers\Admin\SchoolMasterController;
 use App\Http\Controllers\Admin\SettingsAuditController;
 use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\Agronomy\AnalyticsController;
@@ -132,6 +134,30 @@ Route::post('/settings/school', [SettingsAuditController::class, 'updateSchool']
 // Manajemen Media Tanam (Null-Safe & Tenant-Isolated)
 Route::middleware(['auth', 'role:guru,superuser'])->group(function () {
     Route::resource('media', PlantingMediaController::class)->except(['show']);
+});
+
+// 13. Superuser Platform Data Master (MASTER-03-01 & MASTER-03-02)
+Route::middleware(['auth', 'role:superuser'])->prefix('master')->name('master.')->group(function () {
+    // Master Wilayah (MASTER-03-01)
+    Route::get('/regions', [RegionMasterController::class, 'index'])->name('regions.index');
+    Route::post('/regions/sync', [RegionMasterController::class, 'sync'])->name('regions.sync');
+
+    // Master Sekolah (MASTER-03-02)
+    Route::get('/schools', [SchoolMasterController::class, 'index'])->name('schools.index');
+    Route::get('/schools/create', [SchoolMasterController::class, 'create'])->name('schools.create');
+    Route::post('/schools', [SchoolMasterController::class, 'store'])->name('schools.store');
+    Route::get('/schools/{school}', [SchoolMasterController::class, 'show'])->name('schools.show');
+    Route::get('/schools/{school}/edit', [SchoolMasterController::class, 'edit'])->name('schools.edit');
+    Route::put('/schools/{school}', [SchoolMasterController::class, 'update'])->name('schools.update');
+    Route::match(['PATCH', 'POST'], '/schools/{school}/toggle-status', [SchoolMasterController::class, 'toggleStatus'])->name('schools.toggle-status');
+    Route::delete('/schools/{school}', [SchoolMasterController::class, 'destroy'])->name('schools.destroy');
+});
+
+// Cascading region options accessible to authenticated users (e.g. for dynamic form selects)
+Route::middleware(['auth'])->prefix('api/regions')->name('api.regions.')->group(function () {
+    Route::get('/provinces', [RegionMasterController::class, 'provinces'])->name('provinces');
+    Route::get('/regencies', [RegionMasterController::class, 'regencies'])->name('regencies');
+    Route::get('/districts', [RegionMasterController::class, 'districts'])->name('districts');
 });
 
 // LEGACY-01: Retired SaaS module — routes disabled, historic data preserved.

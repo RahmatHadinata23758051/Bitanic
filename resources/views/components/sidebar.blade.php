@@ -19,6 +19,7 @@
     $canViewAssessment = $user !== null; // auth required
     $canViewUsers = $user && in_array($role, ['guru', 'superuser', 'admin', 'admin_sekolah'], true);
     $canViewSettings = $user && in_array($role, ['superuser', 'admin', 'admin_sekolah'], true);
+    $canViewDataMaster = $user && $role === 'superuser';
 
     $currentRoute = Route::currentRouteName() ?? '';
     $userInitials = $isGuest ? 'U' : strtoupper(substr($user->name ?? 'User', 0, 2));
@@ -419,6 +420,42 @@
                 </a>
             @endif
         </div>
+
+        @if($canViewDataMaster)
+            <!-- Section: Data Master (Superuser Only) -->
+            <div class="space-y-1" role="listitem">
+                <p x-show="!sidebarCollapsed" class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider" aria-hidden="true">
+                    Data Master
+                </p>
+                <div x-show="sidebarCollapsed" class="hidden lg:block w-8 h-px bg-slate-200 mx-auto my-2" aria-hidden="true"></div>
+
+                <!-- Master Wilayah -->
+                <a
+                    href="{{ route('master.regions.index') }}"
+                    title="Master Wilayah"
+                    :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
+                    class="flex items-center rounded-xl transition-colors group
+                        {{ Request::is('master/regions*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    aria-current="{{ Request::is('master/regions*') ? 'page' : 'false' }}"
+                >
+                    <i data-lucide="map-pin" class="w-4.5 h-4.5 shrink-0 {{ Request::is('master/regions*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Wilayah</span>
+                </a>
+
+                <!-- Master Sekolah -->
+                <a
+                    href="{{ route('master.schools.index') }}"
+                    title="Master Sekolah"
+                    :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
+                    class="flex items-center rounded-xl transition-colors group
+                        {{ Request::is('master/schools*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    aria-current="{{ Request::is('master/schools*') ? 'page' : 'false' }}"
+                >
+                    <i data-lucide="building-2" class="w-4.5 h-4.5 shrink-0 {{ Request::is('master/schools*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Sekolah</span>
+                </a>
+            </div>
+        @endif
     </nav>
 
     <!-- Sidebar Footer: Profile & Logout -->
