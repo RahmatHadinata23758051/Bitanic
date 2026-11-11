@@ -821,6 +821,41 @@ Implemented and verified the complete Sprint 4 / Pack A engineering delivery (`D
    - **Vite Production Build**: 96.74 kB CSS, 1,875.93 kB JS built cleanly in 20.80s.
    - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
 
+### 2.21 — Sprint 4 / Pack B: Handover, Warranty & Lifecycle Management (2026-11-11)
+
+Implemented and verified the complete Sprint 4 / Pack B engineering delivery (`DEVICE-04-03`, `DEVICE-04-04`) along with critical state-machine integrity fix `DEVICE-SALE-STATE-01`:
+
+1. **DEVICE-SALE-STATE-01 — Sale State Integrity & Unauthorized Resale Protection**:
+   - Guarded `RecordTrainerKitSaleAction`: only units in `registered` factory stock status (`canBeSold()`) can be sold.
+   - Rejects unauthorized resale or silent reassignment of sold, assigned, activated, or decommissioned units with HTTP 422 `ValidationException`.
+   - Supports idempotent sale retries: matching existing sale reference and purchasing school returns the existing inventory record without duplicate lifecycle or audit logs.
+   - Enforces school active status verification before sale recording.
+
+2. **DEVICE-04-03 — Physical Handover (BAST) & 1-Year Hardware Warranty**:
+   - Migration `2026_01_01_000030_create_trainer_kit_handovers_and_warranties_tables.php` creates `trainer_kit_handovers` and `trainer_kit_warranty_logs` tables, and adds additive columns (`handover_date`, `warranty_start_date`, `warranty_expiration_date`) with composite indexes to `trainer_kit_inventories`.
+   - Eloquent models: `TrainerKitHandover` and `TrainerKitWarrantyLog`.
+   - Physical handover recording action `RecordTrainerKitHandoverAction`: records official BAST metadata (`bast_number`, `handover_date`, `recipient_name`, `recipient_title`, `recipient_phone`, `notes`, `recorded_by`), establishes independent 1-year hardware warranty starting upon explicit Superuser confirmation, logs lifecycle events (`HANDOVER_RECORDED`, `WARRANTY_COMMENCED`), and records `AuditLog`.
+   - Exact calendar-year calculation with leap-year handling (`addYearNoOverflow()`): ensures calendar fidelity (`2024-02-29` -> `2025-02-28`).
+   - Warranty date correction action `CorrectTrainerKitWarrantyAction`: permits Superuser to correct warranty dates with mandatory audit reason (`min:5` chars), recalculates expiration date, logs immutable history in `TrainerKitWarrantyLog`, and emits `WARRANTY_CORRECTED` lifecycle and `AuditLog` records.
+   - Truthful state presentation: units without recorded handover display explicit "Belum Dicatat" status; expired units display "Kedaluwarsa"; valid units display "Aktif".
+
+3. **DEVICE-04-04 — Lifecycle History & School Warranty Transparency**:
+   - Superuser detail workstation under `/master/trainer-kits/{id}`: provides interactive modals for physical handover recording and warranty date correction with reason, displays complete BAST info, warranty validity period, warranty correction history, and chronological lifecycle audit trail (`HANDOVER_RECORDED`, `WARRANTY_COMMENCED`, `WARRANTY_CORRECTED`).
+   - Superuser inventory index filter: added `warranty_status` filtering (`all`, `active`, `expired`, `not_recorded`) with visual status badges and expiration date display.
+   - School workstation visibility (`/trainer-kits`): tenant administrators (`admin_sekolah`, legacy `admin`) can view their school's authorized trainer kit factory serials, BAST numbers, and warranty validity in a read-only capacity.
+   - Fail-closed tenant isolation & anti-tampering: tenant administrators, teachers, and students are strictly forbidden (HTTP 403) from accessing `/master/trainer-kits` or mutating handover/warranty records. Foreign school warranty metadata is strictly protected against IDOR.
+
+4. **Full Dual-Driver & Browser E2E Quality Gates**:
+   - **SQLite In-Memory**: 532 passed, 0 failures, 5 skipped (3,060 assertions) (`php artisan test`).
+   - **PostgreSQL 17.6 (`bitanic_test`)**: 533 passed, 0 failures, 4 skipped (3,072 assertions) (`$env:DB_CONNECTION="pgsql_testing"; php artisan test`).
+   - **Real Browser E2E (Playwright Headless Chromium)**: 24 end-to-end scenarios (100% PASS):
+     - Scenario 21: Physical Handover (BAST) & 1-Year Warranty Commencement (PASS)
+     - Scenario 22: Warranty Correction & Audit Trail (PASS)
+     - Scenario 23: School Admin Warranty Visibility & Cross-School IDOR Protection (PASS)
+   - **Laravel Pint**: 100% clean formatting (`./vendor/bin/pint --test`).
+   - **Vite Production Build**: 97.14 kB CSS, 1,875.93 kB JS built cleanly in 17.94s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |
