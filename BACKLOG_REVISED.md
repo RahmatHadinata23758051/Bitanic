@@ -782,6 +782,45 @@ Implemented and verified the complete Sprint 3 / Pack B engineering delivery (`M
    - **Vite Production Build**: 94.29 kB CSS, 1,875.93 kB JS built in 23.42s.
    - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
 
+### 2.20 — Sprint 4 / Pack A: Global Trainer Kit Inventory & School Activation (2026-11-11)
+
+Implemented and verified the complete Sprint 4 / Pack A engineering delivery (`DEVICE-04-01`, `DEVICE-04-02`) along with targeted P0 security corrections:
+
+1. **Targeted P0 Security Corrections (`SEC-USER-ROLE-EDIT`, `MASTER-03-03`)**:
+   - Fixed privilege escalation vulnerability in `UserDirectoryController::update()`: Tenant administrators (`admin_sekolah`, legacy `admin`) are strictly prevented from granting, modifying, deactivating, or deleting administrator roles, or escalating their own role. Privileged administrator assignment requires explicit platform Superuser authorization.
+   - Secured single-user onboarding in `UserDirectoryController::store()`: New accounts receive `must_change_password => true`, dispatches standard password reset token notification, and prevents plaintext password leaks.
+   - Made NISN input explicitly optional in UI with clear helper text `"Nomor Induk (Opsional)"`.
+   - Committed at `8f6b5c2`.
+
+2. **Unsafe Device Fallback Removal**:
+   - Dropped hardcoded fallback to `smk-ppn-1-sukaraja` / `School::first()` in `Device::booted()`.
+   - Migration `2026_01_01_000028_remove_default_school_id_from_devices_table.php` drops PostgreSQL `DEFAULT 1` on `devices.school_id`.
+   - Added `DeviceFactory` with default school association.
+
+3. **DEVICE-04-01 — Global Trainer Kit Physical Inventory Master**:
+   - Migration `2026_01_01_000029_create_trainer_kit_inventories_and_sales_tables.php` creates `trainer_kit_inventories`, `trainer_kit_sale_records`, and `trainer_kit_lifecycle_logs`.
+   - Eloquent models: `TrainerKitInventory`, `TrainerKitSaleRecord`, `TrainerKitLifecycleLog`.
+   - Factory stock registration action `RegisterTrainerKitInventoryAction` and metadata updater `UpdateTrainerKitMetadataAction`.
+   - Central Superuser UI under `/master/trainer-kits` with fleet metrics, serial/batch search, status/school filtering, and registration form.
+   - Dedicated policy `TrainerKitInventoryPolicy` registered in `AppServiceProvider` strictly restricting master inventory mutations to platform Superusers.
+
+4. **DEVICE-04-02 — Sale Records, Ownership Assignment & Platform Activation**:
+   - Sales recording action `RecordTrainerKitSaleAction` binding physical kit to purchasing school.
+   - Concurrency-safe workstation device binding `AssignTrainerKitDeviceAction` utilizing `lockForUpdate()` within database transaction.
+   - Platform activation action `ActivateTrainerKitAction` with lifecycle log recording (`ACTIVATED`).
+   - Workstation manager view (`/trainer-kits`) displays physical factory serial badge (`Hardware SN: BTK-...`) while maintaining strict school tenancy.
+   - Append-only lifecycle tracking in `TrainerKitLifecycleLog` preserving full provenance.
+
+5. **Full Dual-Driver & Browser E2E Quality Gates**:
+   - **SQLite In-Memory**: 517 passed, 0 failures, 5 skipped (3,000 assertions) (`php artisan test`).
+   - **PostgreSQL 17.6 (`bitanic_test`)**: 518 passed, 0 failures, 4 skipped (3,012 assertions) (`$env:DB_CONNECTION="pgsql_testing"; php artisan test`).
+   - **Real Browser E2E (Playwright Headless Chromium)**: 21 end-to-end scenarios (100% PASS):
+     - Scenario 19: Global Trainer Kit Serial Inventory Master (PASS)
+     - Scenario 20: Sale Records, Ownership Assignment & Activation (PASS)
+   - **Laravel Pint**: 100% clean formatting (`./vendor/bin/pint --test`).
+   - **Vite Production Build**: 96.74 kB CSS, 1,875.93 kB JS built cleanly in 20.80s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |

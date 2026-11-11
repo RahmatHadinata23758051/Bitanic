@@ -99,6 +99,21 @@ Delivered in Sprint 3 / Pack B (`MASTER-03-03` + `MASTER-03-04`), providing comp
    - Academic year & semester settings under `POST /classes/academic-year`: persists school configuration in `school_settings` with audit trail.
    - Anti-enumeration IDOR protection: foreign school classroom/group access aborts with HTTP 404 (Not Found).
 
+### 2.6 Global Trainer Kit Physical Inventory, Sale Records, and Activation Architecture (Sprint 4 / Pack A)
+Delivered in Sprint 4 / Pack A (`DEVICE-04-01` + `DEVICE-04-02`), establishing complete physical inventory lifecycle tracking separated cleanly from local school workstation devices:
+1. **DEVICE-04-01: Global Trainer Kit Physical Inventory Master**:
+   - Physical inventory tracking model `TrainerKitInventory` backed by migration `2026_01_01_000029_create_trainer_kit_inventories_and_sales_tables.php`.
+   - Centralized factory stock registration with unique `serial_number`, `model_name`, `hardware_revision`, `batch_number`, and lifecycle status (`registered` -> `sold` -> `assigned` -> `activated` -> `maintenance` -> `decommissioned`).
+   - Strict platform-only authorization via `TrainerKitInventoryPolicy`: exclusively accessible by `superuser` (`role:superuser`). Tenant administrators, teachers, and students receive HTTP 403 Forbidden.
+   - Centralized management UI under `/master/trainer-kits` with real-time fleet inventory metrics (Total Unit, Stok Pabrik, Terjual / Dimiliki Sekolah, Aktif Operasional), serial/batch search, status/school filtering, and factory stock registration form.
+2. **DEVICE-04-02: Sale Records, Ownership Assignment, and Platform Activation**:
+   - Commercial sales logging via `TrainerKitSaleRecord` establishing formal legal ownership between manufacturer inventory and purchasing school (`school_id`).
+   - Concurrency-safe workstation device binding (`AssignTrainerKitDeviceAction`): binds physical serial to a school's workstation `Device` record using database transaction and `lockForUpdate()`. Prevents double-assignment collisions across tenants.
+   - Workstation fleet transparency: workstation manager (`/trainer-kits`) displays verified factory serial numbers with visual provenance badge (`Hardware SN: BTK-...`) while respecting school isolation.
+   - Append-only lifecycle tracking (`TrainerKitLifecycleLog`): tracks every lifecycle transition (`REGISTERED`, `SALE_RECORDED`, `DEVICE_ASSIGNED`, `ACTIVATED`, `METADATA_UPDATED`) with timestamps, actor attribution, status diffs, and notes.
+   - Targeted P0 security hardening: tenant administrators (`admin_sekolah`, legacy `admin`) strictly prohibited from modifying administrator roles, editing/deactivating/deleting administrators, or self-escalating role in `UserDirectoryController::update()`. Single user onboarding mandates initial password change gate (`must_change_password => true`), dispatches reset tokens, and conceals plaintext secrets.
+   - Device fallback removal: eliminated arbitrary fallback to `smk-ppn-1-sukaraja` or `School::first()` in `Device::booted()`, and dropped PostgreSQL `DEFAULT 1` constraint on `devices.school_id` via migration `000028`.
+
 ---
 
 ## 3. Gap Analysis: Implemented State vs. Locked Baseline v1.0
@@ -108,7 +123,7 @@ The following gaps exist between the current codebase and the locked Architectur
 | # | Architecture Dimension | Target Locked Baseline v1.0 | Current Implementation State | Gap Severity | Action / Resolution Path |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **G-01** | **School Admin Role Separation** | Dedicated `admin_sekolah` role strictly scoped to their tenant. Cannot access global platform settings or other schools. | **Sprint 1 & 2 Pack B Execution (`ARCH-RBAC-01`, `RBAC-02-03`)**: Separated `User::isSuperuser()` to strictly check `role === 'superuser'`. Dual-role compatibility supports `admin_sekolah` and legacy `admin`. Cross-school read queries (`?school_id=2`) strictly fail closed with HTTP 403. School switcher is hidden unless `$isSuperuser && $schools->isNotEmpty()`. Platform operations (`kits.api-key.rotate`, `rawlogs.inject`) strictly restricted to superusers (`role:superuser`). Platform superuser has `school_id = NULL`. Implicit default school fallback removed. | **Closed via Pack B Execution** | Verified via dual-driver test suites and Playwright Browser E2E suite. |
-| **G-02** | **Trainer Kit Master Catalog** | Global physical hardware inventory with serial numbers, MAC addresses, batch production records, and school assignment lifecycle. | Devices exist directly in `devices` table linked via `school_id`. No global master serial repository exists. | **Medium (Commercial Scope)** | Deferred to `DATA-MASTER-01` and future hardware inventory release. |
+| **G-02** | **Trainer Kit Master Catalog** | Global physical hardware inventory with serial numbers, MAC addresses, batch production records, and school assignment lifecycle. | **Sprint 4 Pack A Execution (`DEVICE-04-01`, `DEVICE-04-02`)**: Implemented `trainer_kit_inventories`, `trainer_kit_sale_records`, and `trainer_kit_lifecycle_logs` tables. Full Superuser UI under `/master/trainer-kits`, sale recording, school binding with `lockForUpdate`, activation workflow, and serial attribution on school workstation manager. | **Closed via Sprint 4 Pack A Execution** | Verified via dual-driver test suites (44 assertions) and Playwright Browser E2E scenarios 19 & 20. |
 | **G-03** | **School License & Warranty Model** | 1 School = 1 Commercial License, 1-Year Hardware Warranty, automated expiration reminders, grace periods. | No licensing or warranty tables exist. School tenancy is controlled via `status = 'active'` flag on `schools`. | **Deferred (Commercial)** | Explicitly deferred by PO directive. Midtrans SaaS routes retired under `LEGACY-01`. |
 | **G-04** | **Hardware Downlink & Physical Actuator ACK** | Bidirectional Modbus/RS485 transport over lab gateway with cryptographically verified frame delivery and hardware ACK for relay/reboot. | Soft-reboot and calibration are software-only simulations. UI explicitly flags them as simulated. Physical actuation is fail-closed. | **Accepted Constraint (Hardware Safe)** | Fully compliant with Hardware Safety Gate. Remains simulation-only until ESP32 firmware audit is conducted. |
 | **G-05** | **Multi-School Selector Scope** | School switcher on dashboard and fleet view must be restricted strictly to Superusers. | **Resolved at HEAD `345eb73` & verified in `RbacAndMultiTenantAcceptanceTest`**: only superusers can filter/switch schools. | **Closed (Verified)** | Covered by automated test matrix. |
@@ -147,15 +162,16 @@ The following gaps exist between the current codebase and the locked Architectur
 ## 6. Verification & Quality Gates
 
 This architecture baseline is backed by exhaustive automated and end-to-end evidence:
-- **Unit & Feature Suite (SQLite)**: 499 passed, 0 failures, 5 skipped (2,938 assertions) on SQLite in-memory (`php artisan test`).
-- **PostgreSQL 17.6 Test Suite**: 10 passed, 0 failures, 0 skipped (81 assertions) across `PostgresIntegrationAndConcurrencyTest` and `PostgresScheduleConcurrencyRaceTest` on isolated `bitanic_test` (`$env:DB_CONNECTION="pgsql_testing"`).
-- **School User Master Suite**: `tests/Feature/SchoolUserMasterTest.php` (14 tests, 67 assertions) and `tests/Feature/BulkUserImportTest.php` (16 tests, 114 assertions) verifying teacher/student CRUD, active/inactive account status toggle, login blocking for deactivated accounts, deletion guards for linked users, optional NISN, and role-boundary enforcement (Guru & Siswa strictly forbidden from account provisioning and bulk import).
+- **Unit & Feature Suite (SQLite)**: 517 passed, 0 failures, 5 skipped (3,000 assertions) on SQLite in-memory (`php artisan test`).
+- **PostgreSQL 17.6 Test Suite**: 518 passed, 0 failures, 4 skipped (3,012 assertions) on isolated `bitanic_test` (`$env:DB_CONNECTION="pgsql_testing"`).
+- **Trainer Kit Inventory Master Suite**: `tests/Feature/TrainerKitInventoryMasterTest.php` (15 tests, 44 assertions across SQLite and PostgreSQL) verifying serial registration, validation, search/filtering, sale recording, school ownership assignment, concurrency-safe workstation binding with `lockForUpdate()`, platform activation, lifecycle audit logging, and strict superuser policy protection.
+- **School User Master Suite**: `tests/Feature/SchoolUserMasterTest.php` (17 tests, 85 assertions) and `tests/Feature/BulkUserImportTest.php` (16 tests, 114 assertions) verifying teacher/student CRUD, active/inactive account status toggle, login blocking for deactivated accounts, deletion guards for linked users, optional NISN, and role-boundary enforcement (Guru & Siswa strictly forbidden from account provisioning and bulk import).
 - **Academic Master & Allocation Suite**: `tests/Feature/AcademicMasterAndAllocationTest.php` (9 tests, 41 assertions) and `tests/Feature/ClassroomManagementTest.php` (6 tests, 32 assertions) verifying classroom and group management, fail-closed booted tenancy (no arbitrary default schools), homeroom teacher validation, trainer kit group binding, student allocation to classroom & workstation kit, and academic year settings.
 - **Indonesian Region Master Suite**: `tests/Feature/IndonesianRegionMasterTest.php` (9 tests, 54 assertions across SQLite and PostgreSQL) verifying authoritative Kemendagri codes, hierarchy navigation, idempotent sync command, checksum validation, metadata record tracking, cascading endpoints, and superuser-only mutation control.
 - **Global School Master CRUD Suite**: `tests/Feature/SchoolMasterCrudTest.php` (16 tests, 71 assertions across SQLite and PostgreSQL) verifying school listing, search, status/province filtering, full CRUD lifecycle, hierarchy validation, unique NPSN/slug, deletion guard (linked users, devices, schedules, and audit logs protected), status toggling, and tenancy boundary enforcement.
 - **User Provisioning & Tenancy Contract Suite**: `tests/Feature/UserProvisioningAndTenancyContractTest.php` (25 tests, 70 assertions across SQLite and PostgreSQL) verifying school membership invariants, student data isolation on reports and assessments, school-scoped CSV exports, classroom & student group CRUD lifecycle, schedule conflict validation, LKS submission and grading cycle, missing-grade provenance (no fabricated historical fallback), device reboot & calibration simulation, superuser settings filtering vs admin locking, and migration 000024 `down()` default verification.
 - **Operational Role Migration Safety Suite**: `tests/Feature/RoleMigrationCommandTest.php` (7 tests, 38 assertions across SQLite and PostgreSQL) verifying dry-run, forward execution, idempotence, rollback exact restoration, rollback conflict detection without force, rollback override with force, unique microsecond snapshot UUID and checksum verification.
-- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 19 comprehensive end-to-end user scenarios (100% PASS):
+- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 21 comprehensive end-to-end user scenarios (100% PASS):
   1. *Superuser School Switching & Multi-School Access* (PASS).
   2. *Admin Same-School Dashboard & Absence of School Switcher* (PASS).
   3. *Legacy Admin Compatibility Session* (PASS).
@@ -175,7 +191,9 @@ This architecture baseline is backed by exhaustive automated and end-to-end evid
   17. *School Teacher & Student Master Management* (PASS).
   18. *Academic Master & Student Allocation* (PASS).
   19. *Negative Authorization on User Import & Mutations* (PASS).
+  20. *Global Trainer Kit Serial Inventory Master (DEVICE-04-01)* (PASS).
+  21. *Sale Records, Ownership Assignment & Activation (DEVICE-04-02)* (PASS).
 - **Code Style & Formatting**: Laravel Pint passed (`./vendor/bin/pint --test`).
-- **Frontend Assets**: Vite production build succeeded (94 kB CSS, 1.87 MB JS).
+- **Frontend Assets**: Vite production build succeeded (96.7 kB CSS, 1.87 MB JS).
 - **Baseline Immutability**: `upi-edge/` and `dump_upiedge.sql` preserved with zero modifications.
 
