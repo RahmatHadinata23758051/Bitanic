@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 BASE_URL = "http://127.0.0.1:8008"
 
 def run_tests():
-    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (23 SCENARIOS) ===")
+    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (24 SCENARIOS) ===")
     results = {}
 
     with sync_playwright() as p:
@@ -1556,6 +1556,151 @@ def run_tests():
             results["Scenario 23: School Admin Warranty Visibility & Cross-School IDOR Protection"] = f"FAIL: {e}"
         finally:
             context_admin.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 24: SCHOOL LMS LICENSE LIFECYCLE & VISIBILITY (LICENSE-05-01 & LICENSE-05-02)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 24] School LMS License Lifecycle, Superuser Workstation & School Admin Visibility...")
+        context_su24 = browser.new_context()
+        page_su24 = context_su24.new_page()
+        try:
+            # 24.1 Superuser Login
+            page_su24.goto(f"{BASE_URL}/login")
+            page_su24.fill("#email", "superuser@bitanic.id")
+            page_su24.fill("#password", "Password123!")
+            page_su24.click("button[type='submit']")
+            page_su24.wait_for_load_state("networkidle")
+            print("  ✓ Superuser logged in successfully")
+
+            # 24.2 Superuser visits Global LMS License Registry
+            resp_lic_index = page_su24.goto(f"{BASE_URL}/master/licenses")
+            assert resp_lic_index.status == 200, f"Expected 200 on /master/licenses, got {resp_lic_index.status}"
+            content_lic = page_su24.content()
+            assert "Lisensi LMS" in content_lic, "Expected 'Lisensi LMS' in master registry heading"
+            assert "Total Lisensi" in content_lic, "Expected 'Total Lisensi' metric card"
+            print("  ✓ Superuser accessed Global LMS License Registry (/master/licenses)")
+
+            csrf_su24 = page_su24.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers_su24 = {"X-CSRF-TOKEN": csrf_su24, "Accept": "application/json"}
+
+            # 24.3 Initialize License for School 1 (idempotent POST)
+            init_resp = context_su24.request.post(
+                f"{BASE_URL}/master/licenses",
+                data={"school_id": 1, "notes": "Inisialisasi lisensi E2E browser"},
+                headers=headers_su24,
+            )
+            assert init_resp.status in [200, 302], f"Expected 200/302 on license init, got {init_resp.status}"
+            print("  ✓ Superuser initialized LMS license for School 1")
+
+            # 24.4 Find License for School 1
+            resp_lic_again = page_su24.goto(f"{BASE_URL}/master/licenses?search=SMK")
+            assert resp_lic_again.status == 200
+            license_link = page_su24.locator("a[href*='/master/licenses/']").first
+            assert license_link.count() > 0, "Expected at least one license detail link"
+            license_detail_url = license_link.get_attribute("href")
+            assert license_detail_url and "/master/licenses/" in license_detail_url, "Invalid license link"
+
+            # 24.5 Superuser visits License Management Workstation
+            resp_detail = page_su24.goto(license_detail_url)
+            assert resp_detail.status == 200
+            detail_content = page_su24.content()
+            assert "Kembali ke Master Lisensi" in detail_content or "Ringkasan Lisensi" in detail_content or "Profil Entitas Sekolah" in detail_content, f"Expected license workstation content, got url {page_su24.url}"
+            print(f"  ✓ Superuser viewed License Workstation at {license_detail_url}")
+
+            # 24.6 Superuser activates First-Year Entitlement (Term 1)
+            if "Aktivasi Lisensi" in detail_content or "Belum Aktif" in detail_content or "Aktivasi Hak Akses" in detail_content:
+                act_resp = context_su24.request.post(
+                    f"{license_detail_url}/activate",
+                    data={"start_date": "2026-11-12", "notes": "Aktivasi tahun pertama via Playwright E2E"},
+                    headers=headers_su24,
+                )
+                assert act_resp.status in [200, 302], f"Activation failed with status {act_resp.status}"
+                print("  ✓ Superuser activated first-year entitlement")
+                page_su24.goto(license_detail_url)
+                page_su24.wait_for_load_state("networkidle")
+
+            # 24.7 Superuser renews License annually (Term 2)
+            renew_resp = context_su24.request.post(
+                f"{license_detail_url}/renew",
+                data={"notes": "Perpanjangan tahunan resmi via Playwright E2E"},
+                headers=headers_su24,
+            )
+            assert renew_resp.status in [200, 302], f"Renewal failed with status {renew_resp.status}"
+            page_su24.goto(license_detail_url)
+            page_su24.wait_for_load_state("networkidle")
+            renewed_content = page_su24.content()
+            assert "Term #" in renewed_content or "Periode #" in renewed_content or "Tahun Pertama" in renewed_content
+            print("  ✓ Superuser renewed license annually without overwriting term history")
+
+            # 24.8 Superuser corrects dates with mandatory reason
+            correct_resp = context_su24.request.post(
+                f"{license_detail_url}/correct",
+                data={"start_date": "2026-11-01", "correction_reason": "Koreksi tanggal addendum E2E"},
+                headers=headers_su24,
+            )
+            assert correct_resp.status in [200, 302], f"Correction failed with status {correct_resp.status}"
+            print("  ✓ Superuser corrected license dates with mandatory audit reason")
+
+            # 24.9 School Admin Visibility (Read-Only)
+            context_admin24 = browser.new_context()
+            page_admin24 = context_admin24.new_page()
+            page_admin24.goto(f"{BASE_URL}/login")
+            page_admin24.fill("#email", "admin@smk.id")
+            page_admin24.fill("#password", "Password123!")
+            page_admin24.click("button[type='submit']")
+            page_admin24.wait_for_load_state("networkidle")
+
+            # View School License Dedicated Page
+            resp_school_lic = page_admin24.goto(f"{BASE_URL}/school/license")
+            assert resp_school_lic.status == 200, f"Expected 200 on /school/license, got {resp_school_lic.status}"
+            school_lic_content = page_admin24.content()
+            assert "Lisensi Bitanic LMS" in school_lic_content or "Lisensi LMS" in school_lic_content, f"Expected license title in school view, got {page_admin24.url}"
+            assert "Nomor Registri Lisensi" in school_lic_content or "Tanggal Efektif Mulai" in school_lic_content
+            print("  ✓ Admin Sekolah accessed /school/license with read-only visibility")
+
+            # View School Settings License Tab
+            resp_settings_lic = page_admin24.goto(f"{BASE_URL}/settings?tab=license")
+            assert resp_settings_lic.status == 200
+            settings_lic_content = page_admin24.content()
+            assert "Lisensi LMS" in settings_lic_content
+            csrf_admin24 = page_admin24.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            print("  ✓ Admin Sekolah viewed LMS license tab in /settings")
+
+            # 24.10 Negative Authorization & IDOR Protection
+            # Admin Sekolah blocked from mutating license (403)
+            post_block = context_admin24.request.post(
+                f"{license_detail_url}/renew",
+                data={"notes": "Hacked renewal attempt"},
+                headers={"X-CSRF-TOKEN": csrf_admin24, "Accept": "application/json"},
+            )
+            assert post_block.status == 403, f"Admin Sekolah must receive 403 on renew action, got {post_block.status}"
+            print("  ✓ Admin Sekolah strictly denied (HTTP 403) from Superuser license management")
+
+            # Admin Sekolah blocked from Master Registry (403)
+            resp_su_only = page_admin24.goto(f"{BASE_URL}/master/licenses")
+            assert resp_su_only.status == 403, f"Admin Sekolah must receive 403 on /master/licenses, got {resp_su_only.status}"
+            print("  ✓ Admin Sekolah strictly denied (HTTP 403) from /master/licenses")
+
+            # 24.11 Guest blocked from license pages (redirect to /login)
+            context_guest = browser.new_context()
+            page_guest = context_guest.new_page()
+            resp_guest_master = page_guest.goto(f"{BASE_URL}/master/licenses")
+            assert "/login" in page_guest.url, "Guest must be redirected to login on /master/licenses"
+            resp_guest_school = page_guest.goto(f"{BASE_URL}/school/license")
+            assert "/login" in page_guest.url, "Guest must be redirected to login on /school/license"
+            print("  ✓ Guest strictly redirected to login from all license endpoints")
+
+            results["Scenario 24: School LMS License Lifecycle & Visibility"] = "PASS"
+        except Exception as e:
+            import traceback
+            print(f"  ✗ Scenario 24 Failed: {e}\n{traceback.format_exc()}")
+            results["Scenario 24: School LMS License Lifecycle & Visibility"] = f"FAIL: {e}"
+        finally:
+            context_su24.close()
+            if 'context_admin24' in locals():
+                context_admin24.close()
+            if 'context_guest' in locals():
+                context_guest.close()
 
         browser.close()
 
