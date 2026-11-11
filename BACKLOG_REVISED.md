@@ -895,6 +895,46 @@ Implemented and verified the complete Sprint 5 / Pack A engineering delivery (`L
    - **Vite Production Build**: 98.27 kB CSS, 1,875.93 kB JS built cleanly in 33.15s.
    - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
 
+### 2.7.5 — Sprint 5 Pack B: School LMS License Email Reminders & Expiration Enforcement
+
+Implemented and verified the complete Sprint 5 / Pack B engineering delivery (`LICENSE-05-03`, `LICENSE-05-04`) along with critical term interval resolver correctness:
+
+1. **Step 0 — School License Term Interval Resolver & Context Security**:
+   - `SchoolLicenseResolver`: Implemented robust interval evaluation across authorized term intervals (`[start_date, expiration_date)`).
+   - Detects inter-term coverage gaps: when prior term expires and renewal is scheduled in the future, the gap period evaluates to `STATUS_EXPIRED`, preventing false `ACTIVE` status from aggregate expiration dates.
+   - Removed implicit `School::first()` fallback from Superuser license viewing. Accessing `/school/license` without explicit `school_id` cleanly redirects to `/master/licenses` (the global management workstation).
+   - Verified by `tests/Feature/SchoolLicenseEntitlementCorrectnessTest.php` (6 tests, 31 assertions).
+
+2. **LICENSE-05-03 — Automated H-14 Email Reminders & Scheduler**:
+   - Migration `2026_01_01_000032_create_school_license_notifications_table.php`: append-only notification records with unique constraint on `['license_id', 'term_id', 'notification_type', 'recipient_email']`.
+   - `SchoolLicenseExpirationReminderMail` & view `resources/views/emails/license-expiration-reminder.blade.php`: professional Indonesian email template with school details, license number, term period, exact expiration date, and contact instructions. Strictly NO payment links or checkout gateways.
+   - Genuine Active School Admin Recipient Selection: queries `User` with `role: admin_sekolah, admin` and `is_active: true`. Never invents fake emails.
+   - `DispatchSchoolLicenseRemindersAction`: scans licenses expiring in 14 days and dispatches jobs idempotently. Supports `--dry-run`.
+   - `SendSchoolLicenseReminderJob`: revalidates entitlement at execution time; skips dispatch if license was already renewed.
+   - Console command `bitanic:check-license-reminders {--dry-run} {--days=14}` registered in `routes/console.php` with daily schedule at 07:00 WIB.
+   - Verified by `tests/Feature/SchoolLicenseEmailReminderTest.php` (6 tests, 24 assertions).
+
+3. **LICENSE-05-04 — LMS License Expiration Enforcement & Authorized Reactivation**:
+   - Centralized middleware `EnsureSchoolLicenseIsValid` registered in `bootstrap/app.php` and appended to `web` group.
+   - Safe rollout feature flag: `config('license.enforcement_enabled')` (`LICENSE_ENFORCEMENT_ENABLED`), defaulting to `false`.
+   - Fail-closed tenant restriction:
+     - Platform Superuser access is always preserved (never locked out).
+     - Unauthenticated requests bypass (guest routes and login portal functional).
+     - Admin Sekolah retains access to view `/school/license` and `/settings` (GET), but blocked from academic mutations with redirect and warning message.
+     - Guru and Siswa redirected to polite vocational suspension notice at `/school/license-expired` (`resources/views/pages/licenses/expired.blade.php`).
+     - JSON/AJAX requests from expired schools receive 403 Forbidden with structured JSON error.
+     - IoT hardware telemetry ingress (`routes/api.php`) remains completely unblocked.
+     - Immediate Restoration: Annual renewal by Superuser (`RenewSchoolLicenseAction`) immediately restores tenant access on the next HTTP request with zero data resets.
+   - Verified by `tests/Feature/SchoolLicenseEnforcementTest.php` (8 tests, 30 assertions).
+
+4. **Quality Gates & Acceptance Verification**:
+   - **SQLite In-Memory**: 566 passed, 5 skipped (3,239 assertions).
+   - **PostgreSQL 17.6 (`bitanic_test`)**: 559 passed, 4 skipped (3,234 assertions).
+   - **Real Browser E2E Interaction Test Suite**: All 26 scenarios passed completely (100% PASS) on Playwright Headless Chromium, including Scenario 25 (*License Expiration Enforcement, Notice & Restoration*).
+   - **Laravel Pint**: 100% clean formatting (`./vendor/bin/pint --test`).
+   - **Vite Production Build**: 98.38 kB CSS, 1,875.93 kB JS built in 38.02s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |
