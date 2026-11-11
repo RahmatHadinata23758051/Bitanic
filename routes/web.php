@@ -6,8 +6,10 @@ use App\Http\Controllers\Academic\CompetencyAssessmentController;
 use App\Http\Controllers\Academic\ModulePracticumController;
 use App\Http\Controllers\Academic\PracticumReportController;
 use App\Http\Controllers\Academic\UserDirectoryController;
+use App\Http\Controllers\Admin\MasterLicenseController;
 use App\Http\Controllers\Admin\MasterTrainerKitController;
 use App\Http\Controllers\Admin\RegionMasterController;
+use App\Http\Controllers\Admin\SchoolLicenseController;
 use App\Http\Controllers\Admin\SchoolMasterController;
 use App\Http\Controllers\Admin\SettingsAuditController;
 use App\Http\Controllers\Admin\UserImportController;
@@ -172,7 +174,20 @@ Route::middleware(['auth', 'role:superuser'])->prefix('master')->name('master.')
     Route::post('/trainer-kits/{inventory}/handover', [MasterTrainerKitController::class, 'recordHandover'])->name('trainer-kits.handover');
     Route::post('/trainer-kits/{inventory}/warranty/correct', [MasterTrainerKitController::class, 'correctWarranty'])->name('trainer-kits.warranty.correct');
     Route::delete('/trainer-kits/{inventory}', [MasterTrainerKitController::class, 'destroy'])->name('trainer-kits.destroy');
+
+    // Master Lisensi LMS Sekolah (LICENSE-05-01 & LICENSE-05-02)
+    Route::get('/licenses', [MasterLicenseController::class, 'index'])->name('licenses.index');
+    Route::post('/licenses', [MasterLicenseController::class, 'store'])->name('licenses.store');
+    Route::get('/licenses/{license}', [MasterLicenseController::class, 'show'])->name('licenses.show');
+    Route::post('/licenses/{license}/activate', [MasterLicenseController::class, 'activate'])->name('licenses.activate');
+    Route::post('/licenses/{license}/renew', [MasterLicenseController::class, 'renew'])->name('licenses.renew');
+    Route::post('/licenses/{license}/correct', [MasterLicenseController::class, 'correct'])->name('licenses.correct');
 });
+
+// 14. Lisensi LMS Sekolah (Read-Only Tenant Visibility)
+Route::get('/school/license', [SchoolLicenseController::class, 'show'])
+    ->middleware(['auth', 'role:superuser,admin'])
+    ->name('school.license.show');
 
 // Cascading region options accessible to authenticated users (e.g. for dynamic form selects)
 Route::middleware(['auth'])->prefix('api/regions')->name('api.regions.')->group(function () {

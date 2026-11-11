@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\School;
+use App\Models\SchoolLicense;
 use App\Models\SchoolSetting;
 use App\Services\Agronomy\AgronomicThresholdResolver;
 use Illuminate\Http\RedirectResponse;
@@ -107,12 +108,17 @@ class SettingsAuditController extends Controller
             ->latest('id')
             ->paginate(15);
 
+        $license = SchoolLicense::with(['terms.authorizer', 'latestTerm'])
+            ->where('school_id', $schoolId)
+            ->first();
+
         return view('pages.settings.settings', [
             'setting' => $setting,
             'auditLogs' => $auditLogs,
             'isSuperuser' => $isSuperuser,
             'schools' => $schools,
             'selectedSchoolId' => $schoolId,
+            'license' => $license,
         ]);
     }
 

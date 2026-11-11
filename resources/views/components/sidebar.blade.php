@@ -467,6 +467,19 @@
                     <i data-lucide="cpu" class="w-4.5 h-4.5 shrink-0 {{ Request::is('master/trainer-kits*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
                     <span x-show="!sidebarCollapsed" class="text-sm truncate">Trainer Kit</span>
                 </a>
+
+                <!-- Master Lisensi LMS -->
+                <a
+                    href="{{ route('master.licenses.index') }}"
+                    title="Master Lisensi LMS"
+                    :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
+                    class="flex items-center rounded-xl transition-colors group
+                        {{ Request::is('master/licenses*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    aria-current="{{ Request::is('master/licenses*') ? 'page' : 'false' }}"
+                >
+                    <i data-lucide="shield-check" class="w-4.5 h-4.5 shrink-0 {{ Request::is('master/licenses*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Lisensi LMS</span>
+                </a>
             </div>
         @endif
     </nav>
