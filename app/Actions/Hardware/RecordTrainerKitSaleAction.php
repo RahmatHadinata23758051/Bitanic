@@ -13,7 +13,9 @@ use Illuminate\Validation\ValidationException;
 class RecordTrainerKitSaleAction
 {
     /**
-     * Record a sale or transfer of a trainer kit to a specific school.
+     * Record a sale of a trainer kit from factory inventory to a specific school.
+     * Enforces DEVICE-SALE-STATE-01: prevents unauthorized resale/transfer,
+     * rejects double assignment, and supports idempotent retries.
      *
      * @param array{
      *     school_id: int,
@@ -33,6 +35,12 @@ class RecordTrainerKitSaleAction
             ]);
         }
 
+        if ($school->status !== 'active') {
+            throw ValidationException::withMessages([
+                'school_id' => 'Sekolah penerima berstatus tidak aktif. Unit hanya dapat dialokasikan ke sekolah yang aktif.',
+            ]);
+        }
+
         $saleRef = trim($data['sale_reference'] ?? '');
         if (empty($saleRef)) {
             throw ValidationException::withMessages([
@@ -44,9 +52,20 @@ class RecordTrainerKitSaleAction
             /** @var TrainerKitInventory $lockedInventory */
             $lockedInventory = TrainerKitInventory::where('id', $inventory->id)->lockForUpdate()->firstOrFail();
 
-            if (in_array($lockedInventory->status, [TrainerKitInventory::STATUS_DECOMMISSIONED])) {
+            // Check if unit is already sold, assigned, activated, or decommissioned
+            if ($lockedInventory->status !== TrainerKitInventory::STATUS_REGISTERED) {
+                // Check for idempotent retry: same school and same sale reference
+                if ($lockedInventory->school_id === $school->id) {
+                    $existingSale = TrainerKitSaleRecord::where('inventory_id', $lockedInventory->id)
+                        ->where('sale_reference', $saleRef)
+                        ->first();
+                    if ($existingSale) {
+                        return $lockedInventory;
+                    }
+                }
+
                 throw ValidationException::withMessages([
-                    'status' => 'Unit dengan status telah dipensiunkan (decommissioned) tidak dapat dijual kembali.',
+                    'status' => 'Unit Trainer Kit sudah memiliki status '.$lockedInventory->status.' (resale atau transfer kepemilikan antar-sekolah belum didukung).',
                 ]);
             }
 
@@ -65,20 +84,7 @@ class RecordTrainerKitSaleAction
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            // If transferring to a different school and device was assigned, unbind the old school device
-            $fromDeviceId = $lockedInventory->device_id;
-            $toDeviceId = $lockedInventory->device_id;
-            if ($fromSchoolId !== null && $fromSchoolId !== $school->id) {
-                $toDeviceId = null;
-                $lockedInventory->device_id = null;
-            }
-
-            // Determine new status
-            $newStatus = $lockedInventory->status;
-            if ($newStatus === TrainerKitInventory::STATUS_REGISTERED) {
-                $newStatus = TrainerKitInventory::STATUS_SOLD;
-            }
-
+            $newStatus = TrainerKitInventory::STATUS_SOLD;
             $lockedInventory->school_id = $school->id;
             $lockedInventory->status = $newStatus;
             $lockedInventory->save();
@@ -91,8 +97,8 @@ class RecordTrainerKitSaleAction
                 'to_status' => $newStatus,
                 'from_school_id' => $fromSchoolId,
                 'to_school_id' => $school->id,
-                'from_device_id' => $fromDeviceId,
-                'to_device_id' => $toDeviceId,
+                'from_device_id' => null,
+                'to_device_id' => null,
                 'details' => "Penjualan / penetapan kepemilikan dicatat untuk sekolah: {$school->name} (Ref: {$saleRef})",
                 'created_at' => now(),
             ]);
