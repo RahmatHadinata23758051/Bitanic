@@ -475,6 +475,193 @@ def run_tests():
         finally:
             context.close()
 
+        # -------------------------------------------------------------
+        # SCENARIO 9: REAL UI MUTATION — ADMIN SEKOLAH CLASSROOM CREATION
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 9] Real UI Mutation: Admin Sekolah Classroom Creation...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "admin@smk.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+
+            page.goto(f"{BASE_URL}/classes")
+            page.wait_for_load_state("networkidle")
+
+            # Open Tambah Kelas modal
+            page.click("button:has-text('Tambah Kelas')")
+            page.wait_for_timeout(300)
+
+            # Fill modal inputs
+            page.fill("form[action*='classes'] input[name='name']", "XII ATPH E2E Inovasi")
+            page.fill("form[action*='classes'] input[name='academic_year']", "2026/2027")
+
+            # Submit modal form
+            page.click("form[action*='classes'] button[type='submit']:has-text('Simpan Kelas')")
+            page.wait_for_load_state("networkidle")
+
+            # Verify response and presence in table
+            content = page.content()
+            assert "XII ATPH E2E Inovasi" in content, "Created classroom MUST appear in classroom table"
+            print("  ✓ Admin Sekolah created classroom through real modal UI ('XII ATPH E2E Inovasi' verified)")
+
+            logout_btn = page.locator("form[action*='logout'] button")
+            if logout_btn.count() > 0:
+                logout_btn.first.click()
+                page.wait_for_load_state("networkidle")
+
+            results["Scenario 9: Admin Classroom UI Mutation"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 9 Failed: {e}")
+            results["Scenario 9: Admin Classroom UI Mutation"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 10: REAL UI MUTATION — ADMIN SEKOLAH SETTINGS PERSISTENCE
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 10] Real UI Mutation: Admin Sekolah Settings Persistence...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "admin@smk.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+
+            page.goto(f"{BASE_URL}/settings")
+            page.wait_for_load_state("networkidle")
+
+            # Fill lead teacher in settings form
+            lead_input = page.locator("input[name='lead_teacher']")
+            assert lead_input.count() > 0, "Lead teacher input must be present"
+            lead_input.fill("Dr. Ir. Bambang Wicaksono, M.M.")
+
+            # Submit settings form
+            submit_btn = page.locator("form[action*='settings'] button[type='submit']:has-text('Simpan')")
+            submit_btn.first.click()
+            page.wait_for_load_state("networkidle")
+
+            # Verify saved setting is rendered
+            content = page.content()
+            assert "Dr. Ir. Bambang Wicaksono, M.M." in content, "Updated lead teacher must be persisted and displayed"
+            print("  ✓ Admin Sekolah persisted settings through UI ('Dr. Ir. Bambang Wicaksono, M.M.' verified)")
+
+            logout_btn = page.locator("form[action*='logout'] button")
+            if logout_btn.count() > 0:
+                logout_btn.first.click()
+                page.wait_for_load_state("networkidle")
+
+            results["Scenario 10: Admin Settings UI Mutation"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 10 Failed: {e}")
+            results["Scenario 10: Admin Settings UI Mutation"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 11: REAL UI MUTATION — GURU PRACTICUM SCHEDULING CYCLE
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 11] Real UI Mutation: Guru Practicum Scheduling Cycle...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "guru@smk.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+
+            page.goto(f"{BASE_URL}/schedules")
+            page.wait_for_load_state("networkidle")
+
+            # Click Tambah Jadwal button
+            page.click("button:has-text('Tambah Jadwal')")
+            page.wait_for_timeout(300)
+
+            # Fill schedule modal form
+            page.fill("form[action*='schedules'] input[name='title']", "Praktikum Agritech E2E")
+            page.fill("form[action*='schedules'] input[name='activity_date']", "2026-11-20")
+            page.fill("form[action*='schedules'] input[name='start_time']", "08:00")
+            page.fill("form[action*='schedules'] input[name='end_time']", "10:00")
+
+            # Submit schedule modal
+            page.click("form[action*='schedules'] button[type='submit']:has-text('Simpan Jadwal')")
+            page.wait_for_load_state("networkidle")
+
+            # Verify schedule appears
+            content = page.content()
+            assert "Praktikum Agritech E2E" in content, "Newly scheduled practicum must appear in schedule list"
+            print("  ✓ Guru scheduled practicum through UI ('Praktikum Agritech E2E' verified)")
+
+            logout_btn = page.locator("form[action*='logout'] button")
+            if logout_btn.count() > 0:
+                logout_btn.first.click()
+                page.wait_for_load_state("networkidle")
+
+            results["Scenario 11: Guru Scheduling UI Mutation"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 11 Failed: {e}")
+            results["Scenario 11: Guru Scheduling UI Mutation"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 12: STRICT RBAC BOUNDARY — DENIED ACTIONS & BUTTON ABSENCE
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 12] Strict RBAC Boundary: Denied Actions & UI Absence...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "siswa@smk.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+
+            # 1. Check Trainer Kit page as Siswa
+            page.goto(f"{BASE_URL}/trainer-kits")
+            page.wait_for_load_state("networkidle")
+            content_tk = page.content()
+
+            # Verify absence of platform-only and teacher buttons
+            assert "Rotasi Key" not in content_tk, "Siswa MUST NOT see 'Rotasi Key' button"
+            assert "form action" not in content_tk or "api-key/rotate" not in content_tk, "Siswa MUST NOT see rotate API key form"
+            print("  ✓ Siswa verified absence of API key rotation and mutation buttons on Trainer Kit page")
+
+            # 2. Denied direct mutations with CSRF token from session
+            csrf_token = page.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers = {"X-CSRF-TOKEN": csrf_token, "Accept": "application/json"}
+
+            post_classes = context.request.post(f"{BASE_URL}/classes", data={"name": "Hacked Class"}, headers=headers)
+            assert post_classes.status == 403, f"Expected 403 for siswa on POST /classes, got {post_classes.status}"
+
+            post_settings = context.request.post(f"{BASE_URL}/settings/school", data={"school_name": "Hacked School"}, headers=headers)
+            assert post_settings.status == 403, f"Expected 403 for siswa on POST /settings/school, got {post_settings.status}"
+
+            post_rotate = context.request.post(f"{BASE_URL}/trainer-kits/1/api-key/rotate", headers=headers)
+            assert post_rotate.status == 403, f"Expected 403 for siswa on POST rotate key, got {post_rotate.status}"
+
+            post_inject = context.request.post(f"{BASE_URL}/raw-logs/inject", data={"hex": "01030000"}, headers=headers)
+            assert post_inject.status == 403, f"Expected 403 for siswa on POST inject logs, got {post_inject.status}"
+            print("  ✓ All direct unauthorized mutation attempts strictly rejected with HTTP 403")
+
+            logout_btn = page.locator("form[action*='logout'] button")
+            if logout_btn.count() > 0:
+                logout_btn.first.click()
+                page.wait_for_load_state("networkidle")
+
+            results["Scenario 12: Strict RBAC Denied Actions"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 12 Failed: {e}")
+            results["Scenario 12: Strict RBAC Denied Actions"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
         browser.close()
 
     print("\n=== REAL BROWSER E2E TEST SUMMARY ===")
@@ -488,7 +675,7 @@ def run_tests():
         print("\nFAILED: One or more real browser E2E scenarios did not pass.")
         sys.exit(1)
     else:
-        print("\nSUCCESS: All 8 real browser E2E scenarios passed completely!")
+        print(f"\nSUCCESS: All {len(results)} real browser E2E scenarios passed completely!")
 
 if __name__ == "__main__":
     run_tests()
