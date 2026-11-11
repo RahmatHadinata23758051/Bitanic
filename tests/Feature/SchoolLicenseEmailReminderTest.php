@@ -24,8 +24,10 @@ class SchoolLicenseEmailReminderTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Freeze time at a known point
-        Carbon::setTestNow('2026-06-01 08:00:00');
+        // Enable reminders for email dispatch tests
+        config(['license.reminders_enabled' => true]);
+        // Freeze time at a known point (Asia/Jakarta)
+        Carbon::setTestNow(Carbon::parse('2026-06-01 08:00:00', 'Asia/Jakarta'));
     }
 
     protected function tearDown(): void
