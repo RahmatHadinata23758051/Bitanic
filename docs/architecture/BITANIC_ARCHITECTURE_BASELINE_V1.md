@@ -81,6 +81,24 @@ Delivered in Sprint 3 / Pack A under dedicated `App\Http\Controllers\Admin` name
    - Strict deletion guard: prohibits hard deletion of schools with associated users, devices, schedules, or append-only audit logs; displays informative feedback recommending archival via status toggle (`inactive`).
    - Append-only audit logging: every school creation, update, status toggle, and deletion is recorded in `audit_logs`.
 
+### 2.5 School User & Academic Master Architecture (Sprint 3 / Pack B)
+Delivered in Sprint 3 / Pack B (`MASTER-03-03` + `MASTER-03-04`), providing complete user and academic hierarchy management with fail-closed tenant scoping and strict role boundary enforcement:
+1. **MASTER-03-03: School Teacher/Student Master**:
+   - Single-user lifecycle management under `/users` for Teachers (`role: guru`) and Students (`role: siswa`).
+   - Tenant-scoped account creation, profile editing, and safe active/inactive status toggle (`is_active` boolean on `users` table via migration `000027_add_is_active_to_users_table.php`).
+   - Inactive user login guard in `AuthController`: authentication attempts by deactivated accounts are rejected with clear user-facing feedback without leaking tenant details.
+   - Deletion safety: users linked to student reports or audit logs are protected against hard deletion and must be archived via active status toggle. Self-deactivation and self-deletion are strictly blocked.
+   - Bulk CSV/XLSX user import under `/users/import/preview` and `/users/import/execute` with format autodetection (semicolon/tab/BOM, sparse cells, inline strings), secret provisioning (`must_change_password`), and audit logging.
+   - **NISN is strictly optional**: single creation and bulk import allow empty `identifier_number`.
+   - **Authorization lockdown**: User import and user creation/mutation routes are restricted strictly to `admin_sekolah`, `admin`, and `superuser`. `guru` and `siswa` receive HTTP 403 Forbidden.
+2. **MASTER-03-04: Academic Year, Classroom, Groups, and User Allocation**:
+   - Classroom management under `/classes`: create, edit, delete with homeroom teacher assignment.
+   - Model booted isolation: `Classroom::booted()` and `StudentGroup::booted()` enforce fail-closed tenancy without arbitrary fallback schools. `StudentGroup` derives its `school_id` directly from its parent `Classroom`.
+   - Student groups with Trainer Kit (`device_id`) and group leader assignment; rejects cross-school devices or students from different schools.
+   - Student allocation under `POST /students/{student}/allocation`: assigns student to classroom, group, and workstation kit with school matching and audit logging.
+   - Academic year & semester settings under `POST /classes/academic-year`: persists school configuration in `school_settings` with audit trail.
+   - Anti-enumeration IDOR protection: foreign school classroom/group access aborts with HTTP 404 (Not Found).
+
 ---
 
 ## 3. Gap Analysis: Implemented State vs. Locked Baseline v1.0
@@ -129,13 +147,15 @@ The following gaps exist between the current codebase and the locked Architectur
 ## 6. Verification & Quality Gates
 
 This architecture baseline is backed by exhaustive automated and end-to-end evidence:
-- **Unit & Feature Suite (SQLite)**: 475 passed, 0 failures, 5 skipped (2,826 assertions) on SQLite in-memory (`./vendor/bin/phpunit`).
-- **PostgreSQL 17.6 Test Suite**: 476 passed, 0 failures, 4 skipped (2,838 assertions) on isolated `bitanic_test` (`$env:DB_CONNECTION="pgsql_testing"`).
+- **Unit & Feature Suite (SQLite)**: 499 passed, 0 failures, 5 skipped (2,938 assertions) on SQLite in-memory (`php artisan test`).
+- **PostgreSQL 17.6 Test Suite**: 10 passed, 0 failures, 0 skipped (81 assertions) across `PostgresIntegrationAndConcurrencyTest` and `PostgresScheduleConcurrencyRaceTest` on isolated `bitanic_test` (`$env:DB_CONNECTION="pgsql_testing"`).
+- **School User Master Suite**: `tests/Feature/SchoolUserMasterTest.php` (14 tests, 67 assertions) and `tests/Feature/BulkUserImportTest.php` (16 tests, 114 assertions) verifying teacher/student CRUD, active/inactive account status toggle, login blocking for deactivated accounts, deletion guards for linked users, optional NISN, and role-boundary enforcement (Guru & Siswa strictly forbidden from account provisioning and bulk import).
+- **Academic Master & Allocation Suite**: `tests/Feature/AcademicMasterAndAllocationTest.php` (9 tests, 41 assertions) and `tests/Feature/ClassroomManagementTest.php` (6 tests, 32 assertions) verifying classroom and group management, fail-closed booted tenancy (no arbitrary default schools), homeroom teacher validation, trainer kit group binding, student allocation to classroom & workstation kit, and academic year settings.
 - **Indonesian Region Master Suite**: `tests/Feature/IndonesianRegionMasterTest.php` (9 tests, 54 assertions across SQLite and PostgreSQL) verifying authoritative Kemendagri codes, hierarchy navigation, idempotent sync command, checksum validation, metadata record tracking, cascading endpoints, and superuser-only mutation control.
 - **Global School Master CRUD Suite**: `tests/Feature/SchoolMasterCrudTest.php` (16 tests, 71 assertions across SQLite and PostgreSQL) verifying school listing, search, status/province filtering, full CRUD lifecycle, hierarchy validation, unique NPSN/slug, deletion guard (linked users, devices, schedules, and audit logs protected), status toggling, and tenancy boundary enforcement.
 - **User Provisioning & Tenancy Contract Suite**: `tests/Feature/UserProvisioningAndTenancyContractTest.php` (25 tests, 70 assertions across SQLite and PostgreSQL) verifying school membership invariants, student data isolation on reports and assessments, school-scoped CSV exports, classroom & student group CRUD lifecycle, schedule conflict validation, LKS submission and grading cycle, missing-grade provenance (no fabricated historical fallback), device reboot & calibration simulation, superuser settings filtering vs admin locking, and migration 000024 `down()` default verification.
 - **Operational Role Migration Safety Suite**: `tests/Feature/RoleMigrationCommandTest.php` (7 tests, 38 assertions across SQLite and PostgreSQL) verifying dry-run, forward execution, idempotence, rollback exact restoration, rollback conflict detection without force, rollback override with force, unique microsecond snapshot UUID and checksum verification.
-- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 16 comprehensive end-to-end user scenarios (100% PASS):
+- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 19 comprehensive end-to-end user scenarios (100% PASS):
   1. *Superuser School Switching & Multi-School Access* (PASS).
   2. *Admin Same-School Dashboard & Absence of School Switcher* (PASS).
   3. *Legacy Admin Compatibility Session* (PASS).
@@ -152,6 +172,9 @@ This architecture baseline is backed by exhaustive automated and end-to-end evid
   14. *Superuser Data Master Wilayah (Provinsi, Kab/Kota, Kecamatan)* (PASS).
   15. *Superuser Master Sekolah CRUD Lifecycle & Deletion Guard* (PASS).
   16. *Master Routes Security & Role Isolation (Superuser-Only)* (PASS).
+  17. *School Teacher & Student Master Management* (PASS).
+  18. *Academic Master & Student Allocation* (PASS).
+  19. *Negative Authorization on User Import & Mutations* (PASS).
 - **Code Style & Formatting**: Laravel Pint passed (`./vendor/bin/pint --test`).
 - **Frontend Assets**: Vite production build succeeded (94 kB CSS, 1.87 MB JS).
 - **Baseline Immutability**: `upi-edge/` and `dump_upiedge.sql` preserved with zero modifications.

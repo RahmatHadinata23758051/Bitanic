@@ -749,6 +749,39 @@ Implemented and verified the complete Sprint 3 / Pack A engineering delivery (`M
    - **Vite Production Build**: 94.20 kB CSS, 1,875.93 kB JS built in 26.97s.
    - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
 
+### 2.19 — Sprint 3 / Pack B: School User & Academic Master Management (2026-11-11)
+
+Implemented and verified the complete Sprint 3 / Pack B engineering delivery (`MASTER-03-03`, `MASTER-03-04`):
+
+1. **MASTER-03-03 — School Teacher/Student Master**:
+   - Single-user lifecycle management under `/users`: Teacher (`role: guru`) and Student (`role: siswa`) account creation, profile editing, and active status toggle (`is_active` boolean via migration `2026_01_01_000027_add_is_active_to_users_table.php`).
+   - Login guard in `AuthController`: inactive accounts receive authentication failure with clear user-facing feedback without disclosing tenant internals.
+   - Deletion safety guard: users possessing graded student reports or immutable audit logs are protected from hard deletion and must be deactivated via status toggle; self-deactivation and self-deletion are strictly blocked.
+   - Bulk CSV/XLSX import under `/users/import/preview` and `/users/import/execute` with delimiter/BOM auto-detection, sparse cell alignment, inline string parsing, XXE protection, one-time secret setup notifications, and audit logging.
+   - **NISN is strictly optional**: single user creation and bulk import handle blank or null `identifier_number`.
+   - **Strict role isolation**: user creation, update, deactivation, and bulk import are restricted strictly to `admin_sekolah`, `admin`, and `superuser`. `guru` and `siswa` receive HTTP 403 Forbidden.
+   - Dedicated feature test suite: `tests/Feature/SchoolUserMasterTest.php` (14 tests, 67 assertions) and `tests/Feature/BulkUserImportTest.php` (16 tests, 114 assertions).
+
+2. **MASTER-03-04 — Academic Year, Classroom, Groups and User Allocation**:
+   - Classroom management under `/classes`: create, edit, delete with homeroom teacher assignment and strict fail-closed school tenancy.
+   - Booted model tenancy: `Classroom::booted()` and `StudentGroup::booted()` enforce fail-closed tenancy without arbitrary fallback schools. `StudentGroup` derives its `school_id` directly from its parent `Classroom`.
+   - Student groups with Trainer Kit (`device_id`) and group leader assignment; rejects cross-school devices or students.
+   - Student allocation under `POST /students/{student}/allocation`: assigns student to classroom, group, and workstation kit with school matching and audit logging.
+   - Academic year & semester settings under `POST /classes/academic-year`: persists school configuration in `school_settings` with audit trail.
+   - Anti-enumeration IDOR protection: foreign school classroom/group access aborts with HTTP 404 (Not Found).
+   - Dedicated feature test suite: `tests/Feature/AcademicMasterAndAllocationTest.php` (9 tests, 41 assertions) and `tests/Feature/ClassroomManagementTest.php` (6 tests, 32 assertions).
+
+3. **Full Dual-Driver & Browser E2E Quality Gates**:
+   - **SQLite In-Memory**: 499 passed, 0 failures, 5 skipped (2,938 assertions).
+   - **PostgreSQL 17.6 (`bitanic_test`)**: Dedicated integration suites `PostgresIntegrationAndConcurrencyTest` and `PostgresScheduleConcurrencyRaceTest` 100% passing (10 passed, 81 assertions).
+   - **Real Browser E2E (Playwright Headless Chromium)**: Expanded to 19 end-to-end scenarios (100% PASS):
+     - Scenario 16: School Teacher & Student Master Management (PASS)
+     - Scenario 17: Academic Master & Student Allocation (PASS)
+     - Scenario 18: Negative Authorization on User Import & Mutations (PASS)
+   - **Laravel Pint**: 100% clean formatting (`./vendor/bin/pint --test`).
+   - **Vite Production Build**: 94.29 kB CSS, 1,875.93 kB JS built in 23.42s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |
