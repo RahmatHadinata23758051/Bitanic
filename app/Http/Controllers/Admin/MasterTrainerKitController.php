@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Hardware\ActivateTrainerKitAction;
 use App\Actions\Hardware\AssignTrainerKitDeviceAction;
+use App\Actions\Hardware\CorrectTrainerKitWarrantyAction;
+use App\Actions\Hardware\RecordTrainerKitHandoverAction;
 use App\Actions\Hardware\RecordTrainerKitSaleAction;
 use App\Actions\Hardware\RegisterTrainerKitInventoryAction;
 use App\Actions\Hardware\UpdateTrainerKitMetadataAction;
@@ -33,8 +35,9 @@ class MasterTrainerKitController extends Controller
         $status = $request->query('status');
         $batch = $request->query('batch');
         $schoolId = $request->query('school_id');
+        $warrantyStatus = $request->query('warranty_status');
 
-        $query = TrainerKitInventory::with(['school', 'device', 'registeredBy', 'latestSaleRecord.school']);
+        $query = TrainerKitInventory::with(['school', 'device', 'registeredBy', 'latestSaleRecord.school', 'handover']);
 
         if (! empty($search)) {
             $query->where(function ($q) use ($search) {
@@ -44,6 +47,10 @@ class MasterTrainerKitController extends Controller
                     ->orWhere('notes', 'like', "%{$search}%")
                     ->orWhereHas('saleRecords', function ($sq) use ($search) {
                         $sq->where('sale_reference', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('handovers', function ($hq) use ($search) {
+                        $hq->where('bast_number', 'like', "%{$search}%")
+                            ->orWhere('recipient_name', 'like', "%{$search}%");
                     });
             });
         }
@@ -58,6 +65,19 @@ class MasterTrainerKitController extends Controller
 
         if (! empty($schoolId)) {
             $query->where('school_id', $schoolId);
+        }
+
+        if (! empty($warrantyStatus)) {
+            $today = now()->toDateString();
+            if ($warrantyStatus === 'active') {
+                $query->whereNotNull('warranty_expiration_date')
+                    ->where('warranty_expiration_date', '>=', $today);
+            } elseif ($warrantyStatus === 'expired') {
+                $query->whereNotNull('warranty_expiration_date')
+                    ->where('warranty_expiration_date', '<', $today);
+            } elseif ($warrantyStatus === 'not_recorded') {
+                $query->whereNull('warranty_expiration_date');
+            }
         }
 
         $inventories = $query->orderByDesc('id')->paginate(15)->withQueryString();
@@ -81,6 +101,7 @@ class MasterTrainerKitController extends Controller
             'status',
             'batch',
             'schoolId',
+            'warrantyStatus',
             'totalCount',
             'registeredStockCount',
             'soldCount',
@@ -145,6 +166,9 @@ class MasterTrainerKitController extends Controller
             'registeredBy',
             'saleRecords.school',
             'saleRecords.soldBy',
+            'handovers.recordedBy',
+            'handover.recordedBy',
+            'warrantyLogs.user',
             'lifecycleLogs.user',
             'lifecycleLogs.fromSchool',
             'lifecycleLogs.toSchool',
@@ -313,6 +337,56 @@ class MasterTrainerKitController extends Controller
 
         return redirect()->route('master.trainer-kits.show', $updated)
             ->with('status', "Unit '{$updated->serial_number}' telah berhasil diaktivasi pada registri platform.");
+    }
+
+    /**
+     * Record physical handover (BAST) and configure 1-year hardware warranty for the kit.
+     */
+    public function recordHandover(
+        Request $request,
+        TrainerKitInventory $inventory,
+        RecordTrainerKitHandoverAction $action
+    ): RedirectResponse {
+        Gate::authorize('recordHandover', $inventory);
+
+        $validated = $request->validate([
+            'bast_number' => ['required', 'string', 'max:100'],
+            'handover_date' => ['required', 'date'],
+            'recipient_name' => ['required', 'string', 'max:150'],
+            'recipient_title' => ['nullable', 'string', 'max:150'],
+            'recipient_phone' => ['nullable', 'string', 'max:50'],
+            'start_warranty_now' => ['nullable', 'boolean'],
+            'warranty_start_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $validated['recorded_by'] = Auth::id();
+        $action->execute($inventory, $validated);
+
+        return redirect()->route('master.trainer-kits.show', $inventory)
+            ->with('status', 'Berita Acara Serah Terima (BAST) dan garansi 1 tahun berhasil dicatat.');
+    }
+
+    /**
+     * Correct warranty commencement date with mandatory audit reason.
+     */
+    public function correctWarranty(
+        Request $request,
+        TrainerKitInventory $inventory,
+        CorrectTrainerKitWarrantyAction $action
+    ): RedirectResponse {
+        Gate::authorize('correctWarranty', $inventory);
+
+        $validated = $request->validate([
+            'warranty_start_date' => ['required', 'date'],
+            'correction_reason' => ['required', 'string', 'min:5', 'max:1000'],
+        ]);
+
+        $validated['recorded_by'] = Auth::id();
+        $action->execute($inventory, $validated);
+
+        return redirect()->route('master.trainer-kits.show', $inventory)
+            ->with('status', 'Tanggal mulai dan berakhir garansi berhasil dikoreksi.');
     }
 
     /**

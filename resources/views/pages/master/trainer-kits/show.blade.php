@@ -7,7 +7,9 @@
         editModalOpen: false,
         saleModalOpen: false,
         assignModalOpen: false,
-        activateModalOpen: false
+        activateModalOpen: false,
+        handoverModalOpen: false,
+        warrantyModalOpen: false
     }"
 >
     <!-- Breadcrumb & Header -->
@@ -73,6 +75,27 @@
                 <i data-lucide="shopping-cart" class="w-4 h-4"></i>
                 <span>Tetapkan Kepemilikan Sekolah</span>
             </button>
+
+            <!-- Handover & Warranty Buttons -->
+            @if($inventory->school_id && ! $inventory->handover_date)
+                <button
+                    type="button"
+                    @click="handoverModalOpen = true"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-amber-600 text-white hover:bg-amber-700 shadow-2xs transition-colors cursor-pointer"
+                >
+                    <i data-lucide="file-check" class="w-4 h-4"></i>
+                    <span>Catat BAST &amp; Mulai Garansi</span>
+                </button>
+            @elseif($inventory->school_id && $inventory->handover_date)
+                <button
+                    type="button"
+                    @click="warrantyModalOpen = true"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
+                >
+                    <i data-lucide="calendar" class="w-4 h-4 text-slate-500"></i>
+                    <span>Koreksi Garansi</span>
+                </button>
+            @endif
 
             <!-- Assign Workstation -->
             @if($inventory->school_id)
@@ -228,6 +251,109 @@
                         <p class="text-slate-400 text-[11px] max-w-sm mx-auto">
                             Unit ini belum dialokasikan ke sekolah manapun. Klik tombol "Tetapkan Kepemilikan Sekolah" di atas untuk mencatat penjualan atau transfer unit.
                         </p>
+                    </div>
+                @endif
+            </div>
+
+            <!-- Physical Handover & 1-Year Warranty Card (DEVICE-04-03) -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2 text-slate-900 font-bold text-sm">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-amber-600"></i>
+                        <span>Serah Terima Fisik (BAST) &amp; Garansi Hardware</span>
+                    </div>
+                    <div>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border {{ $inventory->warranty_status_badge_class }}">
+                            Garansi: {{ $inventory->warranty_status_label }}
+                        </span>
+                    </div>
+                </div>
+
+                @if($inventory->school_id && $inventory->handover_date)
+                    <div class="space-y-4 text-xs">
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                            <div>
+                                <span class="text-slate-400 block text-[11px]">Nomor Dokumen BAST</span>
+                                <span class="font-mono font-bold text-slate-900">{{ $inventory->handover?->bast_number ?? '—' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[11px]">Tanggal Serah Terima</span>
+                                <span class="font-tabular font-medium text-slate-800">{{ $inventory->handover_date?->translatedFormat('d M Y') ?? '—' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[11px]">Pihak Penerima (Sekolah)</span>
+                                <span class="font-medium text-slate-800">{{ $inventory->handover?->recipient_name ?? '—' }}</span>
+                                @if($inventory->handover?->recipient_title)
+                                    <span class="text-[10px] text-slate-400 block">{{ $inventory->handover->recipient_title }}</span>
+                                @endif
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[11px]">Mulai Garansi Resmi</span>
+                                <span class="font-tabular font-semibold text-emerald-700">{{ $inventory->warranty_start_date?->translatedFormat('d M Y') ?? '—' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[11px]">Berakhir Garansi (1 Tahun)</span>
+                                <span class="font-tabular font-semibold text-slate-900">{{ $inventory->warranty_expiration_date?->translatedFormat('d M Y') ?? '—' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[11px]">Petugas Pencatat</span>
+                                <span class="text-slate-800">{{ $inventory->handover?->recordedBy?->name ?? 'Super Administrator' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-200/70 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
+                            <i data-lucide="info" class="w-4 h-4 shrink-0 text-amber-700 mt-0.5"></i>
+                            <div>
+                                <strong>Kontrak Garansi Hardware 1 Tahun:</strong> Garansi berlaku selama 1 tahun kalender terhitung sejak tanggal serah terima fisik (BAST) yang dikonfirmasi Superuser. Tanggal penjualan atau aktivasi platform tidak otomatis memicu masa garansi.
+                            </div>
+                        </div>
+
+                        <!-- Warranty Correction History -->
+                        @if($inventory->warrantyLogs->isNotEmpty())
+                            <div class="pt-2">
+                                <span class="text-slate-500 font-semibold text-xs block mb-2">Riwayat Koreksi Tanggal Garansi</span>
+                                <div class="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+                                    @foreach($inventory->warrantyLogs as $wLog)
+                                        <div class="p-3 text-xs flex items-start justify-between hover:bg-slate-50 transition-colors">
+                                            <div class="space-y-0.5">
+                                                <div class="font-medium text-slate-900 flex items-center gap-2">
+                                                    <span class="font-tabular text-slate-500 line-through">{{ $wLog->old_start_date?->translatedFormat('d M Y') ?? '—' }}</span>
+                                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+                                                    <span class="font-tabular font-bold text-slate-900">{{ $wLog->new_start_date?->translatedFormat('d M Y') }}</span>
+                                                    <span class="text-[10px] text-slate-400 font-tabular">(Exp: {{ $wLog->new_expiration_date?->translatedFormat('d M Y') }})</span>
+                                                </div>
+                                                <p class="text-[11px] text-slate-600 italic">"{{ $wLog->reason }}"</p>
+                                                <div class="text-[10px] text-slate-400">
+                                                    Oleh: {{ $wLog->user?->name ?? 'Superuser' }} • {{ $wLog->created_at?->translatedFormat('d M Y, H:i') }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @elseif($inventory->school_id)
+                    <div class="text-center py-6 text-xs text-slate-500 space-y-2">
+                        <i data-lucide="file-clock" class="w-8 h-8 mx-auto text-amber-400"></i>
+                        <p class="font-medium text-slate-700">Belum Ada Dokumen Serah Terima (BAST)</p>
+                        <p class="text-slate-400 text-[11px] max-w-sm mx-auto">
+                            Unit telah dimiliki oleh sekolah <strong class="text-slate-700">{{ $inventory->school->name }}</strong>, namun BAST fisik dan tanggal mulai garansi 1 tahun belum dicatat oleh Superuser.
+                        </p>
+                        <div class="pt-2">
+                            <button
+                                type="button"
+                                @click="handoverModalOpen = true"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-amber-600 text-white hover:bg-amber-700 transition-colors cursor-pointer"
+                            >
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                <span>Catat BAST Sekarang</span>
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-6 text-xs text-slate-400">
+                        <p>Unit berstatus stok pabrik. Penetapan sekolah dan BAST diperlukan sebelum garansi dapat dimulai.</p>
                     </div>
                 @endif
             </div>
@@ -599,6 +725,193 @@
                     <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                         <button type="button" @click="activateModalOpen = false" class="px-3.5 py-2 text-xs font-medium text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50">Batal</button>
                         <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-[#0c3c26] rounded-xl hover:bg-[#092d1c]">Konfirmasi Aktivasi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Handover & BAST Modal -->
+    <div x-show="handoverModalOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" @click="handoverModalOpen = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="file-check" class="w-5 h-5 text-amber-600"></i>
+                        <h3 class="text-sm font-bold text-slate-900">Catat Serah Terima (BAST) &amp; Mulai Garansi</h3>
+                    </div>
+                    <button type="button" @click="handoverModalOpen = false" class="text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <form method="POST" action="{{ route('master.trainer-kits.handover', $inventory) }}" class="space-y-3.5">
+                    @csrf
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            Nomor Berita Acara Serah Terima (BAST) <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="bast_number"
+                            required
+                            placeholder="Contoh: BAST/2026/TK-01/SMK1"
+                            class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono"
+                        >
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Tanggal Serah Terima Fisik <span class="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                name="handover_date"
+                                max="{{ date('Y-m-d') }}"
+                                value="{{ date('Y-m-d') }}"
+                                required
+                                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Tanggal Mulai Garansi (Opsional)
+                            </label>
+                            <input
+                                type="date"
+                                name="warranty_start_date"
+                                value="{{ date('Y-m-d') }}"
+                                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                            >
+                            <span class="text-[10px] text-slate-400">Default: Sama dengan tanggal BAST</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Nama Penerima di Sekolah <span class="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                name="recipient_name"
+                                required
+                                placeholder="Nama guru / kepala lab / teknisi"
+                                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Jabatan / Posisi
+                            </label>
+                            <input
+                                type="text"
+                                name="recipient_title"
+                                placeholder="Contoh: Kepala Bengkel Pertanian"
+                                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            Nomor Telepon / WhatsApp Penerima
+                        </label>
+                        <input
+                            type="text"
+                            name="recipient_phone"
+                            placeholder="Contoh: 0812-3456-7890"
+                            class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-tabular"
+                        >
+                    </div>
+
+                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 leading-relaxed space-y-1">
+                        <div class="font-bold flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-amber-700"></i>
+                            <span>Aturan Garansi 1 Tahun Kalender</span>
+                        </div>
+                        <p>
+                            Sistem secara otomatis menetapkan masa kedaluwarsa garansi tepat 1 tahun kalender dari tanggal mulai garansi (memperhitungkan tahun kabisat).
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan Tambahan (Opsional)</label>
+                        <textarea
+                            name="notes"
+                            rows="2"
+                            placeholder="Kondisi fisik kit saat diterima, kelengkapan kabel, probe sensor..."
+                            class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" @click="handoverModalOpen = false" class="px-3.5 py-2 text-xs font-medium text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50">Batal</button>
+                        <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-amber-600 rounded-xl hover:bg-amber-700">Simpan BAST &amp; Aktifkan Garansi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warranty Correction Modal -->
+    <div x-show="warrantyModalOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" @click="warrantyModalOpen = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-5 h-5 text-slate-700"></i>
+                        <h3 class="text-sm font-bold text-slate-900">Koreksi Tanggal Mulai Garansi</h3>
+                    </div>
+                    <button type="button" @click="warrantyModalOpen = false" class="text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <form method="POST" action="{{ route('master.trainer-kits.warranty.correct', $inventory) }}" class="space-y-3.5">
+                    @csrf
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            Tanggal Mulai Garansi Baru <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="date"
+                            name="warranty_start_date"
+                            value="{{ old('warranty_start_date', $inventory->warranty_start_date?->format('Y-m-d') ?? date('Y-m-d')) }}"
+                            required
+                            class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                        >
+                        <span class="text-[10px] text-slate-400">
+                            Tanggal berakhir akan otomatis dihitung ulang (+1 tahun kalender).
+                        </span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            Alasan Koreksi (Audit Trail) <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea
+                            name="correction_reason"
+                            rows="3"
+                            required
+                            minlength="5"
+                            placeholder="Jelaskan alasan koreksi tanggal garansi secara rinci..."
+                            class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800"
+                        ></textarea>
+                        <span class="text-[10px] text-slate-400">
+                            Minimal 5 karakter. Alasan ini akan dicatat permanen dalam audit log sistem.
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" @click="warrantyModalOpen = false" class="px-3.5 py-2 text-xs font-medium text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50">Batal</button>
+                        <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-slate-800 rounded-xl hover:bg-slate-900">Simpan Koreksi</button>
                     </div>
                 </form>
             </div>

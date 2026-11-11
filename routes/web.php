@@ -169,6 +169,8 @@ Route::middleware(['auth', 'role:superuser'])->prefix('master')->name('master.')
     Route::post('/trainer-kits/{inventory}/sale', [MasterTrainerKitController::class, 'recordSale'])->name('trainer-kits.sale');
     Route::post('/trainer-kits/{inventory}/assign', [MasterTrainerKitController::class, 'assignDevice'])->name('trainer-kits.assign');
     Route::post('/trainer-kits/{inventory}/activate', [MasterTrainerKitController::class, 'activate'])->name('trainer-kits.activate');
+    Route::post('/trainer-kits/{inventory}/handover', [MasterTrainerKitController::class, 'recordHandover'])->name('trainer-kits.handover');
+    Route::post('/trainer-kits/{inventory}/warranty/correct', [MasterTrainerKitController::class, 'correctWarranty'])->name('trainer-kits.warranty.correct');
     Route::delete('/trainer-kits/{inventory}', [MasterTrainerKitController::class, 'destroy'])->name('trainer-kits.destroy');
 });
 

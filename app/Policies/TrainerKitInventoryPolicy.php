@@ -94,4 +94,36 @@ class TrainerKitInventoryPolicy
     {
         return $user->isSuperuser();
     }
+
+    /**
+     * Determine whether the user can record physical handover (BAST).
+     */
+    public function recordHandover(User $user, TrainerKitInventory $inventory): bool
+    {
+        return $user->isSuperuser();
+    }
+
+    /**
+     * Determine whether the user can correct warranty dates.
+     */
+    public function correctWarranty(User $user, TrainerKitInventory $inventory): bool
+    {
+        return $user->isSuperuser();
+    }
+
+    /**
+     * Determine whether the user can view warranty information for this kit.
+     */
+    public function viewWarranty(User $user, TrainerKitInventory $inventory): bool
+    {
+        if ($user->isSuperuser()) {
+            return true;
+        }
+
+        if (! empty($user->school_id) && ! empty($inventory->school_id)) {
+            return (int) $user->school_id === (int) $inventory->school_id;
+        }
+
+        return false;
+    }
 }

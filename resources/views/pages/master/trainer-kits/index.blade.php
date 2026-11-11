@@ -100,14 +100,14 @@
 
     <!-- Filter and Search Toolbar -->
     <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
-        <form method="GET" action="{{ route('master.trainer-kits.index') }}" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <form method="GET" action="{{ route('master.trainer-kits.index') }}" class="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div class="relative sm:col-span-1">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                 <input
                     type="text"
                     name="search"
                     value="{{ $search }}"
-                    placeholder="Cari nomor seri, model, batch, no PO..."
+                    placeholder="Cari serial, batch, no PO, BAST..."
                     class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
                 >
             </div>
@@ -118,13 +118,26 @@
                     class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
                     onchange="this.form.submit()"
                 >
-                    <option value="">Semua Status</option>
+                    <option value="">Semua Status Unit</option>
                     <option value="registered" {{ $status === 'registered' ? 'selected' : '' }}>Stok Pabrik (Registered)</option>
                     <option value="sold" {{ $status === 'sold' ? 'selected' : '' }}>Terjual / Dimiliki (Sold)</option>
                     <option value="assigned" {{ $status === 'assigned' ? 'selected' : '' }}>Terikat Workstation (Assigned)</option>
                     <option value="activated" {{ $status === 'activated' ? 'selected' : '' }}>Aktif Operasional (Activated)</option>
                     <option value="maintenance" {{ $status === 'maintenance' ? 'selected' : '' }}>Perawatan (Maintenance)</option>
                     <option value="decommissioned" {{ $status === 'decommissioned' ? 'selected' : '' }}>Dipensiunkan (Decommissioned)</option>
+                </select>
+            </div>
+
+            <div>
+                <select
+                    name="warranty_status"
+                    class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
+                    onchange="this.form.submit()"
+                >
+                    <option value="">Semua Status Garansi</option>
+                    <option value="active" {{ $warrantyStatus === 'active' ? 'selected' : '' }}>Garansi Aktif</option>
+                    <option value="expired" {{ $warrantyStatus === 'expired' ? 'selected' : '' }}>Garansi Kedaluwarsa</option>
+                    <option value="not_recorded" {{ $warrantyStatus === 'not_recorded' ? 'selected' : '' }}>Garansi Belum Dicatat</option>
                 </select>
             </div>
 
@@ -172,6 +185,7 @@
                         <th class="py-3 px-4">Kepemilikan Sekolah</th>
                         <th class="py-3 px-4">Workstation Terikat</th>
                         <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">Garansi Hardware</th>
                         <th class="py-3 px-4 text-right">Aksi</th>
                     </tr>
                 </thead>
@@ -241,6 +255,16 @@
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border {{ $statusClasses[$item->status] ?? 'bg-slate-100 text-slate-700 border-slate-200' }}">
                                     {{ $statusLabels[$item->status] ?? ucfirst($item->status) }}
                                 </span>
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border {{ $item->warranty_status_badge_class }}">
+                                    {{ $item->warranty_status_label }}
+                                </span>
+                                @if($item->warranty_expiration_date)
+                                    <div class="text-[10px] text-slate-400 font-tabular mt-0.5">
+                                        Exp: {{ $item->warranty_expiration_date->translatedFormat('d M Y') }}
+                                    </div>
+                                @endif
                             </td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
                                 <a

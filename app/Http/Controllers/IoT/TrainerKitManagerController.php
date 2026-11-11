@@ -30,7 +30,7 @@ class TrainerKitManagerController extends Controller
         $schools = $context->schools;
         $isSuperuser = $context->isSuperuser;
 
-        $kits = Device::with(['latestReading', 'activeApiKey', 'school', 'trainerKitInventory'])
+        $kits = Device::with(['latestReading', 'activeApiKey', 'school', 'trainerKitInventory.handover'])
             ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
             ->orderBy('code')
             ->paginate(15)

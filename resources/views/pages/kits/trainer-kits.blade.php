@@ -156,13 +156,31 @@
                                 {{ $kit->bench_location ?? $kit->name }}
                             </p>
                             @if($kit->trainerKitInventory)
-                                <p class="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
-                                    <span class="text-slate-400">SN:</span>
-                                    <span>{{ $kit->trainerKitInventory->serial_number }}</span>
-                                    <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-sans">
-                                        {{ ucfirst($kit->trainerKitInventory->status) }}
-                                    </span>
-                                </p>
+                                <div class="text-[11px] text-slate-500 font-mono mt-0.5 space-y-0.5">
+                                    <p class="flex items-center gap-1">
+                                        <span class="text-slate-400">SN:</span>
+                                        <span>{{ $kit->trainerKitInventory->serial_number }}</span>
+                                        <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-sans">
+                                            {{ ucfirst($kit->trainerKitInventory->status) }}
+                                        </span>
+                                    </p>
+                                    <div class="flex items-center gap-1.5 font-sans text-[10px]">
+                                        <span class="text-slate-400">Garansi:</span>
+                                        <span class="inline-flex items-center px-1.5 py-0.2 rounded font-medium border {{ $kit->trainerKitInventory->warranty_status_badge_class }}">
+                                            {{ $kit->trainerKitInventory->warranty_status_label }}
+                                        </span>
+                                        @if($kit->trainerKitInventory->warranty_expiration_date)
+                                            <span class="text-slate-400 font-tabular">
+                                                (s.d. {{ $kit->trainerKitInventory->warranty_expiration_date->translatedFormat('d M Y') }})
+                                            </span>
+                                        @endif
+                                    </div>
+                                    @if($kit->trainerKitInventory->handover)
+                                        <p class="text-[10px] text-slate-400 font-sans">
+                                            BAST: <span class="font-mono text-slate-600">{{ $kit->trainerKitInventory->handover->bast_number }}</span>
+                                        </p>
+                                    @endif
+                                </div>
                             @endif
                             @if(!empty($isSuperuser) && $kit->school)
                                 <p class="text-[11px] text-slate-400 truncate mt-0.5">
