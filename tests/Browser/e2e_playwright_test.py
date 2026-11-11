@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 BASE_URL = "http://127.0.0.1:8008"
 
 def run_tests():
-    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (20 SCENARIOS) ===")
+    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (23 SCENARIOS) ===")
     results = {}
 
     with sync_playwright() as p:
@@ -1356,6 +1356,206 @@ def run_tests():
             results["Scenario 20: Sale Records, Ownership Assignment & Activation"] = f"FAIL: {e}"
         finally:
             context_su20.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 21: PHYSICAL HANDOVER (BAST) & 1-YEAR WARRANTY COMMENCEMENT (DEVICE-04-03)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 21] Physical Handover (BAST) & 1-Year Warranty Commencement (DEVICE-04-03)...")
+        context_su21 = browser.new_context()
+        page_su21 = context_su21.new_page()
+        try:
+            # 21.1 Superuser Login
+            page_su21.goto(f"{BASE_URL}/login")
+            page_su21.fill("#email", "superuser@bitanic.id")
+            page_su21.fill("#password", "Password123!")
+            page_su21.click("button[type='submit']")
+            page_su21.wait_for_load_state("networkidle")
+
+            csrf_su21 = page_su21.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers_su21 = {"X-CSRF-TOKEN": csrf_su21, "Accept": "application/json"}
+
+            # Create kit for handover
+            fresh_serial21 = f"BTK-HND-{int(time.time())}"
+            create_res21 = context_su21.request.post(
+                f"{BASE_URL}/master/trainer-kits",
+                data={
+                    "serial_number": fresh_serial21,
+                    "model_name": "Bitanic Trainer Kit v1.0",
+                    "hardware_revision": "rev1.2",
+                    "batch_number": "BATCH-HANDOVER",
+                },
+                headers=headers_su21,
+            )
+            assert create_res21.status in [200, 302]
+
+            # Locate kit show page
+            page_su21.goto(f"{BASE_URL}/master/trainer-kits?search={fresh_serial21}")
+            page_su21.wait_for_load_state("networkidle")
+            link21 = page_su21.locator(f"a:has-text('{fresh_serial21}')").first
+            inventory_url21 = link21.get_attribute("href")
+            assert inventory_url21, "Must find detail link for fresh kit"
+
+            # Sell kit to School 1
+            sale_res21 = context_su21.request.post(
+                f"{inventory_url21}/sale",
+                data={
+                    "school_id": 1,
+                    "sale_reference": f"PO-BAST-{int(time.time())}",
+                    "sold_at": "2026-11-10",
+                    "notes": "Penjualan paket SMK Handover",
+                },
+                headers=headers_su21,
+            )
+            assert sale_res21.status in [200, 302]
+
+            page_su21.goto(inventory_url21)
+            page_su21.wait_for_load_state("networkidle")
+            assert "Belum Dicatat" in page_su21.content(), "Warranty must initially show Belum Dicatat"
+            print("  ✓ Kit sold and initial unrecorded warranty status confirmed")
+
+            # 21.2 Record Physical Handover (BAST) with 1 Calendar Year Warranty
+            bast_num = f"BAST/E2E/{int(time.time())}"
+            handover_res = context_su21.request.post(
+                f"{inventory_url21}/handover",
+                data={
+                    "bast_number": bast_num,
+                    "handover_date": "2026-11-10",
+                    "recipient_name": "Drs. H. Mulyadi",
+                    "recipient_title": "Kepala Sekolah",
+                    "recipient_phone": "081234567890",
+                    "start_warranty_now": 1,
+                    "notes": "Serah terima unit trainer kit E2E",
+                },
+                headers=headers_su21,
+            )
+            assert handover_res.status in [200, 302], f"Expected 200/302 on handover, got {handover_res.status}"
+
+            page_su21.reload()
+            page_su21.wait_for_load_state("networkidle")
+            content21 = page_su21.content()
+            assert bast_num in content21, f"Expected BAST number {bast_num} on detail page"
+            assert "Drs. H. Mulyadi" in content21, "Expected recipient name on detail page"
+            assert "Aktif" in content21, "Expected Aktif warranty status badge"
+            assert "2027-11-10" in content21, "Expected warranty expiration date 2027-11-10 (+1 calendar year)"
+            assert "HANDOVER_RECORDED" in content21, "Expected HANDOVER_RECORDED lifecycle log"
+            assert "WARRANTY_COMMENCED" in content21, "Expected WARRANTY_COMMENCED lifecycle log"
+            print("  ✓ Handover recorded, 1-year warranty calculated and lifecycle logs verified")
+
+            results["Scenario 21: Physical Handover (BAST) & 1-Year Warranty Commencement"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 21 Failed: {e}")
+            results["Scenario 21: Physical Handover (BAST) & 1-Year Warranty Commencement"] = f"FAIL: {e}"
+        finally:
+            context_su21.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 22: WARRANTY CORRECTION & AUDIT TRAIL (DEVICE-04-03)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 22] Warranty Correction & Audit Trail (DEVICE-04-03)...")
+        context_su22 = browser.new_context()
+        page_su22 = context_su22.new_page()
+        try:
+            # 22.1 Superuser Login
+            page_su22.goto(f"{BASE_URL}/login")
+            page_su22.fill("#email", "superuser@bitanic.id")
+            page_su22.fill("#password", "Password123!")
+            page_su22.click("button[type='submit']")
+            page_su22.wait_for_load_state("networkidle")
+
+            csrf_su22 = page_su22.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers_su22 = {"X-CSRF-TOKEN": csrf_su22, "Accept": "application/json"}
+
+            # Use kit from Scenario 21
+            # 22.2 Reject short reason (< 5 chars)
+            short_res = context_su22.request.post(
+                f"{inventory_url21}/warranty/correct",
+                data={
+                    "warranty_start_date": "2026-11-15",
+                    "correction_reason": "bad",
+                },
+                headers=headers_su22,
+            )
+            assert short_res.status in [422, 302], f"Expected 422 or 302 error for short reason, got {short_res.status}"
+            print("  ✓ Warranty correction rejects invalid short reason (<5 chars)")
+
+            # 22.3 Legitimate Warranty Date Correction with Reason
+            correct_res = context_su22.request.post(
+                f"{inventory_url21}/warranty/correct",
+                data={
+                    "warranty_start_date": "2026-11-15",
+                    "correction_reason": "Penyesuaian tanggal serah terima fisik riil sesuai adendum BAST nomor 02.",
+                },
+                headers=headers_su22,
+            )
+            assert correct_res.status in [200, 302], f"Expected 200/302 on warranty correction, got {correct_res.status}"
+
+            page_su22.goto(inventory_url21)
+            page_su22.wait_for_load_state("networkidle")
+            content22 = page_su22.content()
+            assert "2026-11-15" in content22, "Expected updated start date 2026-11-15"
+            assert "2027-11-15" in content22, "Expected recalculated expiration date 2027-11-15"
+            assert "WARRANTY_CORRECTED" in content22, "Expected WARRANTY_CORRECTED lifecycle log"
+            assert "Penyesuaian tanggal serah terima fisik riil" in content22, "Expected correction reason in audit history"
+            print("  ✓ Warranty date corrected, expiration recalculated and immutable audit trail verified")
+
+            results["Scenario 22: Warranty Correction & Audit Trail"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 22 Failed: {e}")
+            results["Scenario 22: Warranty Correction & Audit Trail"] = f"FAIL: {e}"
+        finally:
+            context_su22.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 23: SCHOOL ADMIN WARRANTY VISIBILITY & CROSS-SCHOOL IDOR PROTECTION (DEVICE-04-04)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 23] School Admin Warranty Visibility & Cross-School IDOR Protection (DEVICE-04-04)...")
+        context_admin = browser.new_context()
+        page_admin = context_admin.new_page()
+        try:
+            # 23.1 Admin Sekolah Login
+            page_admin.goto(f"{BASE_URL}/login")
+            page_admin.fill("#email", "admin@smk.id")
+            page_admin.fill("#password", "Password123!")
+            page_admin.click("button[type='submit']")
+            page_admin.wait_for_load_state("networkidle")
+
+            # 23.2 View Trainer Kits in School Workstation
+            resp_kits = page_admin.goto(f"{BASE_URL}/trainer-kits")
+            assert resp_kits.status == 200, f"Expected 200 on /trainer-kits, got {resp_kits.status}"
+            content_kits = page_admin.content()
+            assert "Trainer Kit" in content_kits, "Expected Trainer Kit heading"
+            assert "TK-01" in content_kits, "Expected TK-01 kit in school workstation"
+            csrf_admin = page_admin.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers_admin = {"X-CSRF-TOKEN": csrf_admin, "Accept": "application/json"}
+            print("  ✓ Admin Sekolah accessed /trainer-kits workstation")
+
+            # 23.3 Negative Authorization: Admin Sekolah cannot access Master Trainer Kits (403)
+            resp_master_denied = page_admin.goto(f"{BASE_URL}/master/trainer-kits")
+            assert resp_master_denied.status == 403, f"Admin Sekolah must receive 403 on /master/trainer-kits, got {resp_master_denied.status}"
+            print("  ✓ Admin Sekolah strictly denied (HTTP 403) from Global Trainer Kit Master")
+
+            # 23.4 Negative Authorization: Admin Sekolah cannot mutate Handover or Warranty (403)
+            post_handover_denied = context_admin.request.post(
+                f"{inventory_url21}/handover",
+                data={"bast_number": "HAX-01", "handover_date": "2026-11-10", "recipient_name": "Hacker"},
+                headers=headers_admin,
+            )
+            assert post_handover_denied.status == 403, f"Admin Sekolah must receive 403 on handover mutation, got {post_handover_denied.status}"
+
+            post_warranty_denied = context_admin.request.post(
+                f"{inventory_url21}/warranty/correct",
+                data={"warranty_start_date": "2026-11-10", "correction_reason": "Hacking reason"},
+                headers=headers_admin,
+            )
+            assert post_warranty_denied.status == 403, f"Admin Sekolah must receive 403 on warranty correction, got {post_warranty_denied.status}"
+            print("  ✓ Admin Sekolah strictly forbidden (HTTP 403) from mutating handover or warranty")
+
+            results["Scenario 23: School Admin Warranty Visibility & Cross-School IDOR Protection"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 23 Failed: {e}")
+            results["Scenario 23: School Admin Warranty Visibility & Cross-School IDOR Protection"] = f"FAIL: {e}"
+        finally:
+            context_admin.close()
 
         browser.close()
 
