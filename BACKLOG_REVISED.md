@@ -711,6 +711,44 @@ Implemented and verified the complete Pack C engineering execution (`RBAC-02-05`
    - **Pint & Vite**: Code style passed cleanly; production assets built in 8.95s.
    - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
 
+### 2.18 — Sprint 3 / Pack A: Superuser Data Master (Wilayah Indonesia & Master Sekolah CRUD) (2026-11-11)
+
+Implemented and verified the complete Sprint 3 / Pack A engineering delivery (`MASTER-03-01`, `MASTER-03-02`):
+
+1. **MASTER-03-01 — Indonesian Administrative Region Master (Wilayah Indonesia)**:
+   - Centralized Kemendagri / BPS official reference data bundled as offline local JSON datasets under `database/data/wilayah/` (`provinces.json`, `regencies.json`, `districts.json`, `dataset_metadata.json`).
+   - Additive database schema: `provinces`, `regencies`, `districts`, `region_dataset_metadata` with official hierarchical code constraints (`2026_01_01_000025_create_indonesian_regions_tables.php`).
+   - Eloquent models: `Province`, `Regency`, `District`, `RegionDatasetMetadata` with full bidirectional relationships.
+   - Idempotent sync command: `php artisan bitanic:sync-indonesian-regions` with SHA-256 payload checksum validation, batch upserts, and automatic non-destructive backfill for legacy school addresses.
+   - Region Policy `RegionPolicy` restricting master sync to platform `superuser`.
+   - Superuser region management interface (`/master/regions`) featuring level tabs (Provinsi, Kab/Kota, Kecamatan), search filter, metadata card, and manual sync trigger.
+   - Cascading JSON API endpoints `/api/regions/provinces`, `/api/regions/regencies?province_code=...`, `/api/regions/districts?regency_code=...`.
+   - Dedicated feature test suite: `tests/Feature/IndonesianRegionMasterTest.php` (9 tests, 54 assertions across SQLite and PostgreSQL).
+
+2. **MASTER-03-02 — Global School Master CRUD (Master Sekolah)**:
+   - Central tenant registry building directly upon `School` model with additive region foreign keys (`province_code`, `regency_code`, `district_code`) and indexes (`2026_01_01_000026_add_indonesian_region_foreign_keys_to_schools_table.php`).
+   - Non-destructive backfill for existing schools (`SMK PPN 1 Sukaraja` -> Prov 32 Jawa Barat, Kab 3202 Kab Sukabumi, Kec 3202170 Sukaraja).
+   - Full Superuser CRUD operations under `/master/schools` (index, create, store, show, edit, update, toggleStatus, destroy) with hierarchical validation, auto-slug generation, and legacy text column auto-resolution.
+   - Deletion guard: hard deletion strictly blocked if a school possesses linked users, devices, schedules, or immutable audit logs; informs the superuser to toggle status (`inactive`) to archive the tenant.
+   - Immutable audit logging: every school creation, update, status change, and deletion is recorded in `audit_logs`.
+   - Dedicated views: `index.blade.php`, `create.blade.php`, `edit.blade.php`, `show.blade.php` with Alpine.js cascading dynamic selects.
+   - Dedicated feature test suite: `tests/Feature/SchoolMasterCrudTest.php` (16 tests, 71 assertions across SQLite and PostgreSQL).
+
+3. **Superuser Navigation & Role Isolation**:
+   - `resources/views/components/sidebar.blade.php`: added dedicated `DATA MASTER` section (`Wilayah`, `Sekolah`) visible strictly to `superuser`.
+   - Non-superuser actors (`admin_sekolah`, `guru`, `siswa`, `guest`) strictly forbidden with HTTP 403 on all `/master/*` routes and API mutations.
+
+4. **Full Dual-Driver & Browser E2E Quality Gates**:
+   - **SQLite In-Memory**: 475 passed, 0 failures, 5 skipped (2,826 assertions) in 53.00s.
+   - **PostgreSQL 17.6 (`bitanic_test`)**: 476 passed, 0 failures, 4 skipped (2,838 assertions) in 146.81s.
+   - **Real Browser E2E (Playwright Headless Chromium)**: Expanded to 16 end-to-end scenarios (100% PASS):
+     - Scenario 13: Superuser Data Master Wilayah (PASS)
+     - Scenario 14: Superuser Master Sekolah CRUD Lifecycle & Deletion Guard (PASS)
+     - Scenario 15: Master Routes Security & Role Isolation (PASS)
+   - **Laravel Pint**: 100% clean formatting.
+   - **Vite Production Build**: 94.20 kB CSS, 1,875.93 kB JS built in 26.97s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |

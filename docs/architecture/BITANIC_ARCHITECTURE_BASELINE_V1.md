@@ -66,6 +66,21 @@ The application groups functionality into 4 domain namespaces under `App\Http\Co
 3. `Agronomy`: `AgronomyAnalyticsController`, `PlantingMediaController`.
 4. `Admin`: `UserDirectoryController`, `SchoolSettingController`.
 
+### 2.4 Superuser Data Master Architecture (Sprint 3 / Pack A)
+Delivered in Sprint 3 / Pack A under dedicated `App\Http\Controllers\Admin` namespace, exclusively managed by `superuser`:
+1. **MASTER-03-01: Indonesian Administrative Region Master (Wilayah Indonesia)**:
+   - Complete reference data: 38 Provinsi, 514 Kabupaten/Kota, and verified Kecamatan (West Java, DKI, Banten priority) based on authoritative Kemendagri / BPS standards.
+   - Zero runtime external API dependencies; bundled as verified offline local JSON datasets under `database/data/wilayah/`.
+   - Tracked with metadata table `region_dataset_metadata` recording source, version `2024.1`, record counts, and SHA-256 checksums.
+   - Idempotent artisan command `php artisan bitanic:sync-indonesian-regions`.
+   - Dedicated searchable, paginated UI under `/master/regions` and cascading API endpoints `/api/regions/provinces`, `/api/regions/regencies`, `/api/regions/districts`.
+2. **MASTER-03-02: Global School Master CRUD (Master Sekolah)**:
+   - Central tenant registry built directly upon the core `School` model with additive regional foreign keys (`province_code`, `regency_code`, `district_code`).
+   - Full Superuser CRUD under `/master/schools` with search, status filtering, province filtering, and cascading dynamic selects in Alpine.js.
+   - Non-destructive backfill for legacy schools (`SMK PPN 1 Sukaraja` -> Prov 32, Kab 3202, Kec 3202170).
+   - Strict deletion guard: prohibits hard deletion of schools with associated users, devices, schedules, or append-only audit logs; displays informative feedback recommending archival via status toggle (`inactive`).
+   - Append-only audit logging: every school creation, update, status toggle, and deletion is recorded in `audit_logs`.
+
 ---
 
 ## 3. Gap Analysis: Implemented State vs. Locked Baseline v1.0
@@ -114,11 +129,13 @@ The following gaps exist between the current codebase and the locked Architectur
 ## 6. Verification & Quality Gates
 
 This architecture baseline is backed by exhaustive automated and end-to-end evidence:
-- **Unit & Feature Suite (SQLite)**: 455 passed, 0 failures, 5 skipped (2,701 assertions) on SQLite in-memory (`./vendor/bin/phpunit`).
-- **PostgreSQL 17.6 Test Suite**: 455 passed, 0 failures, 4 skipped (2,713 assertions) on isolated `bitanic_test` (`$env:DB_CONNECTION="pgsql_testing"`).
+- **Unit & Feature Suite (SQLite)**: 475 passed, 0 failures, 5 skipped (2,826 assertions) on SQLite in-memory (`./vendor/bin/phpunit`).
+- **PostgreSQL 17.6 Test Suite**: 476 passed, 0 failures, 4 skipped (2,838 assertions) on isolated `bitanic_test` (`$env:DB_CONNECTION="pgsql_testing"`).
+- **Indonesian Region Master Suite**: `tests/Feature/IndonesianRegionMasterTest.php` (9 tests, 54 assertions across SQLite and PostgreSQL) verifying authoritative Kemendagri codes, hierarchy navigation, idempotent sync command, checksum validation, metadata record tracking, cascading endpoints, and superuser-only mutation control.
+- **Global School Master CRUD Suite**: `tests/Feature/SchoolMasterCrudTest.php` (16 tests, 71 assertions across SQLite and PostgreSQL) verifying school listing, search, status/province filtering, full CRUD lifecycle, hierarchy validation, unique NPSN/slug, deletion guard (linked users, devices, schedules, and audit logs protected), status toggling, and tenancy boundary enforcement.
 - **User Provisioning & Tenancy Contract Suite**: `tests/Feature/UserProvisioningAndTenancyContractTest.php` (25 tests, 70 assertions across SQLite and PostgreSQL) verifying school membership invariants, student data isolation on reports and assessments, school-scoped CSV exports, classroom & student group CRUD lifecycle, schedule conflict validation, LKS submission and grading cycle, missing-grade provenance (no fabricated historical fallback), device reboot & calibration simulation, superuser settings filtering vs admin locking, and migration 000024 `down()` default verification.
 - **Operational Role Migration Safety Suite**: `tests/Feature/RoleMigrationCommandTest.php` (7 tests, 38 assertions across SQLite and PostgreSQL) verifying dry-run, forward execution, idempotence, rollback exact restoration, rollback conflict detection without force, rollback override with force, unique microsecond snapshot UUID and checksum verification.
-- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 13 comprehensive end-to-end user scenarios:
+- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 16 comprehensive end-to-end user scenarios (100% PASS):
   1. *Superuser School Switching & Multi-School Access* (PASS).
   2. *Admin Same-School Dashboard & Absence of School Switcher* (PASS).
   3. *Legacy Admin Compatibility Session* (PASS).
@@ -132,7 +149,10 @@ This architecture baseline is backed by exhaustive automated and end-to-end evid
   11. *Real UI Mutation: Admin Sekolah Settings Persistence* (PASS).
   12. *Real UI Mutation: Guru Practicum Scheduling Cycle* (PASS).
   13. *Strict RBAC Boundary: Denied Actions & UI Absence* (PASS).
+  14. *Superuser Data Master Wilayah (Provinsi, Kab/Kota, Kecamatan)* (PASS).
+  15. *Superuser Master Sekolah CRUD Lifecycle & Deletion Guard* (PASS).
+  16. *Master Routes Security & Role Isolation (Superuser-Only)* (PASS).
 - **Code Style & Formatting**: Laravel Pint passed (`./vendor/bin/pint --test`).
-- **Frontend Assets**: Vite production build succeeded in 18.33s (93 kB CSS, 1.87 MB JS).
+- **Frontend Assets**: Vite production build succeeded (94 kB CSS, 1.87 MB JS).
 - **Baseline Immutability**: `upi-edge/` and `dump_upiedge.sql` preserved with zero modifications.
 
