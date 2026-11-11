@@ -273,6 +273,17 @@ class TrainerKitHandoverAndWarrantyTest extends TestCase
             'warranty_expiration_date' => '2027-01-10',
         ]);
 
+        TrainerKitHandover::create([
+            'inventory_id' => $kit->id,
+            'school_id' => $this->schoolA->id,
+            'bast_number' => 'BAST/2026/CORR-01',
+            'handover_date' => '2026-01-10',
+            'recipient_name' => 'Petugas Lab BAST',
+            'warranty_start_date' => '2026-01-10',
+            'warranty_expiration_date' => '2027-01-10',
+            'recorded_by' => $this->superuser->id,
+        ]);
+
         $newStart = '2026-02-01';
         $reason = 'Koreksi penyesuaian tanggal komisioning lapangan sesuai addendum BAST nomor 02.';
 
@@ -311,8 +322,20 @@ class TrainerKitHandoverAndWarrantyTest extends TestCase
             'model_name' => 'Bitanic Trainer Kit v1.0',
             'status' => TrainerKitInventory::STATUS_SOLD,
             'school_id' => $this->schoolA->id,
+            'handover_date' => '2026-01-10',
             'warranty_start_date' => '2026-01-10',
             'warranty_expiration_date' => '2027-01-10',
+        ]);
+
+        TrainerKitHandover::create([
+            'inventory_id' => $kit->id,
+            'school_id' => $this->schoolA->id,
+            'bast_number' => 'BAST/2026/SHORT-01',
+            'handover_date' => '2026-01-10',
+            'recipient_name' => 'Petugas Lab BAST',
+            'warranty_start_date' => '2026-01-10',
+            'warranty_expiration_date' => '2027-01-10',
+            'recorded_by' => $this->superuser->id,
         ]);
 
         $response = $this->actingAs($this->superuser)->post(route('master.trainer-kits.warranty.correct', $kit), [
@@ -321,6 +344,92 @@ class TrainerKitHandoverAndWarrantyTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors(['correction_reason']);
+    }
+
+    public function test_warranty_correction_rejected_when_no_bast_handover_exists(): void
+    {
+        $kit = TrainerKitInventory::create([
+            'serial_number' => 'BTK-2026-NOBAST01',
+            'model_name' => 'Bitanic Trainer Kit v1.0',
+            'status' => TrainerKitInventory::STATUS_SOLD,
+            'school_id' => $this->schoolA->id,
+            'handover_date' => null,
+            'warranty_start_date' => null,
+            'warranty_expiration_date' => null,
+        ]);
+
+        $response = $this->actingAs($this->superuser)->post(route('master.trainer-kits.warranty.correct', $kit), [
+            'warranty_start_date' => '2026-02-01',
+            'correction_reason' => 'Koreksi tanggal garansi tanpa serah terima fisik sah.',
+        ]);
+
+        $response->assertSessionHasErrors(['warranty_start_date']);
+
+        $kit->refresh();
+        $this->assertNull($kit->warranty_start_date);
+        $this->assertNull($kit->warranty_expiration_date);
+        $this->assertDatabaseMissing('trainer_kit_warranty_logs', [
+            'inventory_id' => $kit->id,
+        ]);
+    }
+
+    public function test_warranty_correction_rejected_when_school_ownership_is_inconsistent(): void
+    {
+        $kit = TrainerKitInventory::create([
+            'serial_number' => 'BTK-2026-INCONSIST01',
+            'model_name' => 'Bitanic Trainer Kit v1.0',
+            'status' => TrainerKitInventory::STATUS_SOLD,
+            'school_id' => $this->schoolA->id,
+            'handover_date' => '2026-01-10',
+            'warranty_start_date' => '2026-01-10',
+            'warranty_expiration_date' => '2027-01-10',
+        ]);
+
+        // Handover points to schoolB while kit is owned by schoolA
+        TrainerKitHandover::create([
+            'inventory_id' => $kit->id,
+            'school_id' => $this->schoolB->id,
+            'bast_number' => 'BAST/2026/INCONSIST-01',
+            'handover_date' => '2026-01-10',
+            'recipient_name' => 'Petugas Lab Asing',
+            'warranty_start_date' => '2026-01-10',
+            'warranty_expiration_date' => '2027-01-10',
+            'recorded_by' => $this->superuser->id,
+        ]);
+
+        $response = $this->actingAs($this->superuser)->post(route('master.trainer-kits.warranty.correct', $kit), [
+            'warranty_start_date' => '2026-02-01',
+            'correction_reason' => 'Koreksi dengan data kepemilikan sekolah inkonsisten.',
+        ]);
+
+        $response->assertSessionHasErrors(['school_id']);
+
+        $kit->refresh();
+        $this->assertEquals('2026-01-10', $kit->warranty_start_date->toDateString());
+        $this->assertDatabaseMissing('trainer_kit_warranty_logs', [
+            'inventory_id' => $kit->id,
+            'reason' => 'Koreksi dengan data kepemilikan sekolah inkonsisten.',
+        ]);
+    }
+
+    public function test_future_warranty_start_date_evaluates_to_pending_not_active(): void
+    {
+        $futureStart = Carbon::today()->addDays(14)->toDateString();
+        $futureExp = Carbon::parse($futureStart)->addYearNoOverflow()->toDateString();
+
+        $kit = TrainerKitInventory::create([
+            'serial_number' => 'BTK-2026-FUTURE01',
+            'model_name' => 'Bitanic Trainer Kit v1.0',
+            'status' => TrainerKitInventory::STATUS_SOLD,
+            'school_id' => $this->schoolA->id,
+            'handover_date' => Carbon::today()->toDateString(),
+            'warranty_start_date' => $futureStart,
+            'warranty_expiration_date' => $futureExp,
+        ]);
+
+        $this->assertEquals('pending', $kit->warranty_status);
+        $this->assertEquals('Menunggu Efektif', $kit->warranty_status_label);
+        $this->assertStringContainsString('amber', $kit->warranty_status_badge_class);
     }
 
     public function test_unapproved_resale_and_transfer_is_rejected_device_sale_state_01(): void

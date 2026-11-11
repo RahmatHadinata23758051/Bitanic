@@ -136,6 +136,7 @@
                 >
                     <option value="">Semua Status Garansi</option>
                     <option value="active" {{ $warrantyStatus === 'active' ? 'selected' : '' }}>Garansi Aktif</option>
+                    <option value="pending" {{ $warrantyStatus === 'pending' ? 'selected' : '' }}>Garansi Menunggu Efektif</option>
                     <option value="expired" {{ $warrantyStatus === 'expired' ? 'selected' : '' }}>Garansi Kedaluwarsa</option>
                     <option value="not_recorded" {{ $warrantyStatus === 'not_recorded' ? 'selected' : '' }}>Garansi Belum Dicatat</option>
                 </select>

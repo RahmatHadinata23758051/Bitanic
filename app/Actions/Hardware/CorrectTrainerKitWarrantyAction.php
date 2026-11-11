@@ -46,15 +46,29 @@ class CorrectTrainerKitWarrantyAction
             /** @var TrainerKitInventory $lockedInventory */
             $lockedInventory = TrainerKitInventory::where('id', $inventory->id)->lockForUpdate()->firstOrFail();
 
+            // 1. Mandatory existing legitimate BAST / Handover record
+            $handover = $lockedInventory->handover;
+            if (! $handover) {
+                throw ValidationException::withMessages([
+                    'warranty_start_date' => 'Koreksi tanggal garansi hanya dapat dilakukan untuk unit yang telah memiliki Berita Acara Serah Terima (BAST).',
+                ]);
+            }
+
+            // 2. Consistent owning school validation
+            if (empty($lockedInventory->school_id) || (int) $lockedInventory->school_id !== (int) $handover->school_id) {
+                throw ValidationException::withMessages([
+                    'school_id' => 'Data kepemilikan sekolah pada unit tidak konsisten dengan Berita Acara Serah Terima (BAST).',
+                ]);
+            }
+
             $oldStartDate = $lockedInventory->warranty_start_date;
             $oldExpirationDate = $lockedInventory->warranty_expiration_date;
             $recordedBy = $data['recorded_by'] ?? auth()->id();
 
-            // 1. Persist immutable warranty correction log
-            $handover = $lockedInventory->handover;
+            // 3. Persist immutable warranty correction log
             TrainerKitWarrantyLog::create([
                 'inventory_id' => $lockedInventory->id,
-                'handover_id' => $handover?->id,
+                'handover_id' => $handover->id,
                 'user_id' => $recordedBy,
                 'old_start_date' => $oldStartDate,
                 'new_start_date' => $newStartDate->toDateString(),
@@ -64,14 +78,12 @@ class CorrectTrainerKitWarrantyAction
                 'created_at' => now(),
             ]);
 
-            // 2. Update Handover if linked
-            if ($handover) {
-                $handover->warranty_start_date = $newStartDate->toDateString();
-                $handover->warranty_expiration_date = $newExpirationDate->toDateString();
-                $handover->save();
-            }
+            // 4. Update Handover
+            $handover->warranty_start_date = $newStartDate->toDateString();
+            $handover->warranty_expiration_date = $newExpirationDate->toDateString();
+            $handover->save();
 
-            // 3. Update Inventory dates
+            // 5. Update Inventory dates
             $lockedInventory->warranty_start_date = $newStartDate->toDateString();
             $lockedInventory->warranty_expiration_date = $newExpirationDate->toDateString();
             $lockedInventory->save();

@@ -105,7 +105,13 @@ class TrainerKitInventory extends Model
             return 'not_recorded';
         }
 
-        if (Carbon::today()->gt($this->warranty_expiration_date)) {
+        $today = Carbon::today();
+
+        if ($today->lt($this->warranty_start_date)) {
+            return 'pending';
+        }
+
+        if ($today->gt($this->warranty_expiration_date)) {
             return 'expired';
         }
 
@@ -116,6 +122,7 @@ class TrainerKitInventory extends Model
     {
         return match ($this->warranty_status) {
             'active' => 'Aktif',
+            'pending' => 'Menunggu Efektif',
             'expired' => 'Kedaluwarsa',
             default => 'Belum Dicatat',
         };
@@ -125,6 +132,7 @@ class TrainerKitInventory extends Model
     {
         return match ($this->warranty_status) {
             'active' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            'pending' => 'bg-amber-50 text-amber-700 border-amber-200',
             'expired' => 'bg-rose-50 text-rose-700 border-rose-200',
             default => 'bg-slate-100 text-slate-600 border-slate-200',
         };
