@@ -36,8 +36,7 @@ return new class extends Migration
             $table->dropIndex('idx_users_school_role');
         });
 
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement('ALTER TABLE users ALTER COLUMN school_id SET DEFAULT 1;');
-        }
+        // In accordance with explicit tenant provisioning contract (DP-3),
+        // we DO NOT restore DEFAULT 1 on users.school_id to prevent silent tenant association.
     }
 };

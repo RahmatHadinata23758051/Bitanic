@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -18,11 +19,26 @@ class RoleMigrationCommandTest extends TestCase
     {
         parent::setUp();
 
+        $snapshotDir = storage_path('app/rbac_migration_snapshots');
+        if (File::exists($snapshotDir)) {
+            File::cleanDirectory($snapshotDir);
+        }
+
         $this->school = School::where('slug', 'smk-ppn-1-sukaraja')->first() ?? School::create([
             'name' => 'SMK PPN 1 Sukaraja',
             'slug' => 'smk-ppn-1-sukaraja',
             'status' => 'active',
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        $snapshotDir = storage_path('app/rbac_migration_snapshots');
+        if (File::exists($snapshotDir)) {
+            File::cleanDirectory($snapshotDir);
+        }
+
+        parent::tearDown();
     }
 
     public function test_dry_run_leaves_database_unmodified(): void
@@ -161,5 +177,97 @@ class RoleMigrationCommandTest extends TestCase
             'role' => 'superuser',
             'school_id' => $this->school->id,
         ]);
+    }
+
+    public function test_rollback_detects_subsequent_modifications_and_aborts_without_force(): void
+    {
+        $admin = User::create([
+            'name' => 'Legacy Admin To Modify',
+            'email' => 'mod.admin@bitanic.test',
+            'password' => Hash::make('P@ssword123!'),
+            'role' => 'admin',
+            'school_id' => $this->school->id,
+        ]);
+
+        // 1. Forward migration
+        $this->artisan('bitanic:migrate-school-admin-roles')->assertSuccessful();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $admin->id,
+            'role' => 'admin_sekolah',
+        ]);
+
+        // 2. Simulate subsequent legitimate change: User role is changed to 'guru'
+        $admin->update(['role' => 'guru']);
+
+        // 3. Rollback without --force: MUST detect conflict and abort
+        $this->artisan('bitanic:migrate-school-admin-roles --rollback')
+            ->expectsOutputToContain('ROLLBACK CONFLICT DETECTED')
+            ->expectsOutputToContain('Rollback aborted to prevent overwriting subsequent legitimate user changes')
+            ->assertFailed();
+
+        // 4. Verify DB was NOT corrupted: role remains 'guru'
+        $this->assertDatabaseHas('users', [
+            'id' => $admin->id,
+            'role' => 'guru',
+        ]);
+    }
+
+    public function test_rollback_with_force_overrides_conflict_detection(): void
+    {
+        $admin = User::create([
+            'name' => 'Legacy Admin To Force',
+            'email' => 'force.admin@bitanic.test',
+            'password' => Hash::make('P@ssword123!'),
+            'role' => 'admin',
+            'school_id' => $this->school->id,
+        ]);
+
+        // 1. Forward migration
+        $this->artisan('bitanic:migrate-school-admin-roles')->assertSuccessful();
+
+        // 2. Modify user
+        $admin->update(['role' => 'guru']);
+
+        // 3. Rollback WITH --force
+        $this->artisan('bitanic:migrate-school-admin-roles --rollback --force')
+            ->expectsOutputToContain('ROLLBACK CONFLICT DETECTED')
+            ->expectsOutputToContain('--force passed: Overriding conflict detection')
+            ->expectsOutputToContain('Rollback successfully completed')
+            ->assertSuccessful();
+
+        // 4. Verify restored to exact prior state: role is 'admin'
+        $this->assertDatabaseHas('users', [
+            'id' => $admin->id,
+            'role' => 'admin',
+            'school_id' => $this->school->id,
+        ]);
+    }
+
+    public function test_snapshot_identity_is_unique_and_contains_checksum(): void
+    {
+        User::create([
+            'name' => 'Snapshot Admin',
+            'email' => 'snapshot.admin@bitanic.test',
+            'password' => Hash::make('P@ssword123!'),
+            'role' => 'admin',
+            'school_id' => $this->school->id,
+        ]);
+
+        $this->artisan('bitanic:migrate-school-admin-roles')->assertSuccessful();
+
+        $snapshotDir = storage_path('app/rbac_migration_snapshots');
+        $files = File::glob("{$snapshotDir}/rbac_migration_snapshot_*.json");
+        $this->assertNotEmpty($files);
+
+        rsort($files);
+        $latest = $files[0];
+        $content = json_decode((string) File::get($latest), true);
+
+        $this->assertArrayHasKey('snapshot_id', $content);
+        $this->assertArrayHasKey('checksum', $content);
+        $this->assertArrayHasKey('total_users', $content);
+        $this->assertArrayHasKey('users', $content);
+        $this->assertGreaterThan(0, $content['total_users']);
     }
 }
