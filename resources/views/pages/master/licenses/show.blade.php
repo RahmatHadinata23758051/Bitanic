@@ -261,6 +261,85 @@
         </div>
     </div>
 
+    {{-- Automated Email Notifications & Reminders (LICENSE-05-03) --}}
+    <div class="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden space-y-0">
+        <div class="p-4 border-b border-slate-200/80 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i data-lucide="mail" class="w-4 h-4 text-emerald-700"></i>
+                <h3 class="text-sm font-bold text-slate-900">Riwayat Pengingat & Notifikasi Email Otomatis</h3>
+            </div>
+            <span class="text-xs text-slate-400 font-medium">H-14 Automated Dispatch</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50/80 text-[11px] font-semibold text-slate-700 uppercase tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="py-2.5 px-4">Tipe Pengingat</th>
+                        <th class="py-2.5 px-4">Penerima (Admin Sekolah)</th>
+                        <th class="py-2.5 px-4">Term Terkait</th>
+                        <th class="py-2.5 px-4">Status Pengiriman</th>
+                        <th class="py-2.5 px-4">Jadwal / Waktu Kirim</th>
+                        <th class="py-2.5 px-4">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @forelse($license->notifications as $notif)
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3 px-4 whitespace-nowrap">
+                                <span class="font-medium text-slate-900">
+                                    {{ $notif->notification_type === 'reminder_h14' ? 'Pengingat H-14 Kedaluwarsa' : $notif->notification_type }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap">
+                                <div class="font-semibold text-slate-800">{{ $notif->recipient_name ?: 'Admin Sekolah' }}</div>
+                                <div class="text-[11px] text-slate-400 font-mono">{{ $notif->recipient_email }}</div>
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap font-mono text-slate-700">
+                                {{ $notif->term ? 'Term #' . $notif->term->term_number : '—' }}
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap">
+                                @if($notif->status === 'sent')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        Terkirim
+                                    </span>
+                                @elseif($notif->status === 'queued')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                        Dalam Antrean
+                                    </span>
+                                @elseif($notif->status === 'failed')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                        Gagal
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                        Dilewati
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap font-tabular">
+                                @if($notif->sent_at)
+                                    <span class="text-slate-700">{{ $notif->sent_at->translatedFormat('d M Y H:i') }}</span>
+                                @else
+                                    <span class="text-slate-400">Jadwal: {{ $notif->scheduled_for->translatedFormat('d M Y') }}</span>
+                                @endif
+                            </td>
+                            <td class="py-3 px-4 text-slate-500 max-w-xs truncate">
+                                {{ $notif->error_message ?: 'Terkirim tanpa kendala' }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="py-6 px-4 text-center text-slate-400 italic">
+                                Belum ada riwayat pengiriman notifikasi pengingat untuk lisensi ini.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     {{-- Activity & Audit Logs --}}
     <div class="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden space-y-0">
         <div class="p-4 border-b border-slate-200/80 flex items-center justify-between">

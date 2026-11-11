@@ -152,6 +152,7 @@ class MasterLicenseController extends Controller
             'terms.authorizer',
             'logs.user',
             'lastAuthorizedBy',
+            'notifications.term',
         ]);
 
         return view('pages.master.licenses.show', [
