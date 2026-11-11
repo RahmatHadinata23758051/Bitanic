@@ -1,9 +1,9 @@
 # BITANIC — RBAC PERMISSION MATRIX V1.0
 ## Fine-Grained Role-Based Access Control & Tenant Authorization Contract
 
-**Document Version:** 1.0.0  
-**Status:** Architecture Contract (Sprint 2 / Pack A — Deliverable 1)  
-**Task Reference:** `RBAC-02-01`  
+**Document Version:** 1.1.0  
+**Status:** Implemented & Verified (Sprint 2 / Pack C — Closed)  
+**Task Reference:** `RBAC-02-01`, `RBAC-02-05`, `RBAC-02-06`  
 **Target Environment:** Bitanic Vocational LMS & IoT Platform Baseline v1.0  
 **Aligned Standards:** Architecture Baseline v1.0, PRD ATPH 4.0, OWASP ASVS v4.0.3 (Access Control)  
 
@@ -287,4 +287,20 @@ The matrix below documents all 59 Laravel routes and domain actions across the a
    - In `/reports` and `/assessment`, students are strictly limited to their own personal submissions and grades.
 4. **Hardware Safety Guardrail**:
    - Relay toggling, reboots, and sensor calibration downlinks remain simulation-only. No UI or endpoint shall report a physical hardware success until the lab gateway bidirectional ACK protocol is verified.
+
+---
+
+## 5. Verification & Quality Gate Sign-Off (Pack C)
+
+| Verification Phase | Test Suite / Execution | Scope / Coverage | Status |
+| :--- | :--- | :--- | :--- |
+| **Feature / Contract Tests** | `UserProvisioningAndTenancyContractTest.php` | 25 tests (70 assertions) covering tenant scoping, cross-school IDOR, LKS submission/grading, provenance, device safety, and school settings. | **PASS** (100%) |
+| **Command & Migration Safety** | `RoleMigrationCommandTest.php` | 7 tests (38 assertions) verifying dry-run, forward atomic migration, idempotence, snapshot uniqueness, checksums, and rollback conflict detection. | **PASS** (100%) |
+| **Full PHPUnit (SQLite)** | In-memory suite (`phpunit.xml`) | 455 tests, 2,701 assertions, 0 failures. | **PASS** (100%) |
+| **Full PHPUnit (PostgreSQL)** | `bitanic_test` on PostgreSQL 17.6 | 455 tests, 2,713 assertions, 0 failures. | **PASS** (100%) |
+| **Real Browser E2E** | Playwright Chromium (`e2e_playwright_test.py`) | 13 comprehensive end-to-end scenarios covering multi-school switching, tenant isolation, modal UI classroom creation, settings persistence, scheduling, and strict denied mutations. | **PASS** (100%) |
+| **Static Code Quality** | Laravel Pint (`./vendor/bin/pint --test`) | Full codebase lint and formatting clean. | **PASS** (100%) |
+| **Frontend Production Build** | Vite v6.4.5 (`npm run build`) | All assets compiled cleanly in 18.33s. | **PASS** (100%) |
+| **Baseline Assets Integrity** | `git status --short -- upi-edge dump_upiedge.sql` | Clean; baseline assets completely untouched. | **PASS** (100%) |
+
 

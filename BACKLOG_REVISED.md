@@ -652,7 +652,35 @@ Finalized the foundational architecture contracts for fine-grained authorization
 
 ### 2.16 — Sprint 2 / Pack B: Role Separation, Tenant Provisioning Contract & Resource Policies (2026-11-11)
 
-Implemented and verified the complete Pack B engineering execution (`RBAC-02-03`, `RBAC-02-04`) adhering strictly to Approved Decisions DP-1 through DP-5:
+Implemented and verified the complete Pack B engineering execution (`RBAC-02-03`, `RBAC-02-04`) adhering strictly to Approved Decisions DP-1 through DP-5.
+
+### 2.17 — Sprint 2 / Pack C: Role-Aware UI & Full System Acceptance (2026-11-11)
+
+Implemented and verified the complete Pack C engineering execution (`RBAC-02-05`, `RBAC-02-06`) closing Sprint 2:
+
+1. **Migration Safety & Role Migration Command Hardening**:
+   - Hardened `2026_01_01_000024_remove_default_school_id_and_support_admin_sekolah.php` `down()` method: drops index `idx_users_school_role`, but strictly does NOT restore `users.school_id DEFAULT 1` to preserve explicit tenant provisioning.
+   - Enhanced `MigrateSchoolAdminRolesCommand`: added preflight checks, unique UUID + microsecond timestamp snapshot naming (`rbac_migration_snapshot_{timestamp}_{uuid}.json`), SHA-256 payload verification before DB writes, atomic database transactions, and rollback conflict detection (aborts if accounts modified post-migration unless `--force` is specified).
+
+2. **Role-Aware UI Integration across all Bitanic Modules (`RBAC-02-05`)**:
+   - **Sidebar Navigation**: updated visibility for `admin_sekolah` to access Classrooms, Users Data, Settings, Media Tanam, and Reports Hub; added role badge and label mapping.
+   - **Dashboard**: role pill displays `Admin Sekolah` or `Superuser`; school context switcher is strictly superuser-only; tenant administrators and teachers see their school badge without tenant switching UI.
+   - **Device Monitoring**: IP Gateway configuration visibility protected with role check (`in_array(role, ['superuser', 'admin', 'admin_sekolah', 'guru'])`).
+   - **Classroom Management**: superuser can switch target school via `?school_id=`; tenant admins are locked to own school; class modal includes hidden `school_id` for superusers.
+   - **Settings & Audit Trail**: superuser can inspect/update any school via `?school_id=`; tenant admins locked to own school; cross-school IDOR tampering aborts fail-closed (HTTP 403).
+   - **Practicum Schedules & Reports**: `admin_sekolah` has full management capabilities matching academic lab lead responsibilities.
+
+3. **Full System Regression & Browser E2E Acceptance Matrix (`RBAC-02-06`)**:
+   - Expanded `UserProvisioningAndTenancyContractTest.php` to 25 tests (70 assertions) covering School A vs. School B data isolation, student private gradebook, LKS submit & grading, CSV export scoping, missing-grade provenance, and simulation-only device controls.
+   - Expanded `RoleMigrationCommandTest.php` to 7 tests (38 assertions) verifying dry-run, forward migration, idempotence, rollback restoration, rollback conflict abort, force override, and snapshot checksums.
+   - Expanded Playwright Chromium browser E2E (`tests/Browser/e2e_playwright_test.py`) to 13 real scenarios including real modal UI classroom creation, settings persistence, teacher scheduling cycle, and strict RBAC mutation rejections.
+   - **Quality Gates**:
+     - SQLite In-Memory: 455 passed, 5 skipped (2,701 assertions), 0 failures.
+     - PostgreSQL 17.6 (`bitanic_test`): 455 passed, 4 skipped (2,713 assertions), 0 failures.
+     - Playwright Real Browser E2E: 13/13 scenarios passed (100% SUCCESS).
+     - Pint: 100% clean formatting.
+     - Vite: Production build succeeded (93 kB CSS, 1.87 MB JS).
+     - Baseline Assets: `upi-edge/` and `dump_upiedge.sql` 100% pristine.
 
 1. **Database Schema & Provisioning Hardening (`2026_01_01_000024_remove_default_school_id_and_support_admin_sekolah.php`)**:
    - Additive DDL dropped PostgreSQL and SQLite default value on `users.school_id`.

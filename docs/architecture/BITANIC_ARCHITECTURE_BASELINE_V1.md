@@ -114,20 +114,25 @@ The following gaps exist between the current codebase and the locked Architectur
 ## 6. Verification & Quality Gates
 
 This architecture baseline is backed by exhaustive automated and end-to-end evidence:
-- **Unit & Feature Suite**: 418 passed, 0 failures, 5 skipped (2,593 assertions) on SQLite in-memory (`php artisan test`).
-- **Role & Tenancy E2E Acceptance Suite**: `tests/Feature/RbacAndMultiTenantAcceptanceTest.php` (8 tests, 147 assertions) verifying all 5 roles, cross-school IDOR rejection, academic lifecycles, and hardware safeguards.
-- **RBAC Boundary Verification & Tenant Isolation Suite**: `tests/Feature/RbacBoundaryVerificationTest.php` (14 tests, 111 assertions across SQLite and PostgreSQL) verifying separation of superuser identity, isolation of legacy admin to assigned school, fail-closed rejection of hostile cross-school query tampering (`?school_id=2`, `?school_id=99999`, `?school_id=abc`, `?school_id[]=1`), and isolation across all 10 read-surface controllers.
-- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 8 comprehensive end-to-end user scenarios:
+- **Unit & Feature Suite (SQLite)**: 455 passed, 0 failures, 5 skipped (2,701 assertions) on SQLite in-memory (`./vendor/bin/phpunit`).
+- **PostgreSQL 17.6 Test Suite**: 455 passed, 0 failures, 4 skipped (2,713 assertions) on isolated `bitanic_test` (`$env:DB_CONNECTION="pgsql_testing"`).
+- **User Provisioning & Tenancy Contract Suite**: `tests/Feature/UserProvisioningAndTenancyContractTest.php` (25 tests, 70 assertions across SQLite and PostgreSQL) verifying school membership invariants, student data isolation on reports and assessments, school-scoped CSV exports, classroom & student group CRUD lifecycle, schedule conflict validation, LKS submission and grading cycle, missing-grade provenance (no fabricated historical fallback), device reboot & calibration simulation, superuser settings filtering vs admin locking, and migration 000024 `down()` default verification.
+- **Operational Role Migration Safety Suite**: `tests/Feature/RoleMigrationCommandTest.php` (7 tests, 38 assertions across SQLite and PostgreSQL) verifying dry-run, forward execution, idempotence, rollback exact restoration, rollback conflict detection without force, rollback override with force, unique microsecond snapshot UUID and checksum verification.
+- **Real Browser E2E Interaction Test Suite**: `tests/Browser/e2e_playwright_test.py` (Playwright headless Chromium against isolated port 8008 environment `.env.browser_e2e`) verifying 13 comprehensive end-to-end user scenarios:
   1. *Superuser School Switching & Multi-School Access* (PASS).
   2. *Admin Same-School Dashboard & Absence of School Switcher* (PASS).
-  3. *Admin Foreign-School Selector Tampering Fail-Closed 403* (PASS).
-  4. *Admin Foreign-School Directory Search Isolation* (PASS).
-  5. *Admin Foreign-School Gradebook & Export Access Rejection* (PASS).
-  6. *Admin Unauthorized Direct URLs & Hardware Mutation Rejection* (PASS).
-  7. *Normal Guru Workflow & Tenant Protection* (PASS).
-  8. *Normal Siswa Workflow & Tenant Protection* (PASS).
-- **PostgreSQL 17.6 Concurrency & Locking**: `PostgresIntegrationAndConcurrencyTest` (9 tests, 69 assertions), `RbacBoundaryVerificationTest` (14 tests, 111 assertions), and `RbacAndMultiTenantAcceptanceTest` (8 tests, 147 assertions) on isolated `bitanic_test`.
-- **Code Style & Formatting**: Laravel Pint passed on all newly added and modified files.
-- **Frontend Assets**: Vite production build succeeded (93 kB CSS, 1.87 MB JS).
+  3. *Legacy Admin Compatibility Session* (PASS).
+  4. *Admin Foreign-School Selector Tampering Fail-Closed 403* (PASS).
+  5. *Admin Foreign-School Directory Search Isolation* (PASS).
+  6. *Admin Foreign-School Gradebook & Export Access Rejection* (PASS).
+  7. *Admin Unauthorized Direct URLs & Hardware Mutation Rejection* (PASS).
+  8. *Normal Guru Workflow & Tenant Protection* (PASS).
+  9. *Normal Siswa Workflow & Tenant Protection* (PASS).
+  10. *Real UI Mutation: Admin Sekolah Classroom Creation* (PASS).
+  11. *Real UI Mutation: Admin Sekolah Settings Persistence* (PASS).
+  12. *Real UI Mutation: Guru Practicum Scheduling Cycle* (PASS).
+  13. *Strict RBAC Boundary: Denied Actions & UI Absence* (PASS).
+- **Code Style & Formatting**: Laravel Pint passed (`./vendor/bin/pint --test`).
+- **Frontend Assets**: Vite production build succeeded in 18.33s (93 kB CSS, 1.87 MB JS).
 - **Baseline Immutability**: `upi-edge/` and `dump_upiedge.sql` preserved with zero modifications.
 
