@@ -97,6 +97,11 @@ class Device extends Model
         return $this->hasOne(TelemetryReading::class)->latestOfMany('recorded_at');
     }
 
+    public function trainerKitInventory(): HasOne
+    {
+        return $this->hasOne(TrainerKitInventory::class);
+    }
+
     /**
      * Get the currently active calibration profile for a given parameter at a point in time.
      */

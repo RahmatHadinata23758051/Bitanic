@@ -73,4 +73,14 @@ class School extends Model
     {
         return $this->hasMany(AuditLog::class);
     }
+
+    public function trainerKitInventories(): HasMany
+    {
+        return $this->hasMany(TrainerKitInventory::class);
+    }
+
+    public function trainerKitSaleRecords(): HasMany
+    {
+        return $this->hasMany(TrainerKitSaleRecord::class);
+    }
 }
