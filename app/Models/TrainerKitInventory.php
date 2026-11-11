@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,12 +36,18 @@ class TrainerKitInventory extends Model
         'registered_at',
         'registered_by',
         'notes',
+        'handover_date',
+        'warranty_start_date',
+        'warranty_expiration_date',
     ];
 
     protected function casts(): array
     {
         return [
             'registered_at' => 'datetime',
+            'handover_date' => 'date',
+            'warranty_start_date' => 'date',
+            'warranty_expiration_date' => 'date',
         ];
     }
 
@@ -74,6 +81,55 @@ class TrainerKitInventory extends Model
         return $this->hasMany(TrainerKitLifecycleLog::class, 'inventory_id')->latest('created_at');
     }
 
+    public function handovers(): HasMany
+    {
+        return $this->hasMany(TrainerKitHandover::class, 'inventory_id')->latest('handover_date');
+    }
+
+    public function handover(): HasOne
+    {
+        return $this->hasOne(TrainerKitHandover::class, 'inventory_id')->latestOfMany('handover_date');
+    }
+
+    public function warrantyLogs(): HasMany
+    {
+        return $this->hasMany(TrainerKitWarrantyLog::class, 'inventory_id')->latest('created_at');
+    }
+
+    /**
+     * Compute current warranty status based on persisted dates.
+     */
+    public function getWarrantyStatusAttribute(): string
+    {
+        if (! $this->warranty_start_date || ! $this->warranty_expiration_date) {
+            return 'not_recorded';
+        }
+
+        if (Carbon::today()->gt($this->warranty_expiration_date)) {
+            return 'expired';
+        }
+
+        return 'active';
+    }
+
+    public function getWarrantyStatusLabelAttribute(): string
+    {
+        return match ($this->warranty_status) {
+            'active' => 'Aktif',
+            'expired' => 'Kedaluwarsa',
+            default => 'Belum Dicatat',
+        };
+    }
+
+    public function getWarrantyStatusBadgeClassAttribute(): string
+    {
+        return match ($this->warranty_status) {
+            'active' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            'expired' => 'bg-rose-50 text-rose-700 border-rose-200',
+            default => 'bg-slate-100 text-slate-600 border-slate-200',
+        };
+    }
+
     public function isActivated(): bool
     {
         return $this->status === self::STATUS_ACTIVATED;
@@ -96,7 +152,7 @@ class TrainerKitInventory extends Model
 
     public function canBeSold(): bool
     {
-        return in_array($this->status, [self::STATUS_REGISTERED, self::STATUS_SOLD]);
+        return $this->status === self::STATUS_REGISTERED;
     }
 
     public function canBeAssigned(): bool

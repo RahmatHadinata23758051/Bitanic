@@ -83,4 +83,9 @@ class School extends Model
     {
         return $this->hasMany(TrainerKitSaleRecord::class);
     }
+
+    public function trainerKitHandovers(): HasMany
+    {
+        return $this->hasMany(TrainerKitHandover::class);
+    }
 }
