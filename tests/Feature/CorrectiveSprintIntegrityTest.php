@@ -120,6 +120,7 @@ class CorrectiveSprintIntegrityTest extends TestCase
     {
         $teacher = User::factory()->create(['role' => 'guru']);
         $device = Device::create([
+            'school_id' => $teacher->school_id,
             'code' => 'TK-CALIB-01',
             'name' => 'Meja Kalibrasi',
             'is_active' => true,
@@ -212,6 +213,7 @@ class CorrectiveSprintIntegrityTest extends TestCase
     {
         $teacher = User::factory()->create(['role' => 'guru']);
         $device = Device::create([
+            'school_id' => $teacher->school_id,
             'code' => 'TK-STALE', 'name' => 'Meja Offline', 'is_active' => true,
             'last_seen_at' => now()->subHours(2),
         ]);

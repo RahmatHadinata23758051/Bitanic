@@ -52,6 +52,15 @@ UserProfile::updateOrCreate(
     ['type' => 'guru', 'identifier_number' => 'ADM-001', 'department' => 'Teknisi Lab']
 );
 
+$legacyAdmin = User::updateOrCreate(
+    ['email' => 'legacyadmin@smk.id'],
+    ['name' => 'Legacy Admin E2E', 'role' => 'admin', 'school_id' => 1, 'password' => $password, 'must_change_password' => false]
+);
+UserProfile::updateOrCreate(
+    ['user_id' => $legacyAdmin->id],
+    ['type' => 'guru', 'identifier_number' => 'LEG-001', 'department' => 'Teknisi Lab']
+);
+
 $guru = User::updateOrCreate(
     ['email' => 'guru@smk.id'],
     ['name' => 'Guru Agronomi E2E', 'role' => 'guru', 'school_id' => 1, 'password' => $password, 'must_change_password' => false]
@@ -81,15 +90,33 @@ $deviceA = Device::firstOrCreate(
     ]
 );
 
-$deviceB = Device::firstOrCreate(
-    ['code' => 'TK-02'],
-    [
+$deviceB = Device::where('code', 'TK-02')->first();
+if ($deviceB) {
+    $deviceB->update([
         'school_id' => 2,
         'name' => 'BITANIC Kit Sekolah B #02',
         'bench_location' => 'Meja Praktik B',
         'is_active' => true,
         'status' => 'online',
-    ]
+    ]);
+} else {
+    $deviceB = Device::create([
+        'code' => 'TK-02',
+        'school_id' => 2,
+        'name' => 'BITANIC Kit Sekolah B #02',
+        'bench_location' => 'Meja Praktik B',
+        'is_active' => true,
+        'status' => 'online',
+    ]);
+}
+
+$foreignSiswa = User::updateOrCreate(
+    ['email' => 'rahasia@smk2.id'],
+    ['name' => 'Siswa Rahasia Sekolah B', 'role' => 'siswa', 'school_id' => 2, 'password' => $password, 'must_change_password' => false]
+);
+UserProfile::updateOrCreate(
+    ['user_id' => $foreignSiswa->id],
+    ['type' => 'siswa', 'identifier_number' => '0099999999', 'class_grade' => 'XII ATPH 2']
 );
 
 $module = ModulePracticum::firstOrCreate(

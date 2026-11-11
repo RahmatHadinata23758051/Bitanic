@@ -495,7 +495,9 @@ class TelemetryProvenanceAndHonestEmptyStateTest extends TestCase
 
     public function test_telemetry_history_renders_null_parameters_as_em_dashes_not_zeroes(): void
     {
+        $defaultSchool = School::where('slug', 'smk-ppn-1-sukaraja')->first() ?? School::first();
         $device = Device::create([
+            'school_id' => $defaultSchool?->id,
             'code' => 'TK-NULL-HISTORY',
             'name' => 'Kit Null History',
             'is_active' => true,

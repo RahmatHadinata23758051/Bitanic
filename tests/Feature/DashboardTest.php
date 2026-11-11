@@ -18,9 +18,28 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected School $defaultSchool;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->defaultSchool = School::where('slug', 'smk-ppn-1-sukaraja')->first()
+            ?? School::first()
+            ?? School::create([
+                'name' => 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
+                'slug' => 'smk-ppn-1-sukaraja',
+                'npsn' => '20202941',
+                'address' => 'Jl. Agronomi No. 1',
+                'city' => 'Sukaraja',
+                'province' => 'Jawa Barat',
+                'status' => 'active',
+            ]);
+    }
+
     public function test_dashboard_renders_successfully(): void
     {
         $device = Device::create([
+            'school_id' => $this->defaultSchool->id,
             'code' => 'BITANIC-TK-01',
             'name' => 'BITANIC Precision Agritech Kit #01',
             'connection_type' => 'modbus_rs485',
@@ -59,6 +78,7 @@ class DashboardTest extends TestCase
     public function test_iot_monitoring_page_renders_real_time_workstation(): void
     {
         $device = Device::create([
+            'school_id' => $this->defaultSchool->id,
             'code' => 'BITANIC-TK-01',
             'name' => 'BITANIC Precision Agritech Kit #01',
             'bench_location' => 'Meja Praktik 01 - Lahan Uji',
@@ -104,6 +124,7 @@ class DashboardTest extends TestCase
     public function test_iot_monitoring_marks_offline_after_heartbeat_timeout(): void
     {
         $device = Device::create([
+            'school_id' => $this->defaultSchool->id,
             'code' => 'TK-OFFLINE',
             'name' => 'Offline Kit',
             'connection_type' => 'modbus_rs485',
@@ -128,6 +149,7 @@ class DashboardTest extends TestCase
     public function test_dashboard_displays_lab_overview_separate_from_sensor_dashboard(): void
     {
         Device::create([
+            'school_id' => $this->defaultSchool->id,
             'code' => 'TK-DASH',
             'name' => 'Dashboard Trainer Kit',
             'connection_type' => 'modbus_rs485',
@@ -162,6 +184,7 @@ class DashboardTest extends TestCase
     public function test_analytics_selects_device_from_available_active_devices(): void
     {
         $device = Device::create([
+            'school_id' => $this->defaultSchool->id,
             'code' => 'TK-ANALYTICS',
             'name' => 'Analytics Trainer Kit',
             'connection_type' => 'modbus_rs485',
@@ -178,6 +201,7 @@ class DashboardTest extends TestCase
     public function test_iot_monitoring_unknown_device_id_falls_back_to_first_active_kit(): void
     {
         Device::create([
+            'school_id' => $this->defaultSchool->id,
             'code' => 'TK-FIRST',
             'name' => 'First Active Trainer Kit',
             'connection_type' => 'modbus_rs485',
@@ -210,8 +234,9 @@ class DashboardTest extends TestCase
 
     public function test_relay_toggle_without_hardware_ack_does_not_persist_requested_state(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $this->defaultSchool->id]);
         $device = Device::create([
+            'school_id' => $this->defaultSchool->id,
             'code' => 'TK-RELAY-NO-ACK',
             'name' => 'Relay tanpa ACK',
             'is_active' => true,

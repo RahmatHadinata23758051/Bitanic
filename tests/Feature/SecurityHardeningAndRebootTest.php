@@ -112,7 +112,15 @@ class SecurityHardeningAndRebootTest extends TestCase
 
     public function test_superuser_can_rotate_device_api_key_and_other_roles_cannot(): void
     {
+        $defaultSchool = School::where('slug', 'smk-ppn-1-sukaraja')->first()
+            ?? School::first()
+            ?? School::create([
+                'name' => 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
+                'slug' => 'smk-ppn-1-sukaraja',
+                'status' => 'active',
+            ]);
         $device = Device::create([
+            'school_id' => $defaultSchool->id,
             'code' => 'TK-KEY-ROTATE-01',
             'name' => 'Meja Test Rotasi',
             'is_active' => true,
@@ -172,9 +180,17 @@ class SecurityHardeningAndRebootTest extends TestCase
 
     public function test_reboot_does_not_forge_online_status_or_last_seen_at_without_ack(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $school = School::where('slug', 'smk-ppn-1-sukaraja')->first()
+            ?? School::first()
+            ?? School::create([
+                'name' => 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
+                'slug' => 'smk-ppn-1-sukaraja',
+                'status' => 'active',
+            ]);
+        $teacher = User::factory()->create(['role' => 'guru', 'school_id' => $school->id]);
         $oldTimestamp = now()->subHours(5);
         $device = Device::create([
+            'school_id' => $school->id,
             'code' => 'TK-REBOOT-01',
             'name' => 'Meja Offline',
             'status' => 'offline',

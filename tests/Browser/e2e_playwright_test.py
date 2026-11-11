@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 BASE_URL = "http://127.0.0.1:8008"
 
 def run_tests():
-    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (18 SCENARIOS) ===")
+    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (20 SCENARIOS) ===")
     results = {}
 
     with sync_playwright() as p:
@@ -1204,6 +1204,158 @@ def run_tests():
             results["Scenario 18: Negative Authorization on User Import & Mutations"] = f"FAIL: {e}"
         finally:
             context_siswa.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 19: GLOBAL TRAINER KIT SERIAL INVENTORY MASTER (DEVICE-04-01)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 19] Global Trainer Kit Serial Inventory Master (DEVICE-04-01)...")
+        context_su19 = browser.new_context()
+        page_su19 = context_su19.new_page()
+        try:
+            # 19.1 Superuser Login
+            page_su19.goto(f"{BASE_URL}/login")
+            page_su19.fill("#email", "superuser@bitanic.id")
+            page_su19.fill("#password", "Password123!")
+            page_su19.click("button[type='submit']")
+            page_su19.wait_for_load_state("networkidle")
+
+            # 19.2 Visit Master Trainer Kit Page
+            resp_inv = page_su19.goto(f"{BASE_URL}/master/trainer-kits")
+            assert resp_inv.status == 200, f"Expected 200 on /master/trainer-kits, got {resp_inv.status}"
+            content_inv = page_su19.content()
+            assert "Master Serial" in content_inv, "Expected Master Serial header"
+            assert "Total Unit" in content_inv, "Expected Total Unit card"
+            assert "Stok Pabrik" in content_inv, "Expected Stok Pabrik card"
+            print("  ✓ Superuser accessed Global Trainer Kit Master listing with metrics")
+
+            csrf_su19 = page_su19.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers_su19 = {"X-CSRF-TOKEN": csrf_su19, "Accept": "application/json"}
+
+            # 19.3 Register New Physical Serial
+            e2e_serial = f"BTK-2026-E2E-{int(time.time())}"
+            reg_res = context_su19.request.post(
+                f"{BASE_URL}/master/trainer-kits",
+                data={
+                    "serial_number": e2e_serial,
+                    "model_name": "Bitanic Trainer Kit v1.0",
+                    "hardware_revision": "rev1.2",
+                    "batch_number": "BATCH-E2E-Q1",
+                    "notes": "Unit uji coba otomatis Playwright E2E",
+                },
+                headers=headers_su19,
+            )
+            assert reg_res.status in [200, 302], f"Expected 200/302 on registration, got {reg_res.status}"
+            print(f"  ✓ Registered new serial: {e2e_serial}")
+
+            # 19.4 Search for Newly Created Serial
+            page_su19.goto(f"{BASE_URL}/master/trainer-kits?search={e2e_serial}")
+            page_su19.wait_for_load_state("networkidle")
+            assert e2e_serial in page_su19.content(), f"Expected {e2e_serial} in search results"
+            print("  ✓ Verified newly created kit in search results")
+
+            results["Scenario 19: Global Trainer Kit Serial Inventory Master"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 19 Failed: {e}")
+            results["Scenario 19: Global Trainer Kit Serial Inventory Master"] = f"FAIL: {e}"
+        finally:
+            context_su19.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 20: SALE RECORDS, OWNERSHIP ASSIGNMENT & ACTIVATION (DEVICE-04-02)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 20] Sale Records, Ownership Assignment & Activation (DEVICE-04-02)...")
+        context_su20 = browser.new_context()
+        page_su20 = context_su20.new_page()
+        try:
+            # 20.1 Superuser Login
+            page_su20.goto(f"{BASE_URL}/login")
+            page_su20.fill("#email", "superuser@bitanic.id")
+            page_su20.fill("#password", "Password123!")
+            page_su20.click("button[type='submit']")
+            page_su20.wait_for_load_state("networkidle")
+
+            csrf_su20 = page_su20.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers_su20 = {"X-CSRF-TOKEN": csrf_su20, "Accept": "application/json"}
+
+            # Create fresh kit for complete lifecycle test
+            fresh_serial = f"BTK-FLOW-{int(time.time())}"
+            create_res = context_su20.request.post(
+                f"{BASE_URL}/master/trainer-kits",
+                data={
+                    "serial_number": fresh_serial,
+                    "model_name": "Bitanic Trainer Kit v1.0",
+                    "hardware_revision": "rev1.2",
+                    "batch_number": "BATCH-LIFECYCLE",
+                },
+                headers=headers_su20,
+            )
+            assert create_res.status in [200, 302]
+
+            # Fetch show page to get the inventory ID
+            page_su20.goto(f"{BASE_URL}/master/trainer-kits?search={fresh_serial}")
+            page_su20.wait_for_load_state("networkidle")
+            link = page_su20.locator(f"a:has-text('{fresh_serial}')").first
+            inventory_url = link.get_attribute("href")
+            assert inventory_url, "Must find detail link for fresh kit"
+
+            page_su20.goto(inventory_url)
+            page_su20.wait_for_load_state("networkidle")
+            assert "Stok Pabrik" in page_su20.content(), "Expected status Stok Pabrik initially"
+            print("  ✓ Fresh kit confirmed in registered status")
+
+            # 20.2 Record Sale to School 1
+            sale_res = context_su20.request.post(
+                f"{inventory_url}/sale",
+                data={
+                    "school_id": 1,
+                    "sale_reference": f"PO-E2E-{int(time.time())}",
+                    "sold_at": "2026-11-11",
+                    "notes": "Penjualan paket SMK Playwright",
+                },
+                headers=headers_su20,
+            )
+            assert sale_res.status in [200, 302], f"Expected 200/302 on sale record, got {sale_res.status}"
+            page_su20.reload()
+            page_su20.wait_for_load_state("networkidle")
+            assert "Terjual" in page_su20.content() or "Dimiliki" in page_su20.content(), "Status must update to Terjual"
+            assert "SALE_RECORDED" in page_su20.content(), "Audit log must record SALE_RECORDED"
+            print("  ✓ Sale recorded and school ownership established")
+
+            # 20.3 Activate Kit
+            act_res = context_su20.request.post(
+                f"{inventory_url}/activate",
+                data={"notes": "Aktivasi komisioning E2E"},
+                headers=headers_su20,
+            )
+            assert act_res.status in [200, 302], f"Expected 200/302 on activation, got {act_res.status}"
+            page_su20.reload()
+            page_su20.wait_for_load_state("networkidle")
+            assert "Aktif Operasional" in page_su20.content(), "Status must update to Aktif Operasional"
+            assert "ACTIVATED" in page_su20.content(), "Audit log must record ACTIVATED"
+            print("  ✓ Kit activated for instructional deployment")
+
+            # 20.4 Negative Authorization: Guru & Siswa Forbidden (403) from Master
+            context_neg = browser.new_context()
+            try:
+                page_neg = context_neg.new_page()
+                page_neg.goto(f"{BASE_URL}/login")
+                page_neg.fill("#email", "guru@smk.id")
+                page_neg.fill("#password", "Password123!")
+                page_neg.click("button[type='submit']")
+                page_neg.wait_for_load_state("networkidle")
+
+                resp_guru_denied = page_neg.goto(f"{BASE_URL}/master/trainer-kits")
+                assert resp_guru_denied.status == 403, f"Guru must receive 403 on /master/trainer-kits, got {resp_guru_denied.status}"
+                print("  ✓ Guru strictly denied (HTTP 403) from Global Trainer Kit Master")
+            finally:
+                context_neg.close()
+
+            results["Scenario 20: Sale Records, Ownership Assignment & Activation"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 20 Failed: {e}")
+            results["Scenario 20: Sale Records, Ownership Assignment & Activation"] = f"FAIL: {e}"
+        finally:
+            context_su20.close()
 
         browser.close()
 
