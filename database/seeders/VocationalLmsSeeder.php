@@ -532,7 +532,7 @@ class VocationalLmsSeeder extends Seeder
                 'school_id' => 1,
                 'name' => 'M. Fikri Nurhakim, S.Kom.',
                 'password' => $passwordHash,
-                'role' => 'admin',
+                'role' => 'admin_sekolah',
                 'email_verified_at' => now(),
                 'must_change_password' => false,
             ]
@@ -549,10 +549,22 @@ class VocationalLmsSeeder extends Seeder
             ]
         );
 
+        User::updateOrCreate(
+            ['email' => 'legacyadmin@smk.id'],
+            [
+                'school_id' => 1,
+                'name' => 'Legacy Administrator SMK',
+                'password' => $passwordHash,
+                'role' => 'admin',
+                'email_verified_at' => now(),
+                'must_change_password' => false,
+            ]
+        );
+
         $superuser = User::updateOrCreate(
             ['email' => 'superuser@bitanic.id'],
             [
-                'school_id' => 1,
+                'school_id' => null,
                 'name' => 'Super Administrator Bitanic',
                 'password' => $passwordHash,
                 'role' => 'superuser',
