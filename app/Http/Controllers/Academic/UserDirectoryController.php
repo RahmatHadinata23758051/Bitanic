@@ -162,9 +162,11 @@ class UserDirectoryController extends Controller
             $classroom = ! empty($validated['classroom_id']) ? Classroom::find($validated['classroom_id']) : null;
             $group = ! empty($validated['student_group_id']) ? StudentGroup::find($validated['student_group_id']) : null;
 
+            $profileType = ($validated['role'] === 'siswa') ? 'siswa' : 'guru';
+
             UserProfile::create([
                 'user_id' => $user->id,
-                'type' => $validated['role'],
+                'type' => $profileType,
                 'identifier_number' => ! empty($validated['identifier_number']) ? trim($validated['identifier_number']) : null,
                 'department' => ! empty($validated['department']) ? trim($validated['department']) : 'Agribisnis Tanaman Pangan & Hortikultura',
                 'specialization' => ! empty($validated['specialization']) ? trim($validated['specialization']) : null,
@@ -255,9 +257,11 @@ class UserDirectoryController extends Controller
             $classroom = ! empty($validated['classroom_id']) ? Classroom::find($validated['classroom_id']) : null;
             $group = ! empty($validated['student_group_id']) ? StudentGroup::find($validated['student_group_id']) : null;
 
-            $profile = $user->profile()->firstOrCreate([], ['type' => $validated['role']]);
+            $profileType = ($validated['role'] === 'siswa') ? 'siswa' : 'guru';
+
+            $profile = $user->profile()->firstOrCreate([], ['type' => $profileType]);
             $profile->update([
-                'type' => $validated['role'],
+                'type' => $profileType,
                 'identifier_number' => ! empty($validated['identifier_number']) ? trim($validated['identifier_number']) : null,
                 'department' => ! empty($validated['department']) ? trim($validated['department']) : $profile->department,
                 'specialization' => ! empty($validated['specialization']) ? trim($validated['specialization']) : null,

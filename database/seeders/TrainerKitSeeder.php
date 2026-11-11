@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Device;
+use App\Models\School;
 use Illuminate\Database\Seeder;
 
 class TrainerKitSeeder extends Seeder
@@ -12,6 +13,18 @@ class TrainerKitSeeder extends Seeder
      */
     public function run(): void
     {
+        $school = School::where('slug', 'smk-ppn-1-sukaraja')->first()
+            ?? School::first()
+            ?? School::create([
+                'name' => 'SMK Pertanian Pembangunan Negeri 1 Sukaraja',
+                'slug' => 'smk-ppn-1-sukaraja',
+                'npsn' => '20202941',
+                'address' => 'Jl. Agronomi No. 1',
+                'city' => 'Sukaraja',
+                'province' => 'Jawa Barat',
+                'status' => 'active',
+            ]);
+
         $kits = [
             [
                 'code' => 'TK-01',
@@ -58,6 +71,7 @@ class TrainerKitSeeder extends Seeder
         ];
 
         foreach ($kits as $kit) {
+            $kit['school_id'] = $school->id;
             Device::updateOrCreate(
                 ['code' => $kit['code']],
                 $kit

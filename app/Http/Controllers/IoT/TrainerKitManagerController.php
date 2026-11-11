@@ -30,7 +30,7 @@ class TrainerKitManagerController extends Controller
         $schools = $context->schools;
         $isSuperuser = $context->isSuperuser;
 
-        $kits = Device::with(['latestReading', 'activeApiKey', 'school'])
+        $kits = Device::with(['latestReading', 'activeApiKey', 'school', 'trainerKitInventory'])
             ->when($targetSchoolId, fn ($query) => $query->where('school_id', $targetSchoolId))
             ->orderBy('code')
             ->paginate(15)
@@ -52,7 +52,8 @@ class TrainerKitManagerController extends Controller
                 $kit->connection_config = null;
                 $kit->unsetRelation('activeApiKey');
                 $kit->unsetRelation('apiKeys');
-                $kit->makeHidden(['ip_address', 'mac_address', 'firmware_version', 'connection_config', 'activeApiKey', 'apiKeys']);
+                $kit->unsetRelation('trainerKitInventory');
+                $kit->makeHidden(['ip_address', 'mac_address', 'firmware_version', 'connection_config', 'activeApiKey', 'apiKeys', 'trainerKitInventory']);
             });
         }
 

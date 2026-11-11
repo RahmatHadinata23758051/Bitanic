@@ -454,6 +454,19 @@
                     <i data-lucide="building-2" class="w-4.5 h-4.5 shrink-0 {{ Request::is('master/schools*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
                     <span x-show="!sidebarCollapsed" class="text-sm truncate">Sekolah</span>
                 </a>
+
+                <!-- Master Trainer Kit -->
+                <a
+                    href="{{ route('master.trainer-kits.index') }}"
+                    title="Master Trainer Kit"
+                    :class="sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'"
+                    class="flex items-center rounded-xl transition-colors group
+                        {{ Request::is('master/trainer-kits*') ? 'bg-[#0c3c26] text-white font-semibold shadow-xs shadow-[#0c3c26]/20' : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900' }}"
+                    aria-current="{{ Request::is('master/trainer-kits*') ? 'page' : 'false' }}"
+                >
+                    <i data-lucide="cpu" class="w-4.5 h-4.5 shrink-0 {{ Request::is('master/trainer-kits*') ? 'text-white' : 'text-slate-400 group-hover:text-slate-700' }}" aria-hidden="true"></i>
+                    <span x-show="!sidebarCollapsed" class="text-sm truncate">Trainer Kit</span>
+                </a>
             </div>
         @endif
     </nav>

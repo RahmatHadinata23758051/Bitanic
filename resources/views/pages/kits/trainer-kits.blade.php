@@ -155,6 +155,15 @@
                             <p class="text-xs text-slate-600 mt-1 line-clamp-1">
                                 {{ $kit->bench_location ?? $kit->name }}
                             </p>
+                            @if($kit->trainerKitInventory)
+                                <p class="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
+                                    <span class="text-slate-400">SN:</span>
+                                    <span>{{ $kit->trainerKitInventory->serial_number }}</span>
+                                    <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-sans">
+                                        {{ ucfirst($kit->trainerKitInventory->status) }}
+                                    </span>
+                                </p>
+                            @endif
                             @if(!empty($isSuperuser) && $kit->school)
                                 <p class="text-[11px] text-slate-400 truncate mt-0.5">
                                     {{ $kit->school->name }}

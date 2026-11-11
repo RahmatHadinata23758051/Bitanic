@@ -6,6 +6,7 @@ use App\Http\Controllers\Academic\CompetencyAssessmentController;
 use App\Http\Controllers\Academic\ModulePracticumController;
 use App\Http\Controllers\Academic\PracticumReportController;
 use App\Http\Controllers\Academic\UserDirectoryController;
+use App\Http\Controllers\Admin\MasterTrainerKitController;
 use App\Http\Controllers\Admin\RegionMasterController;
 use App\Http\Controllers\Admin\SchoolMasterController;
 use App\Http\Controllers\Admin\SettingsAuditController;
@@ -159,6 +160,16 @@ Route::middleware(['auth', 'role:superuser'])->prefix('master')->name('master.')
     Route::put('/schools/{school}', [SchoolMasterController::class, 'update'])->name('schools.update');
     Route::match(['PATCH', 'POST'], '/schools/{school}/toggle-status', [SchoolMasterController::class, 'toggleStatus'])->name('schools.toggle-status');
     Route::delete('/schools/{school}', [SchoolMasterController::class, 'destroy'])->name('schools.destroy');
+
+    // Master Trainer Kit Inventory & Activation (DEVICE-04-01 & DEVICE-04-02)
+    Route::get('/trainer-kits', [MasterTrainerKitController::class, 'index'])->name('trainer-kits.index');
+    Route::post('/trainer-kits', [MasterTrainerKitController::class, 'store'])->name('trainer-kits.store');
+    Route::get('/trainer-kits/{inventory}', [MasterTrainerKitController::class, 'show'])->name('trainer-kits.show');
+    Route::put('/trainer-kits/{inventory}', [MasterTrainerKitController::class, 'update'])->name('trainer-kits.update');
+    Route::post('/trainer-kits/{inventory}/sale', [MasterTrainerKitController::class, 'recordSale'])->name('trainer-kits.sale');
+    Route::post('/trainer-kits/{inventory}/assign', [MasterTrainerKitController::class, 'assignDevice'])->name('trainer-kits.assign');
+    Route::post('/trainer-kits/{inventory}/activate', [MasterTrainerKitController::class, 'activate'])->name('trainer-kits.activate');
+    Route::delete('/trainer-kits/{inventory}', [MasterTrainerKitController::class, 'destroy'])->name('trainer-kits.destroy');
 });
 
 // Cascading region options accessible to authenticated users (e.g. for dynamic form selects)

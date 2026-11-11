@@ -6,6 +6,9 @@ use App\Models\AuditLog;
 use App\Models\Device;
 use App\Models\RawDataLog;
 use App\Models\SchoolSetting;
+use App\Models\TrainerKitInventory;
+use App\Models\TrainerKitLifecycleLog;
+use App\Models\TrainerKitSaleRecord;
 use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Database\Seeder;
@@ -198,11 +201,73 @@ class VocationalLmsSeeder extends Seeder
         ];
 
         $deviceModels = [];
+        $kitIndex = 1;
         foreach ($kits as $kitData) {
             $kitData['school_id'] = 1;
             $device = Device::updateOrCreate(['code' => $kitData['code']], $kitData);
             $deviceModels[$device->code] = $device;
+
+            $serialNumber = 'BTK-2026-'.str_pad((string) $kitIndex, 4, '0', STR_PAD_LEFT);
+            $inventory = TrainerKitInventory::updateOrCreate(
+                ['serial_number' => $serialNumber],
+                [
+                    'model_name' => 'Bitanic Trainer Kit v1.0',
+                    'hardware_revision' => 'rev1.2',
+                    'batch_number' => 'BATCH-2026-Q1',
+                    'status' => TrainerKitInventory::STATUS_ACTIVATED,
+                    'school_id' => 1,
+                    'device_id' => $device->id,
+                    'registered_at' => now()->subMonths(2),
+                    'notes' => "Unit fisik resmi workstation {$device->name}.",
+                ]
+            );
+
+            TrainerKitSaleRecord::firstOrCreate(
+                [
+                    'inventory_id' => $inventory->id,
+                    'school_id' => 1,
+                    'sale_reference' => 'BAST-SMK-2026/01',
+                ],
+                [
+                    'sold_at' => now()->subMonths(2),
+                    'notes' => 'Alokasi pengadaan hibah lab pertanian presisi IoT ATPH 4.0.',
+                ]
+            );
+
+            TrainerKitLifecycleLog::firstOrCreate(
+                [
+                    'inventory_id' => $inventory->id,
+                    'action' => 'ACTIVATED',
+                ],
+                [
+                    'from_status' => TrainerKitInventory::STATUS_ASSIGNED,
+                    'to_status' => TrainerKitInventory::STATUS_ACTIVATED,
+                    'from_school_id' => 1,
+                    'to_school_id' => 1,
+                    'from_device_id' => $device->id,
+                    'to_device_id' => $device->id,
+                    'details' => 'Aktivasi unit di platform berhasil.',
+                    'created_at' => now()->subMonths(2),
+                ]
+            );
+
+            $kitIndex++;
         }
+
+        // 2B. Central factory inventory stock (unassigned)
+        TrainerKitInventory::updateOrCreate(
+            ['serial_number' => 'BTK-2026-0007'],
+            [
+                'model_name' => 'Bitanic Trainer Kit v1.0',
+                'hardware_revision' => 'rev1.2',
+                'batch_number' => 'BATCH-2026-Q1',
+                'status' => TrainerKitInventory::STATUS_REGISTERED,
+                'school_id' => null,
+                'device_id' => null,
+                'registered_at' => now()->subWeeks(1),
+                'notes' => 'Stok unit pabrik baru lolos QC, siap dialokasikan ke sekolah mitra.',
+            ]
+        );
 
         // 3. User Seeders (Guru, Siswa, Admin)
         $passwordHash = Hash::make('password123');
