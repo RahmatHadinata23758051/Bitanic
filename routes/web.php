@@ -184,10 +184,13 @@ Route::middleware(['auth', 'role:superuser'])->prefix('master')->name('master.')
     Route::post('/licenses/{license}/correct', [MasterLicenseController::class, 'correct'])->name('licenses.correct');
 });
 
-// 14. Lisensi LMS Sekolah (Read-Only Tenant Visibility)
+// 14. Lisensi LMS Sekolah (Read-Only Tenant Visibility & Expiration Notice)
 Route::get('/school/license', [SchoolLicenseController::class, 'show'])
     ->middleware(['auth', 'role:superuser,admin'])
     ->name('school.license.show');
+Route::get('/school/license-expired', [SchoolLicenseController::class, 'expired'])
+    ->middleware('auth')
+    ->name('school.license.expired');
 
 // Cascading region options accessible to authenticated users (e.g. for dynamic form selects)
 Route::middleware(['auth'])->prefix('api/regions')->name('api.regions.')->group(function () {

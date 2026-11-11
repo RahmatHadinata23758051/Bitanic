@@ -1,0 +1,94 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Models\SchoolLicense;
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class EnsureSchoolLicenseIsValid
+{
+    /**
+     * Handle an incoming request.
+     *
+     * @param  Closure(Request): (Response)  $next
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        // 1. Safety Rollout Gate: If enforcement feature flag is disabled, bypass check
+        if (! config('license.enforcement_enabled', false)) {
+            return $next($request);
+        }
+
+        // 2. Unauthenticated requests bypass (guest routes, login, etc.)
+        if (! auth()->check()) {
+            return $next($request);
+        }
+
+        $user = auth()->user();
+
+        // 3. Platform Superuser is never locked out
+        if ($user->isSuperuser()) {
+            return $next($request);
+        }
+
+        // 4. Accounts without school association bypass
+        if (! $user->school_id) {
+            return $next($request);
+        }
+
+        // 5. Allowlist: Routes and paths that must always remain accessible
+        if (
+            $request->routeIs(
+                'logout',
+                'school.license.show',
+                'school.license.expired',
+                'password.*',
+                'api.regions.*'
+            ) || $request->is('school/license*', 'logout')
+        ) {
+            return $next($request);
+        }
+
+        // 6. Check school license entitlement
+        $school = $user->school;
+        $license = $school?->license;
+
+        // If no license exists or status is not expired, allow (safe rollout)
+        if (! $license) {
+            return $next($request);
+        }
+
+        $status = $license->computed_status;
+        if ($status !== SchoolLicense::STATUS_EXPIRED) {
+            return $next($request);
+        }
+
+        // 7. License is EXPIRED: Handle enforcement
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Masa berlaku lisensi LMS Bitanic sekolah Anda telah berakhir.',
+                'license_status' => 'expired',
+                'redirect' => route('school.license.expired'),
+            ], 403);
+        }
+
+        // Tenant Admins (admin_sekolah, legacy admin):
+        // Allow GET on settings.index so they can view settings/license info
+        if ($user->isAdmin() && $request->isMethod('GET') && $request->routeIs('settings.index')) {
+            return $next($request);
+        }
+
+        // Tenant Admins get redirected to the license overview page with a warning
+        if ($user->isAdmin()) {
+            $formattedExp = $license->expiration_date?->translatedFormat('d F Y') ?? 'sebelumnya';
+
+            return redirect()->route('school.license.show')
+                ->with('error', "Masa berlaku lisensi LMS Bitanic sekolah Anda telah berakhir pada {$formattedExp}. Operasi sistem dibatasi hingga lisensi diperpanjang.");
+        }
+
+        // Guru and Siswa: Redirect to polite suspension notice page
+        return redirect()->route('school.license.expired');
+    }
+}

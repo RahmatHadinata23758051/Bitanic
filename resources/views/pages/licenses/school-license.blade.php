@@ -31,6 +31,24 @@
         </div>
     </div>
 
+    @if(session('error'))
+        <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-3 shadow-2xs">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600 shrink-0 mt-0.5"></i>
+            <div>
+                <p class="font-bold">Pemberitahuan Lisensi Kedaluwarsa</p>
+                <p class="mt-0.5">{{ session('error') }}</p>
+            </div>
+        </div>
+    @elseif($license && $license->computed_status === 'expired')
+        <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-3 shadow-2xs">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600 shrink-0 mt-0.5"></i>
+            <div>
+                <p class="font-bold">Masa Berlaku Lisensi Telah Berakhir</p>
+                <p class="mt-0.5">Akses LMS modul praktikum bagi guru dan siswa ditangguhkan hingga perpanjangan lisensi diselesaikan. Seluruh data akademik dan telemetri Anda tersimpan aman.</p>
+            </div>
+        </div>
+    @endif
+
     @if($license)
         {{-- License Status Hero Card --}}
         <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-5">
