@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\School;
 use App\Models\SchoolSetting;
 use App\Services\Agronomy\AgronomicThresholdResolver;
 use Illuminate\Http\RedirectResponse;
@@ -16,15 +17,50 @@ use Illuminate\View\View;
 class SettingsAuditController extends Controller
 {
     /**
-     * Resolve the authenticated user's school_id or abort 403.
+     * Resolve the authenticated user's school_id or abort 403/404.
      * Fail-closed: no fallback to a default school.
      */
     private function resolveSchoolIdOrFail(): int
     {
         $user = Auth::user();
 
-        if (! $user || ! $user->school_id) {
+        if (! $user) {
             abort(403, 'Akses ditolak: akun Anda belum terdaftar pada sekolah manapun.');
+        }
+
+        if ($user->isSuperuser()) {
+            $requestedSchoolId = request()->query('school_id') ?? request()->input('school_id');
+            if ($requestedSchoolId !== null && $requestedSchoolId !== '') {
+                if (! is_numeric($requestedSchoolId)) {
+                    abort(404, 'Parameter sekolah tidak valid.');
+                }
+                $school = School::where('id', (int) $requestedSchoolId)->where('status', 'active')->first();
+                if (! $school) {
+                    abort(404, 'Sekolah tidak ditemukan atau tidak aktif.');
+                }
+
+                return (int) $school->id;
+            }
+
+            if ($user->school_id) {
+                $school = $user->school;
+                if ($school && $school->status === 'active') {
+                    return (int) $school->id;
+                }
+            }
+
+            abort(403, 'Akses ditolak: akun Anda belum terdaftar pada sekolah manapun.');
+        }
+
+        if (! $user->school_id) {
+            abort(403, 'Akses ditolak: akun Anda belum terdaftar pada sekolah manapun.');
+        }
+
+        $requestedSchoolId = request()->query('school_id') ?? request()->input('school_id');
+        if ($requestedSchoolId !== null && $requestedSchoolId !== '') {
+            if ((string) $requestedSchoolId !== (string) $user->school_id) {
+                abort(403, 'Akses ditolak: Anda tidak memiliki izin untuk mengakses pengaturan sekolah lain.');
+            }
         }
 
         $school = $user->school;
@@ -41,6 +77,10 @@ class SettingsAuditController extends Controller
     public function index(): View
     {
         $schoolId = $this->resolveSchoolIdOrFail();
+        $user = Auth::user();
+        $isSuperuser = (bool) $user?->isSuperuser();
+        $schools = $isSuperuser ? School::where('status', 'active')->orderBy('name')->get() : collect();
+        $school = School::find($schoolId);
 
         $setting = SchoolSetting::where('school_id', $schoolId)->first();
 
@@ -49,7 +89,7 @@ class SettingsAuditController extends Controller
         if (! $setting) {
             $setting = (object) [
                 'school_id' => $schoolId,
-                'school_name' => Auth::user()->school?->name ?? 'Belum Dikonfigurasi',
+                'school_name' => $school?->name ?? 'Belum Dikonfigurasi',
                 'academic_year' => '2026/2027',
                 'semester' => 'Ganjil',
                 'course_name' => 'Agribisnis Tanaman Pangan & Hortikultura (ATPH)',
@@ -70,6 +110,9 @@ class SettingsAuditController extends Controller
         return view('pages.settings.settings', [
             'setting' => $setting,
             'auditLogs' => $auditLogs,
+            'isSuperuser' => $isSuperuser,
+            'schools' => $schools,
+            'selectedSchoolId' => $schoolId,
         ]);
     }
 
@@ -161,7 +204,9 @@ class SettingsAuditController extends Controller
                 'ip_address' => $request->ip(),
             ]);
 
-            return redirect()->route('settings.index')
+            $redirectParams = $user && $user->isSuperuser() ? ['school_id' => $schoolId] : [];
+
+            return redirect()->route('settings.index', $redirectParams)
                 ->with('success', 'Konfigurasi profil laboratorium dan ambang batas agronomi berhasil diperbarui.');
         });
     }

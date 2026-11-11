@@ -120,7 +120,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span class="text-slate-400 font-sans">IP Gateway:</span>
-                            @if(Auth::check() && in_array(Auth::user()->role, ['superuser', 'admin', 'guru']))
+                            @if(Auth::check() && in_array(Auth::user()->role, ['superuser', 'admin', 'admin_sekolah', 'guru']))
                                 <span class="text-slate-800 font-semibold">{{ $activeDevice->ip_address ?? 'Belum dikonfigurasi' }}</span>
                             @else
                                 <span class="text-slate-400 italic font-sans text-[10px]">Akses terbatas</span>

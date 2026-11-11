@@ -48,11 +48,12 @@ class ModulePracticumController extends Controller
             ->where('module_id', $module->id)
             ->first() : null;
 
-        // Jika Guru, ambil seluruh laporan siswa di modul ini untuk dinilai
-        $allReports = ($user && in_array($user->role, ['guru', 'superuser']))
+        // Jika Guru atau Admin Sekolah/Superuser, ambil seluruh laporan siswa di modul ini untuk dinilai
+        $canGrade = $user && ($user->isGuru() || $user->isSuperuser() || $user->isAdmin());
+        $allReports = $canGrade
             ? StudentReport::with(['user.profile'])
                 ->where('module_id', $module->id)
-                ->when($user->role !== 'superuser', fn ($query) => $query->whereHas('user', fn ($studentQuery) => $studentQuery->where('school_id', $user->school_id)))
+                ->when(! $user->isSuperuser(), fn ($query) => $query->whereHas('user', fn ($studentQuery) => $studentQuery->where('school_id', $user->school_id)))
                 ->latest()
                 ->get()
             : collect();

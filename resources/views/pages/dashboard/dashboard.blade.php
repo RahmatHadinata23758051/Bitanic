@@ -5,16 +5,18 @@
 
     @php
         $isGuest = ! $user;
-        $isSiswa = $user?->isSiswa();
-        $isGuru = $user?->isGuru();
-        $isSuperuser = $user?->isSuperuser();
-        $isAdmin = in_array($user?->role ?? '', ['superuser', 'admin'], true);
+        $isSiswa = (bool) $user?->isSiswa();
+        $isGuru = (bool) $user?->isGuru();
+        $isSuperuser = (bool) $user?->isSuperuser();
+        $isSchoolAdmin = (bool) ($user && $user->isAdmin());
+        $isAdmin = $isSuperuser || $isSchoolAdmin;
 
         $offlineKitsCount = max(0, $totalKitsCount - $onlineKitsCount);
 
         $rolePillLabel = match (true) {
             $isGuru => 'Guru Pembimbing',
-            $isSuperuser, $isAdmin => 'Admin Lab IoT',
+            $isSuperuser => 'Superuser Platform',
+            $isSchoolAdmin => 'Admin Sekolah',
             $isSiswa => 'Siswa Praktikan',
             default => 'Pengunjung',
         };
@@ -56,6 +58,13 @@
                     </select>
                 </div>
             </form>
+        @elseif($user && $user->school)
+            <div class="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs">
+                    <i data-lucide="building-2" class="w-3.5 h-3.5 text-slate-500"></i>
+                    {{ $user->school->name }}
+                </span>
+            </div>
         @endif
     </header>
 

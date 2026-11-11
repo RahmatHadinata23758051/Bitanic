@@ -110,6 +110,21 @@
 
         <!-- Action Toolbar -->
         <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
+            @if(!empty($isSuperuser) && $schools->isNotEmpty())
+                <form method="GET" action="{{ route('classes.index') }}" class="flex items-center gap-2">
+                    <label for="school_id" class="text-xs text-slate-500 font-medium">Sekolah:</label>
+                    <select id="school_id" name="school_id" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] shadow-2xs">
+                        @foreach($schools as $school)
+                            <option value="{{ $school->id }}" {{ (string) $selectedSchoolId === (string) $school->id ? 'selected' : '' }}>{{ $school->name }}</option>
+                        @endforeach
+                    </select>
+                </form>
+            @elseif(!empty($schoolName))
+                <span class="text-xs text-slate-500 font-medium bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                    {{ $schoolName }}
+                </span>
+            @endif
+
             <button
                 type="button"
                 @click="showImportModal = true"
@@ -295,6 +310,7 @@
 
             <form method="POST" action="{{ route('classes.store') }}" class="space-y-3.5">
                 @csrf
+                <input type="hidden" name="school_id" value="{{ $selectedSchoolId }}">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Kelas *</label>
                     <input type="text" name="name" required placeholder="Contoh: XII ATPH 1" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">

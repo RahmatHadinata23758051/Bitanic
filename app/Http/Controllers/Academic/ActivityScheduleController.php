@@ -70,7 +70,7 @@ class ActivityScheduleController extends Controller
             ];
         }
 
-        $canManageSchedules = (bool) ($user && in_array($user->role, ['guru', 'superuser', 'admin'], true));
+        $canManageSchedules = (bool) ($user && ($user->isGuru() || $user->isSuperuser() || $user->isAdmin()));
 
         return view('pages.schedules.activity-schedules', [
             'schedules' => $schedules,

@@ -15,11 +15,22 @@
             </p>
         </div>
 
-        <!-- School Scope Badge -->
+        <!-- School Scope Badge / Selector -->
         <div class="flex items-center gap-2.5 shrink-0">
-            <span class="text-xs text-slate-600 font-medium bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                {{ $setting->school_name }}
-            </span>
+            @if(!empty($isSuperuser) && $schools->isNotEmpty())
+                <form method="GET" action="{{ route('settings.index') }}" class="flex items-center gap-2">
+                    <label for="school_id" class="text-xs text-slate-500 font-medium">Sekolah:</label>
+                    <select id="school_id" name="school_id" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] shadow-2xs">
+                        @foreach($schools as $school)
+                            <option value="{{ $school->id }}" {{ (string) $selectedSchoolId === (string) $school->id ? 'selected' : '' }}>{{ $school->name }}</option>
+                        @endforeach
+                    </select>
+                </form>
+            @else
+                <span class="text-xs text-slate-600 font-medium bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                    {{ $setting->school_name }}
+                </span>
+            @endif
         </div>
     </div>
 
@@ -71,6 +82,7 @@
     <div x-show="activeTab === 'config'" class="space-y-6">
         <form method="POST" action="{{ route('settings.update') }}" class="space-y-6">
             @csrf
+            <input type="hidden" name="school_id" value="{{ $setting->school_id }}">
 
             <!-- Section 1: Profil Sekolah & Kurikulum -->
             <div class="p-5 sm:p-6 rounded-xl bg-white border border-slate-200/80 shadow-2xs space-y-4">

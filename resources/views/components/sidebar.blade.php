@@ -13,18 +13,19 @@
     $canViewRawLogs = true; // public
 
     $canViewSchedules = $user !== null; // auth required
-    $canViewMedia = $user && in_array($role, ['guru', 'superuser', 'admin'], true);
+    $canViewMedia = $user && in_array($role, ['guru', 'superuser', 'admin', 'admin_sekolah'], true);
     $canViewReports = $user !== null; // auth required
-    $canViewClasses = $user && in_array($role, ['guru', 'superuser', 'admin'], true);
+    $canViewClasses = $user && in_array($role, ['guru', 'superuser', 'admin', 'admin_sekolah'], true);
     $canViewAssessment = $user !== null; // auth required
-    $canViewUsers = $user && in_array($role, ['guru', 'superuser', 'admin'], true);
-    $canViewSettings = $user && in_array($role, ['superuser', 'admin'], true);
+    $canViewUsers = $user && in_array($role, ['guru', 'superuser', 'admin', 'admin_sekolah'], true);
+    $canViewSettings = $user && in_array($role, ['superuser', 'admin', 'admin_sekolah'], true);
 
     $currentRoute = Route::currentRouteName() ?? '';
     $userInitials = $isGuest ? 'U' : strtoupper(substr($user->name ?? 'User', 0, 2));
     $userRoleLabel = match ($role) {
         'guru' => 'Guru Pembimbing',
-        'superuser', 'admin' => 'Admin Lab IoT',
+        'superuser' => 'Superuser Platform',
+        'admin_sekolah', 'admin' => 'Admin Sekolah',
         'siswa' => 'Siswa Praktikan',
         default => 'Pengunjung',
     };
