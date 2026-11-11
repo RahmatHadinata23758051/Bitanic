@@ -856,6 +856,45 @@ Implemented and verified the complete Sprint 4 / Pack B engineering delivery (`D
    - **Vite Production Build**: 97.14 kB CSS, 1,875.93 kB JS built cleanly in 17.94s.
    - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
 
+### 2.22 — Sprint 5 / Pack A: School LMS Licensing & Superuser Management (2026-11-12)
+
+Implemented and verified the complete Sprint 5 / Pack A engineering delivery (`LICENSE-05-01`, `LICENSE-05-02`) along with critical targeted hardware warranty guard `WARRANTY-BAST-GUARD`:
+
+1. **WARRANTY-BAST-GUARD — Targeted Hardware Warranty Security Guard**:
+   - Guarded `CorrectTrainerKitWarrantyAction`: requires existing legitimate physical handover/BAST (`$lockedInventory->handover`) and consistent school ownership (`$school_id === $lockedInventory->school_id`). Rejects unrecorded or cross-school kits with HTTP 422 `ValidationException`.
+   - Updated `TrainerKitInventory::getWarrantyStatusAttribute()` to return `pending` ("Menunggu Efektif") when `today < warranty_start_date`, eliminating false `ACTIVE` status for future dates.
+   - Preserves existing audit logs, warranty correction history, and lifecycle logs.
+   - Formatted and verified with 18 tests (72 assertions) in `tests/Feature/TrainerKitHandoverAndWarrantyTest.php` across SQLite and PostgreSQL.
+
+2. **LICENSE-05-01 — One LMS License per School & First-Year Entitlement**:
+   - Migration `2026_01_01_000031_create_school_licenses_and_terms_tables.php` creates `school_licenses` (canonical, `unique('school_id')`), `school_license_terms` (append-only annual term records), and `school_license_logs` (immutable audit trail).
+   - Enforces **ONE SCHOOL = ONE LMS LICENSE** contract: multiple Trainer Kits never duplicate or multiply LMS software licenses.
+   - Decoupled from automated payment gates: no billing system, no invoice generator, no Midtrans, and no automatic entitlement inferred from hardware sales or BAST handovers. All activations and renewals require explicit Superuser authorization.
+   - Half-open interval convention `[start_date, expiration_date)`:
+     - `pending`: `today < start_date` or unactivated (`start_date IS NULL`).
+     - `active`: `start_date <= today < expiration_date`.
+     - `expired`: `today >= expiration_date`.
+   - Exact 1-calendar-year duration with leap-year safety (`addYearNoOverflow()`, e.g. `2024-02-29` to `2025-02-28`).
+   - Actions: `InitializeSchoolLicenseAction`, `ActivateFirstYearLicenseAction`, `RenewSchoolLicenseAction`, `CorrectSchoolLicenseDatesAction`.
+
+3. **LICENSE-05-02 — Superuser License Management & School License Visibility**:
+   - Superuser workstation under `/master/licenses` (registry index) and `/master/licenses/{id}` (detailed lifecycle management).
+   - Case-insensitive search across license number, school name, and NPSN; status filtering (`all`, `active`, `pending`, `expired`, `unentitled_only`); metric overview cards (Total Lisensi, Lisensi Aktif, Menunggu Aktivasi, Lisensi Kedaluwarsa, Sekolah Belum Berlisensi).
+   - Single-click license initialization for active schools in pending status.
+   - First-year entitlement activation modal, annual renewal modal (chains seamlessly to subsequent term without overwriting term history), date correction modal with mandatory audit reason (`min:5` chars).
+   - School Admin visibility: `/school/license` (dedicated school license overview) and `/settings?tab=license` (Settings tab) for `admin_sekolah` and legacy `admin` in read-only capacity.
+   - Fail-closed multi-tenant isolation: Guru, Siswa, and unauthenticated guests are strictly forbidden (HTTP 403 or redirect to `/login`).
+
+4. **Full Dual-Driver & Browser E2E Quality Gates**:
+   - **SQLite In-Memory**: 546 passed, 0 failures, 5 skipped (3,154 assertions) (`php artisan test`).
+   - **PostgreSQL 17.6 (`bitanic_test`)**: 547 passed, 0 failures, 4 skipped (3,166 assertions) (`$env:DB_CONNECTION="pgsql_testing"; php artisan test`).
+   - **School LMS License Management Suite**: 11 tests, 82 assertions (`tests/Feature/SchoolLicenseManagementTest.php`).
+   - **Real Browser E2E (Playwright Headless Chromium)**: 25 end-to-end scenarios (100% PASS):
+     - Scenario 24: School LMS License Lifecycle, Superuser Workstation & School Admin Visibility (PASS).
+   - **Laravel Pint**: 100% clean formatting (`./vendor/bin/pint --test`).
+   - **Vite Production Build**: 98.27 kB CSS, 1,875.93 kB JS built cleanly in 33.15s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |
