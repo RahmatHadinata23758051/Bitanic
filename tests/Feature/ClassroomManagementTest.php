@@ -48,11 +48,13 @@ class ClassroomManagementTest extends TestCase
     public function test_teacher_can_crud_student_groups_with_trainer_kit(): void
     {
         $teacher = User::factory()->create(['role' => 'guru']);
-        $classroom = Classroom::create(['name' => 'XI ATPH 2']);
-        $device = Device::create(['code' => 'TK-GRP-01', 'name' => 'Meja Kelompok 1', 'is_active' => true]);
+        $this->actingAs($teacher);
+
+        $classroom = Classroom::create(['name' => 'XI ATPH 2', 'school_id' => $teacher->school_id]);
+        $device = Device::create(['code' => 'TK-GRP-01', 'name' => 'Meja Kelompok 1', 'is_active' => true, 'school_id' => $teacher->school_id]);
 
         // 1. Create Group
-        $response = $this->actingAs($teacher)->post(route('classes.groups.store', $classroom->id), [
+        $response = $this->post(route('classes.groups.store', $classroom->id), [
             'name' => 'Kelompok 1 (Bedengan Melati)',
             'device_id' => $device->id,
             'notes' => 'Fokus komoditas tomat beef',
@@ -67,7 +69,7 @@ class ClassroomManagementTest extends TestCase
         $group = StudentGroup::where('name', 'Kelompok 1 (Bedengan Melati)')->firstOrFail();
 
         // 2. Update Group
-        $updateResponse = $this->actingAs($teacher)->put(route('groups.update', $group->id), [
+        $updateResponse = $this->put(route('groups.update', $group->id), [
             'name' => 'Kelompok 1 (Bedengan Mawar)',
             'device_id' => $device->id,
         ]);
@@ -75,7 +77,7 @@ class ClassroomManagementTest extends TestCase
         $this->assertDatabaseHas('student_groups', ['name' => 'Kelompok 1 (Bedengan Mawar)']);
 
         // 3. Delete Group
-        $deleteResponse = $this->actingAs($teacher)->delete(route('groups.destroy', $group->id));
+        $deleteResponse = $this->delete(route('groups.destroy', $group->id));
         $deleteResponse->assertRedirect(route('classes.index'));
         $this->assertDatabaseMissing('student_groups', ['id' => $group->id]);
     }
@@ -83,13 +85,14 @@ class ClassroomManagementTest extends TestCase
     public function test_teacher_can_allocate_student_to_class_group_and_trainer_kit(): void
     {
         $teacher = User::factory()->create(['role' => 'guru']);
-        $student = User::factory()->create(['role' => 'siswa']);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $teacher->school_id]);
         UserProfile::create(['user_id' => $student->id, 'type' => 'siswa']);
 
-        $classroom = Classroom::create(['name' => 'X ATPH 3']);
-        $device = Device::create(['code' => 'TK-ALLOC-01', 'name' => 'Meja Praktik 1', 'is_active' => true]);
+        $classroom = Classroom::create(['name' => 'X ATPH 3', 'school_id' => $teacher->school_id]);
+        $device = Device::create(['code' => 'TK-ALLOC-01', 'name' => 'Meja Praktik 1', 'is_active' => true, 'school_id' => $teacher->school_id]);
         $group = StudentGroup::create([
             'classroom_id' => $classroom->id,
+            'school_id' => $teacher->school_id,
             'name' => 'Kelompok Bedengan 3A',
             'device_id' => $device->id,
         ]);
@@ -112,7 +115,7 @@ class ClassroomManagementTest extends TestCase
     public function test_teacher_can_view_classes_index(): void
     {
         $teacher = User::factory()->create(['role' => 'guru']);
-        Classroom::create(['name' => 'X ATPH 1']);
+        Classroom::create(['name' => 'X ATPH 1', 'school_id' => $teacher->school_id]);
 
         $response = $this->actingAs($teacher)->get(route('classes.index'));
         $response->assertStatus(200);
@@ -123,8 +126,8 @@ class ClassroomManagementTest extends TestCase
     public function test_cannot_delete_classroom_with_assigned_students(): void
     {
         $teacher = User::factory()->create(['role' => 'guru']);
-        $student = User::factory()->create(['role' => 'siswa']);
-        $classroom = Classroom::create(['name' => 'XII ATPH 3']);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $teacher->school_id]);
+        $classroom = Classroom::create(['name' => 'XII ATPH 3', 'school_id' => $teacher->school_id]);
 
         UserProfile::create([
             'user_id' => $student->id,
@@ -140,15 +143,16 @@ class ClassroomManagementTest extends TestCase
     public function test_student_allocation_validates_group_kit_mismatch(): void
     {
         $teacher = User::factory()->create(['role' => 'guru']);
-        $student = User::factory()->create(['role' => 'siswa']);
+        $student = User::factory()->create(['role' => 'siswa', 'school_id' => $teacher->school_id]);
         UserProfile::create(['user_id' => $student->id, 'type' => 'siswa']);
 
-        $classroom = Classroom::create(['name' => 'X ATPH 4']);
-        $device1 = Device::create(['code' => 'TK-GRP-01', 'name' => 'Meja 1', 'is_active' => true]);
-        $device2 = Device::create(['code' => 'TK-GRP-02', 'name' => 'Meja 2', 'is_active' => true]);
+        $classroom = Classroom::create(['name' => 'X ATPH 4', 'school_id' => $teacher->school_id]);
+        $device1 = Device::create(['code' => 'TK-GRP-01', 'name' => 'Meja 1', 'is_active' => true, 'school_id' => $teacher->school_id]);
+        $device2 = Device::create(['code' => 'TK-GRP-02', 'name' => 'Meja 2', 'is_active' => true, 'school_id' => $teacher->school_id]);
 
         $group = StudentGroup::create([
             'classroom_id' => $classroom->id,
+            'school_id' => $teacher->school_id,
             'name' => 'Kelompok 1',
             'device_id' => $device1->id,
         ]);

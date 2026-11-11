@@ -24,10 +24,8 @@ class StudentGroup extends Model
     {
         static::creating(function (StudentGroup $group) {
             if (empty($group->school_id)) {
-                $group->school_id = auth()->user()?->school_id
-                    ?? $group->classroom?->school_id
-                    ?? School::where('slug', 'smk-ppn-1-sukaraja')->value('id')
-                    ?? School::first()?->id;
+                $group->school_id = $group->classroom?->school_id
+                    ?? auth()->user()?->school_id;
             }
         });
     }

@@ -24,9 +24,10 @@ class Classroom extends Model
     {
         static::creating(function (Classroom $classroom) {
             if (empty($classroom->school_id)) {
-                $classroom->school_id = auth()->user()?->school_id
-                    ?? School::where('slug', 'smk-ppn-1-sukaraja')->value('id')
-                    ?? School::first()?->id;
+                $userSchoolId = auth()->user()?->school_id;
+                if (! empty($userSchoolId)) {
+                    $classroom->school_id = $userSchoolId;
+                }
             }
         });
     }

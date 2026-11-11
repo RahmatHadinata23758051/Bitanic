@@ -5,9 +5,17 @@
     showClassModal: false,
     showEditClassModal: false,
     showGroupModal: false,
+    showAcademicModal: false,
+    showAllocateModal: false,
     showImportModal: false,
     selectedClassId: null,
     selectedClassName: '',
+    selectedClassGroups: [],
+    allocateData: {
+        student_id: '',
+        student_group_id: '',
+        assigned_kit_id: ''
+    },
     editClassData: { id: null, name: '', department: '', academic_year: '', homeroom_teacher_id: '', description: '' },
     importFile: null,
     importPreview: null,
@@ -19,6 +27,18 @@
         this.selectedClassId = classId;
         this.selectedClassName = className;
         this.showGroupModal = true;
+    },
+
+    openAllocateModal(classId, className, groups) {
+        this.selectedClassId = classId;
+        this.selectedClassName = className;
+        this.selectedClassGroups = groups || [];
+        this.allocateData = {
+            student_id: '',
+            student_group_id: '',
+            assigned_kit_id: ''
+        };
+        this.showAllocateModal = true;
     },
 
     openEditClass(cls) {
@@ -44,9 +64,12 @@
         const formData = new FormData();
         formData.append('file', file);
         formData.append('_token', '{{ csrf_token() }}');
+        @if($selectedSchoolId)
+        formData.append('school_id', '{{ $selectedSchoolId }}');
+        @endif
 
         try {
-            const res = await fetch('{{ Route::has('users.import.preview') ? route('users.import.preview') : url('/users/import/preview') }}', {
+            const res = await fetch('{{ route('users.import.preview') }}', {
                 method: 'POST',
                 headers: { 'Accept': 'application/json' },
                 body: formData
@@ -71,14 +94,19 @@
 
         this.uploadProgress = true;
         try {
-            const res = await fetch('{{ Route::has('users.import.execute') ? route('users.import.execute') : url('/users/import/execute') }}', {
+            const res = await fetch('{{ route('users.import.execute') }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify({ rows: validRows })
+                body: JSON.stringify({
+                    rows: validRows,
+                    @if($selectedSchoolId)
+                    school_id: '{{ $selectedSchoolId }}'
+                    @endif
+                })
             });
             const data = await res.json();
             if (res.ok) {
@@ -99,12 +127,12 @@
         <div>
             <div class="flex items-center gap-2">
                 <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-sans">
-                    Kelas
+                    Kelas &amp; Akademik
                 </h1>
-                <span class="sr-only">Manajemen Kelas</span>
+                <span class="sr-only">Manajemen Kelas &amp; Alokasi Praktikum</span>
             </div>
             <p class="text-xs sm:text-sm text-slate-500 mt-1">
-                Pengelolaan kelas, kelompok, dan peserta praktikum
+                Pengelolaan kelas, kelompok kerja, alokasi siswa, dan konfigurasi tahun ajaran
             </p>
         </div>
 
@@ -112,6 +140,9 @@
         <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
             @if(!empty($isSuperuser) && $schools->isNotEmpty())
                 <form method="GET" action="{{ route('classes.index') }}" class="flex items-center gap-2">
+                    @if(!empty($academicYearFilter))
+                        <input type="hidden" name="academic_year" value="{{ $academicYearFilter }}">
+                    @endif
                     <label for="school_id" class="text-xs text-slate-500 font-medium">Sekolah:</label>
                     <select id="school_id" name="school_id" onchange="this.form.submit()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] shadow-2xs">
                         @foreach($schools as $school)
@@ -125,6 +156,14 @@
                 </span>
             @endif
 
+            <button
+                type="button"
+                @click="showAcademicModal = true"
+                class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-2 transition-colors border border-slate-200/80 shadow-2xs"
+            >
+                <i data-lucide="calendar" class="w-4 h-4 text-slate-500"></i>
+                <span>Tahun Ajaran</span>
+            </button>
             <button
                 type="button"
                 @click="showImportModal = true"
@@ -142,6 +181,41 @@
                 <span>Tambah Kelas</span>
             </button>
         </div>
+    </div>
+
+    <!-- Active Academic Year Banner & Filter -->
+    <div class="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold text-xs">
+                <i data-lucide="calendar" class="w-4 h-4 text-emerald-700"></i>
+            </div>
+            <div>
+                <div class="text-[11px] text-slate-500">Tahun Ajaran Aktif Sekolah</div>
+                <div class="text-xs font-bold text-slate-800 font-tabular">
+                    {{ $setting->academic_year ?? '2026/2027' }} • Semester {{ $setting->semester ?? 'Ganjil' }}
+                </div>
+            </div>
+        </div>
+
+        @if($availableYears->isNotEmpty())
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[11px] text-slate-400 font-medium mr-1">Filter Angkatan:</span>
+                <a
+                    href="{{ route('classes.index', array_filter(['school_id' => $selectedSchoolId])) }}"
+                    class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors {{ empty($academicYearFilter) ? 'bg-[#0c3c26] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
+                >
+                    Semua
+                </a>
+                @foreach($availableYears as $yr)
+                    <a
+                        href="{{ route('classes.index', array_filter(['school_id' => $selectedSchoolId, 'academic_year' => $yr])) }}"
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold font-tabular transition-colors {{ $academicYearFilter === $yr ? 'bg-[#0c3c26] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
+                    >
+                        {{ $yr }}
+                    </a>
+                @endforeach
+            </div>
+        @endif
     </div>
 
     <!-- Flash Messages / Alerts -->
@@ -188,11 +262,19 @@
                             <span class="text-slate-300">•</span>
                             <span><strong class="font-medium font-tabular text-slate-700">{{ $classroom->groups->count() }}</strong> Kelompok</span>
                             <span class="text-slate-300">•</span>
-                            <span><strong class="font-medium font-tabular text-slate-700">{{ $classroom->profiles_count ?? $classroom->profiles->count() }}</strong> Siswa</span>
+                            <span><strong class="font-medium font-tabular text-slate-700">{{ $classroom->profiles_count ?? $classroom->profiles->count() }}</strong> Siswa Terdaftar</span>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            @click="openAllocateModal({{ $classroom->id }}, '{{ addslashes($classroom->name) }}', {{ json_encode($classroom->groups) }})"
+                            class="px-3 py-1.5 rounded-lg border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors shadow-2xs"
+                        >
+                            <i data-lucide="user-check" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Alokasi Siswa</span>
+                        </button>
                         <button
                             type="button"
                             @click="openGroupModal({{ $classroom->id }}, '{{ addslashes($classroom->name) }}')"
@@ -247,7 +329,7 @@
                                     <!-- Trainer Kit Badge -->
                                     <div class="text-xs">
                                         @if ($group->device)
-                                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[11px] border border-emerald-200/70">
+                                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[11px] border border-emerald-200/70 font-tabular">
                                                 <i data-lucide="cpu" class="w-3 h-3 text-emerald-700"></i>
                                                 {{ $group->device->code }} ({{ $group->device->name }})
                                             </span>
@@ -257,6 +339,12 @@
                                             </span>
                                         @endif
                                     </div>
+
+                                    @if($group->leader)
+                                        <div class="text-[11px] text-slate-600">
+                                            Ketua: <strong class="font-medium text-slate-800">{{ $group->leader->name }}</strong>
+                                        </div>
+                                    @endif
 
                                     @if ($group->notes)
                                         <p class="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{{ $group->notes }}</p>
@@ -318,12 +406,12 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Jurusan / Konsentrasi Keahlian</label>
-                    <input type="text" name="department" value="Agribisnis Tanaman Pangan & Hortikultura" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                    <input type="text" name="department" value="Agribisnis Tanaman Pangan &amp; Hortikultura" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran *</label>
-                    <input type="text" name="academic_year" value="2026/2027" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                    <input type="text" name="academic_year" value="{{ $setting->academic_year ?? '2026/2027' }}" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none font-tabular">
                 </div>
 
                 <div>
@@ -373,7 +461,7 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran *</label>
-                    <input type="text" name="academic_year" x-model="editClassData.academic_year" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                    <input type="text" name="academic_year" x-model="editClassData.academic_year" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none font-tabular">
                 </div>
 
                 <div>
@@ -420,10 +508,20 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Alokasi Default Trainer Kit Meja</label>
-                    <select name="device_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                    <select name="device_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none font-mono">
                         <option value="">-- Tanpa Meja Default --</option>
                         @foreach ($devices as $device)
                             <option value="{{ $device->id }}">{{ $device->code }} - {{ $device->name }} ({{ $device->bench_location ?? 'Lab' }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Ketua Kelompok (Siswa)</label>
+                    <select name="leader_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                        <option value="">-- Pilih Ketua --</option>
+                        @foreach ($students as $stu)
+                            <option value="{{ $stu->id }}">{{ $stu->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -441,6 +539,109 @@
         </div>
     </div>
 
+    <!-- Modal: Alokasi Siswa ke Kelas & Kelompok -->
+    <div
+        x-show="showAllocateModal"
+        x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+    >
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl border border-slate-200" @click.outside="showAllocateModal = false">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-base">Alokasi Siswa</h3>
+                    <p class="text-xs text-slate-500">Kelas Target: <span class="font-semibold text-slate-800" x-text="selectedClassName"></span></p>
+                </div>
+                <button type="button" @click="showAllocateModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form :action="'{{ url('/students') }}/' + allocateData.student_id + '/allocation'" method="POST" class="space-y-3.5">
+                @csrf
+                <input type="hidden" name="classroom_id" :value="selectedClassId">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih Siswa *</label>
+                    <select name="student_id" x-model="allocateData.student_id" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                        <option value="">-- Pilih Siswa --</option>
+                        @foreach ($students as $stu)
+                            <option value="{{ $stu->id }}">{{ $stu->name }} ({{ $stu->profile?->class_grade ?? 'Belum ada kelas' }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Kelompok Praktikum</label>
+                    <select name="student_group_id" x-model="allocateData.student_group_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                        <option value="">-- Tanpa Kelompok --</option>
+                        <template x-for="grp in selectedClassGroups" :key="grp.id">
+                            <option :value="grp.id" x-text="grp.name"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Alokasi Meja Trainer Kit</label>
+                    <select name="assigned_kit_id" x-model="allocateData.assigned_kit_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none font-mono">
+                        <option value="">-- Gunakan Meja Default Kelompok --</option>
+                        @foreach ($devices as $device)
+                            <option value="{{ $device->code }}">{{ $device->code }} - {{ $device->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" @click="showAllocateModal = false" class="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" :disabled="!allocateData.student_id" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0c3c26] hover:bg-[#082819] disabled:opacity-50 transition-colors shadow-2xs">Simpan Alokasi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Konfigurasi Tahun Ajaran & Semester Sekolah -->
+    <div
+        x-show="showAcademicModal"
+        x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+    >
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl border border-slate-200" @click.outside="showAcademicModal = false">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-base">Konfigurasi Tahun Ajaran</h3>
+                    <p class="text-xs text-slate-500">Atur kalender akademik dan semester aktif institusi</p>
+                </div>
+                <button type="button" @click="showAcademicModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form method="POST" action="{{ route('classes.academic-year.update') }}" class="space-y-3.5">
+                @csrf
+                @if($isSuperuser)
+                    <input type="hidden" name="school_id" value="{{ $selectedSchoolId }}">
+                @endif
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran Aktif *</label>
+                    <input type="text" name="academic_year" value="{{ $setting->academic_year ?? '2026/2027' }}" required placeholder="Contoh: 2026/2027" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none font-tabular">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Semester Aktif *</label>
+                    <select name="semester" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#0c3c26]/20 focus:border-[#0c3c26] focus:outline-none">
+                        <option value="Ganjil" {{ ($setting->semester ?? 'Ganjil') === 'Ganjil' ? 'selected' : '' }}>Semester Ganjil</option>
+                        <option value="Genap" {{ ($setting->semester ?? '') === 'Genap' ? 'selected' : '' }}>Semester Genap</option>
+                    </select>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" @click="showAcademicModal = false" class="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0c3c26] hover:bg-[#082819] transition-colors shadow-2xs">Simpan Konfigurasi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal: Bulk Import CSV/XLSX -->
     <div
         x-show="showImportModal"
@@ -451,7 +652,7 @@
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
                     <h3 class="font-bold text-slate-900 text-base">Bulk Import Akun Pengguna</h3>
-                    <p class="text-xs text-slate-500">Unggah berkas CSV atau XLSX dengan kolom: nama, email, role (siswa/guru), nisn/nip, kelas, kelompok, kit.</p>
+                    <p class="text-xs text-slate-500">Unggah berkas CSV atau XLSX dengan kolom: nama, email, role (siswa/guru), nisn/nip (opsional), kelas, kelompok, kit.</p>
                 </div>
                 <button type="button" @click="showImportModal = false" class="text-slate-400 hover:text-slate-600">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -489,7 +690,7 @@
                         </div>
                         <div class="text-[11px] text-slate-500 flex items-center gap-1.5">
                             <i data-lucide="shield-check" class="w-3.5 h-3.5 text-slate-400"></i>
-                            Proteksi sandi unik & wajib ganti saat login pertama
+                            Proteksi sandi unik &amp; wajib ganti saat login pertama
                         </div>
                     </div>
 
