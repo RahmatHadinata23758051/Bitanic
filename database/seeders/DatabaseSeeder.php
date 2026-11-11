@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Seeding Bitanic vocational LMS master data...');
 
         $this->call([
+            IndonesianRegionsSeeder::class,
             SubscriptionPlanSeeder::class,
             VocationalLmsSeeder::class,
             ModulePracticumSeeder::class,

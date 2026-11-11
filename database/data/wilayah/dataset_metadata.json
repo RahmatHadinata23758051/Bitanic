@@ -1,0 +1,9 @@
+{
+  "source_name": "Kepmendagri No 050-145 Tahun 2022 / BPS Indonesia",
+  "dataset_version": "2024.1",
+  "total_provinces": 38,
+  "total_regencies": 514,
+  "total_districts": 826,
+  "checksum": "3a8dabaae1b2733ae3897fe8bd00d03ba1159dcfa54dc48badf238baa2e58911",
+  "description": "Authoritative Indonesian administrative region reference data (Provinsi, Kabupaten/Kota, Kecamatan)."
+}

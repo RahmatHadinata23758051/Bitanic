@@ -1,0 +1,4132 @@
+[
+  {
+    "code": "3101010",
+    "regency_code": "3101",
+    "name": "KEPULAUAN SERIBU SELATAN"
+  },
+  {
+    "code": "3101020",
+    "regency_code": "3101",
+    "name": "KEPULAUAN SERIBU UTARA"
+  },
+  {
+    "code": "3171010",
+    "regency_code": "3171",
+    "name": "JAGAKARSA"
+  },
+  {
+    "code": "3171020",
+    "regency_code": "3171",
+    "name": "PASAR MINGGU"
+  },
+  {
+    "code": "3171030",
+    "regency_code": "3171",
+    "name": "CILANDAK"
+  },
+  {
+    "code": "3171040",
+    "regency_code": "3171",
+    "name": "PESANGGRAHAN"
+  },
+  {
+    "code": "3171050",
+    "regency_code": "3171",
+    "name": "KEBAYORAN LAMA"
+  },
+  {
+    "code": "3171060",
+    "regency_code": "3171",
+    "name": "KEBAYORAN BARU"
+  },
+  {
+    "code": "3171070",
+    "regency_code": "3171",
+    "name": "MAMPANG PRAPATAN"
+  },
+  {
+    "code": "3171080",
+    "regency_code": "3171",
+    "name": "PANCORAN"
+  },
+  {
+    "code": "3171090",
+    "regency_code": "3171",
+    "name": "TEBET"
+  },
+  {
+    "code": "3171100",
+    "regency_code": "3171",
+    "name": "SETIA BUDI"
+  },
+  {
+    "code": "3172010",
+    "regency_code": "3172",
+    "name": "PASAR REBO"
+  },
+  {
+    "code": "3172020",
+    "regency_code": "3172",
+    "name": "CIRACAS"
+  },
+  {
+    "code": "3172030",
+    "regency_code": "3172",
+    "name": "CIPAYUNG"
+  },
+  {
+    "code": "3172040",
+    "regency_code": "3172",
+    "name": "MAKASAR"
+  },
+  {
+    "code": "3172050",
+    "regency_code": "3172",
+    "name": "KRAMAT JATI"
+  },
+  {
+    "code": "3172060",
+    "regency_code": "3172",
+    "name": "JATINEGARA"
+  },
+  {
+    "code": "3172070",
+    "regency_code": "3172",
+    "name": "DUREN SAWIT"
+  },
+  {
+    "code": "3172080",
+    "regency_code": "3172",
+    "name": "CAKUNG"
+  },
+  {
+    "code": "3172090",
+    "regency_code": "3172",
+    "name": "PULO GADUNG"
+  },
+  {
+    "code": "3172100",
+    "regency_code": "3172",
+    "name": "MATRAMAN"
+  },
+  {
+    "code": "3173010",
+    "regency_code": "3173",
+    "name": "TANAH ABANG"
+  },
+  {
+    "code": "3173020",
+    "regency_code": "3173",
+    "name": "MENTENG"
+  },
+  {
+    "code": "3173030",
+    "regency_code": "3173",
+    "name": "SENEN"
+  },
+  {
+    "code": "3173040",
+    "regency_code": "3173",
+    "name": "JOHAR BARU"
+  },
+  {
+    "code": "3173050",
+    "regency_code": "3173",
+    "name": "CEMPAKA PUTIH"
+  },
+  {
+    "code": "3173060",
+    "regency_code": "3173",
+    "name": "KEMAYORAN"
+  },
+  {
+    "code": "3173070",
+    "regency_code": "3173",
+    "name": "SAWAH BESAR"
+  },
+  {
+    "code": "3173080",
+    "regency_code": "3173",
+    "name": "GAMBIR"
+  },
+  {
+    "code": "3174010",
+    "regency_code": "3174",
+    "name": "KEMBANGAN"
+  },
+  {
+    "code": "3174020",
+    "regency_code": "3174",
+    "name": "KEBON JERUK"
+  },
+  {
+    "code": "3174030",
+    "regency_code": "3174",
+    "name": "PALMERAH"
+  },
+  {
+    "code": "3174040",
+    "regency_code": "3174",
+    "name": "GROGOL PETAMBURAN"
+  },
+  {
+    "code": "3174050",
+    "regency_code": "3174",
+    "name": "TAMBORA"
+  },
+  {
+    "code": "3174060",
+    "regency_code": "3174",
+    "name": "TAMAN SARI"
+  },
+  {
+    "code": "3174070",
+    "regency_code": "3174",
+    "name": "CENGKARENG"
+  },
+  {
+    "code": "3174080",
+    "regency_code": "3174",
+    "name": "KALI DERES"
+  },
+  {
+    "code": "3175010",
+    "regency_code": "3175",
+    "name": "PENJARINGAN"
+  },
+  {
+    "code": "3175020",
+    "regency_code": "3175",
+    "name": "PADEMANGAN"
+  },
+  {
+    "code": "3175030",
+    "regency_code": "3175",
+    "name": "TANJUNG PRIOK"
+  },
+  {
+    "code": "3175040",
+    "regency_code": "3175",
+    "name": "KOJA"
+  },
+  {
+    "code": "3175050",
+    "regency_code": "3175",
+    "name": "KELAPA GADING"
+  },
+  {
+    "code": "3175060",
+    "regency_code": "3175",
+    "name": "CILINCING"
+  },
+  {
+    "code": "3201010",
+    "regency_code": "3201",
+    "name": "NANGGUNG"
+  },
+  {
+    "code": "3201020",
+    "regency_code": "3201",
+    "name": "LEUWILIANG"
+  },
+  {
+    "code": "3201021",
+    "regency_code": "3201",
+    "name": "LEUWISADENG"
+  },
+  {
+    "code": "3201030",
+    "regency_code": "3201",
+    "name": "PAMIJAHAN"
+  },
+  {
+    "code": "3201040",
+    "regency_code": "3201",
+    "name": "CIBUNGBULANG"
+  },
+  {
+    "code": "3201050",
+    "regency_code": "3201",
+    "name": "CIAMPEA"
+  },
+  {
+    "code": "3201051",
+    "regency_code": "3201",
+    "name": "TENJOLAYA"
+  },
+  {
+    "code": "3201060",
+    "regency_code": "3201",
+    "name": "DRAMAGA"
+  },
+  {
+    "code": "3201070",
+    "regency_code": "3201",
+    "name": "CIOMAS"
+  },
+  {
+    "code": "3201071",
+    "regency_code": "3201",
+    "name": "TAMANSARI"
+  },
+  {
+    "code": "3201080",
+    "regency_code": "3201",
+    "name": "CIJERUK"
+  },
+  {
+    "code": "3201081",
+    "regency_code": "3201",
+    "name": "CIGOMBONG"
+  },
+  {
+    "code": "3201090",
+    "regency_code": "3201",
+    "name": "CARINGIN"
+  },
+  {
+    "code": "3201100",
+    "regency_code": "3201",
+    "name": "CIAWI"
+  },
+  {
+    "code": "3201110",
+    "regency_code": "3201",
+    "name": "CISARUA"
+  },
+  {
+    "code": "3201120",
+    "regency_code": "3201",
+    "name": "MEGAMENDUNG"
+  },
+  {
+    "code": "3201130",
+    "regency_code": "3201",
+    "name": "SUKARAJA"
+  },
+  {
+    "code": "3201140",
+    "regency_code": "3201",
+    "name": "BABAKAN MADANG"
+  },
+  {
+    "code": "3201150",
+    "regency_code": "3201",
+    "name": "SUKAMAKMUR"
+  },
+  {
+    "code": "3201160",
+    "regency_code": "3201",
+    "name": "CARIU"
+  },
+  {
+    "code": "3201161",
+    "regency_code": "3201",
+    "name": "TANJUNGSARI"
+  },
+  {
+    "code": "3201170",
+    "regency_code": "3201",
+    "name": "JONGGOL"
+  },
+  {
+    "code": "3201180",
+    "regency_code": "3201",
+    "name": "CILEUNGSI"
+  },
+  {
+    "code": "3201181",
+    "regency_code": "3201",
+    "name": "KELAPA NUNGGAL"
+  },
+  {
+    "code": "3201190",
+    "regency_code": "3201",
+    "name": "GUNUNG PUTRI"
+  },
+  {
+    "code": "3201200",
+    "regency_code": "3201",
+    "name": "CITEUREUP"
+  },
+  {
+    "code": "3201210",
+    "regency_code": "3201",
+    "name": "CIBINONG"
+  },
+  {
+    "code": "3201220",
+    "regency_code": "3201",
+    "name": "BOJONG GEDE"
+  },
+  {
+    "code": "3201221",
+    "regency_code": "3201",
+    "name": "TAJUR HALANG"
+  },
+  {
+    "code": "3201230",
+    "regency_code": "3201",
+    "name": "KEMANG"
+  },
+  {
+    "code": "3201231",
+    "regency_code": "3201",
+    "name": "RANCA BUNGUR"
+  },
+  {
+    "code": "3201240",
+    "regency_code": "3201",
+    "name": "PARUNG"
+  },
+  {
+    "code": "3201241",
+    "regency_code": "3201",
+    "name": "CISEENG"
+  },
+  {
+    "code": "3201250",
+    "regency_code": "3201",
+    "name": "GUNUNG SINDUR"
+  },
+  {
+    "code": "3201260",
+    "regency_code": "3201",
+    "name": "RUMPIN"
+  },
+  {
+    "code": "3201270",
+    "regency_code": "3201",
+    "name": "CIGUDEG"
+  },
+  {
+    "code": "3201271",
+    "regency_code": "3201",
+    "name": "SUKAJAYA"
+  },
+  {
+    "code": "3201280",
+    "regency_code": "3201",
+    "name": "JASINGA"
+  },
+  {
+    "code": "3201290",
+    "regency_code": "3201",
+    "name": "TENJO"
+  },
+  {
+    "code": "3201300",
+    "regency_code": "3201",
+    "name": "PARUNG PANJANG"
+  },
+  {
+    "code": "3202010",
+    "regency_code": "3202",
+    "name": "CIEMAS"
+  },
+  {
+    "code": "3202020",
+    "regency_code": "3202",
+    "name": "CIRACAP"
+  },
+  {
+    "code": "3202021",
+    "regency_code": "3202",
+    "name": "WALURAN"
+  },
+  {
+    "code": "3202030",
+    "regency_code": "3202",
+    "name": "SURADE"
+  },
+  {
+    "code": "3202031",
+    "regency_code": "3202",
+    "name": "CIBITUNG"
+  },
+  {
+    "code": "3202040",
+    "regency_code": "3202",
+    "name": "JAMPANG KULON"
+  },
+  {
+    "code": "3202041",
+    "regency_code": "3202",
+    "name": "CIMANGGU"
+  },
+  {
+    "code": "3202050",
+    "regency_code": "3202",
+    "name": "KALI BUNDER"
+  },
+  {
+    "code": "3202060",
+    "regency_code": "3202",
+    "name": "TEGAL BULEUD"
+  },
+  {
+    "code": "3202070",
+    "regency_code": "3202",
+    "name": "CIDOLOG"
+  },
+  {
+    "code": "3202080",
+    "regency_code": "3202",
+    "name": "SAGARANTEN"
+  },
+  {
+    "code": "3202081",
+    "regency_code": "3202",
+    "name": "CIDADAP"
+  },
+  {
+    "code": "3202082",
+    "regency_code": "3202",
+    "name": "CURUGKEMBAR"
+  },
+  {
+    "code": "3202090",
+    "regency_code": "3202",
+    "name": "PABUARAN"
+  },
+  {
+    "code": "3202100",
+    "regency_code": "3202",
+    "name": "LENGKONG"
+  },
+  {
+    "code": "3202110",
+    "regency_code": "3202",
+    "name": "PALABUHANRATU"
+  },
+  {
+    "code": "3202111",
+    "regency_code": "3202",
+    "name": "SIMPENAN"
+  },
+  {
+    "code": "3202120",
+    "regency_code": "3202",
+    "name": "WARUNG KIARA"
+  },
+  {
+    "code": "3202121",
+    "regency_code": "3202",
+    "name": "BANTARGADUNG"
+  },
+  {
+    "code": "3202130",
+    "regency_code": "3202",
+    "name": "JAMPANG TENGAH"
+  },
+  {
+    "code": "3202131",
+    "regency_code": "3202",
+    "name": "PURABAYA"
+  },
+  {
+    "code": "3202140",
+    "regency_code": "3202",
+    "name": "CIKEMBAR"
+  },
+  {
+    "code": "3202150",
+    "regency_code": "3202",
+    "name": "NYALINDUNG"
+  },
+  {
+    "code": "3202160",
+    "regency_code": "3202",
+    "name": "GEGER BITUNG"
+  },
+  {
+    "code": "3202170",
+    "regency_code": "3202",
+    "name": "SUKARAJA"
+  },
+  {
+    "code": "3202171",
+    "regency_code": "3202",
+    "name": "KEBONPEDES"
+  },
+  {
+    "code": "3202172",
+    "regency_code": "3202",
+    "name": "CIREUNGHAS"
+  },
+  {
+    "code": "3202173",
+    "regency_code": "3202",
+    "name": "SUKALARANG"
+  },
+  {
+    "code": "3202180",
+    "regency_code": "3202",
+    "name": "SUKABUMI"
+  },
+  {
+    "code": "3202190",
+    "regency_code": "3202",
+    "name": "KADUDAMPIT"
+  },
+  {
+    "code": "3202200",
+    "regency_code": "3202",
+    "name": "CISAAT"
+  },
+  {
+    "code": "3202201",
+    "regency_code": "3202",
+    "name": "GUNUNGGURUH"
+  },
+  {
+    "code": "3202210",
+    "regency_code": "3202",
+    "name": "CIBADAK"
+  },
+  {
+    "code": "3202211",
+    "regency_code": "3202",
+    "name": "CICANTAYAN"
+  },
+  {
+    "code": "3202212",
+    "regency_code": "3202",
+    "name": "CARINGIN"
+  },
+  {
+    "code": "3202220",
+    "regency_code": "3202",
+    "name": "NAGRAK"
+  },
+  {
+    "code": "3202221",
+    "regency_code": "3202",
+    "name": "CIAMBAR"
+  },
+  {
+    "code": "3202230",
+    "regency_code": "3202",
+    "name": "CICURUG"
+  },
+  {
+    "code": "3202240",
+    "regency_code": "3202",
+    "name": "CIDAHU"
+  },
+  {
+    "code": "3202250",
+    "regency_code": "3202",
+    "name": "PARAKAN SALAK"
+  },
+  {
+    "code": "3202260",
+    "regency_code": "3202",
+    "name": "PARUNG KUDA"
+  },
+  {
+    "code": "3202261",
+    "regency_code": "3202",
+    "name": "BOJONG GENTENG"
+  },
+  {
+    "code": "3202270",
+    "regency_code": "3202",
+    "name": "KALAPA NUNGGAL"
+  },
+  {
+    "code": "3202280",
+    "regency_code": "3202",
+    "name": "CIKIDANG"
+  },
+  {
+    "code": "3202290",
+    "regency_code": "3202",
+    "name": "CISOLOK"
+  },
+  {
+    "code": "3202291",
+    "regency_code": "3202",
+    "name": "CIKAKAK"
+  },
+  {
+    "code": "3202300",
+    "regency_code": "3202",
+    "name": "KABANDUNGAN"
+  },
+  {
+    "code": "3203010",
+    "regency_code": "3203",
+    "name": "AGRABINTA"
+  },
+  {
+    "code": "3203011",
+    "regency_code": "3203",
+    "name": "LELES"
+  },
+  {
+    "code": "3203020",
+    "regency_code": "3203",
+    "name": "SINDANGBARANG"
+  },
+  {
+    "code": "3203030",
+    "regency_code": "3203",
+    "name": "CIDAUN"
+  },
+  {
+    "code": "3203040",
+    "regency_code": "3203",
+    "name": "NARINGGUL"
+  },
+  {
+    "code": "3203050",
+    "regency_code": "3203",
+    "name": "CIBINONG"
+  },
+  {
+    "code": "3203051",
+    "regency_code": "3203",
+    "name": "CIKADU"
+  },
+  {
+    "code": "3203060",
+    "regency_code": "3203",
+    "name": "TANGGEUNG"
+  },
+  {
+    "code": "3203061",
+    "regency_code": "3203",
+    "name": "PASIRKUDA"
+  },
+  {
+    "code": "3203070",
+    "regency_code": "3203",
+    "name": "KADUPANDAK"
+  },
+  {
+    "code": "3203071",
+    "regency_code": "3203",
+    "name": "CIJATI"
+  },
+  {
+    "code": "3203080",
+    "regency_code": "3203",
+    "name": "TAKOKAK"
+  },
+  {
+    "code": "3203090",
+    "regency_code": "3203",
+    "name": "SUKANAGARA"
+  },
+  {
+    "code": "3203100",
+    "regency_code": "3203",
+    "name": "PAGELARAN"
+  },
+  {
+    "code": "3203110",
+    "regency_code": "3203",
+    "name": "CAMPAKA"
+  },
+  {
+    "code": "3203111",
+    "regency_code": "3203",
+    "name": "CAMPAKA MULYA"
+  },
+  {
+    "code": "3203120",
+    "regency_code": "3203",
+    "name": "CIBEBER"
+  },
+  {
+    "code": "3203130",
+    "regency_code": "3203",
+    "name": "WARUNGKONDANG"
+  },
+  {
+    "code": "3203131",
+    "regency_code": "3203",
+    "name": "GEKBRONG"
+  },
+  {
+    "code": "3203140",
+    "regency_code": "3203",
+    "name": "CILAKU"
+  },
+  {
+    "code": "3203150",
+    "regency_code": "3203",
+    "name": "SUKALUYU"
+  },
+  {
+    "code": "3203160",
+    "regency_code": "3203",
+    "name": "BOJONGPICUNG"
+  },
+  {
+    "code": "3203161",
+    "regency_code": "3203",
+    "name": "HAURWANGI"
+  },
+  {
+    "code": "3203170",
+    "regency_code": "3203",
+    "name": "CIRANJANG"
+  },
+  {
+    "code": "3203180",
+    "regency_code": "3203",
+    "name": "MANDE"
+  },
+  {
+    "code": "3203190",
+    "regency_code": "3203",
+    "name": "KARANGTENGAH"
+  },
+  {
+    "code": "3203200",
+    "regency_code": "3203",
+    "name": "CIANJUR"
+  },
+  {
+    "code": "3203210",
+    "regency_code": "3203",
+    "name": "CUGENANG"
+  },
+  {
+    "code": "3203220",
+    "regency_code": "3203",
+    "name": "PACET"
+  },
+  {
+    "code": "3203221",
+    "regency_code": "3203",
+    "name": "CIPANAS"
+  },
+  {
+    "code": "3203230",
+    "regency_code": "3203",
+    "name": "SUKARESMI"
+  },
+  {
+    "code": "3203240",
+    "regency_code": "3203",
+    "name": "CIKALONGKULON"
+  },
+  {
+    "code": "3204010",
+    "regency_code": "3204",
+    "name": "CIWIDEY"
+  },
+  {
+    "code": "3204011",
+    "regency_code": "3204",
+    "name": "RANCABALI"
+  },
+  {
+    "code": "3204020",
+    "regency_code": "3204",
+    "name": "PASIRJAMBU"
+  },
+  {
+    "code": "3204030",
+    "regency_code": "3204",
+    "name": "CIMAUNG"
+  },
+  {
+    "code": "3204040",
+    "regency_code": "3204",
+    "name": "PANGALENGAN"
+  },
+  {
+    "code": "3204050",
+    "regency_code": "3204",
+    "name": "KERTASARI"
+  },
+  {
+    "code": "3204060",
+    "regency_code": "3204",
+    "name": "PACET"
+  },
+  {
+    "code": "3204070",
+    "regency_code": "3204",
+    "name": "IBUN"
+  },
+  {
+    "code": "3204080",
+    "regency_code": "3204",
+    "name": "PASEH"
+  },
+  {
+    "code": "3204090",
+    "regency_code": "3204",
+    "name": "CIKANCUNG"
+  },
+  {
+    "code": "3204100",
+    "regency_code": "3204",
+    "name": "CICALENGKA"
+  },
+  {
+    "code": "3204101",
+    "regency_code": "3204",
+    "name": "NAGREG"
+  },
+  {
+    "code": "3204110",
+    "regency_code": "3204",
+    "name": "RANCAEKEK"
+  },
+  {
+    "code": "3204120",
+    "regency_code": "3204",
+    "name": "MAJALAYA"
+  },
+  {
+    "code": "3204121",
+    "regency_code": "3204",
+    "name": "SOLOKAN JERUK"
+  },
+  {
+    "code": "3204130",
+    "regency_code": "3204",
+    "name": "CIPARAY"
+  },
+  {
+    "code": "3204140",
+    "regency_code": "3204",
+    "name": "BALEENDAH"
+  },
+  {
+    "code": "3204150",
+    "regency_code": "3204",
+    "name": "ARJASARI"
+  },
+  {
+    "code": "3204160",
+    "regency_code": "3204",
+    "name": "BANJARAN"
+  },
+  {
+    "code": "3204161",
+    "regency_code": "3204",
+    "name": "CANGKUANG"
+  },
+  {
+    "code": "3204170",
+    "regency_code": "3204",
+    "name": "PAMEUNGPEUK"
+  },
+  {
+    "code": "3204180",
+    "regency_code": "3204",
+    "name": "KATAPANG"
+  },
+  {
+    "code": "3204190",
+    "regency_code": "3204",
+    "name": "SOREANG"
+  },
+  {
+    "code": "3204191",
+    "regency_code": "3204",
+    "name": "KUTAWARINGIN"
+  },
+  {
+    "code": "3204250",
+    "regency_code": "3204",
+    "name": "MARGAASIH"
+  },
+  {
+    "code": "3204260",
+    "regency_code": "3204",
+    "name": "MARGAHAYU"
+  },
+  {
+    "code": "3204270",
+    "regency_code": "3204",
+    "name": "DAYEUHKOLOT"
+  },
+  {
+    "code": "3204280",
+    "regency_code": "3204",
+    "name": "BOJONGSOANG"
+  },
+  {
+    "code": "3204290",
+    "regency_code": "3204",
+    "name": "CILEUNYI"
+  },
+  {
+    "code": "3204300",
+    "regency_code": "3204",
+    "name": "CILENGKRANG"
+  },
+  {
+    "code": "3204310",
+    "regency_code": "3204",
+    "name": "CIMENYAN"
+  },
+  {
+    "code": "3205010",
+    "regency_code": "3205",
+    "name": "CISEWU"
+  },
+  {
+    "code": "3205011",
+    "regency_code": "3205",
+    "name": "CARINGIN"
+  },
+  {
+    "code": "3205020",
+    "regency_code": "3205",
+    "name": "TALEGONG"
+  },
+  {
+    "code": "3205030",
+    "regency_code": "3205",
+    "name": "BUNGBULANG"
+  },
+  {
+    "code": "3205031",
+    "regency_code": "3205",
+    "name": "MEKARMUKTI"
+  },
+  {
+    "code": "3205040",
+    "regency_code": "3205",
+    "name": "PAMULIHAN"
+  },
+  {
+    "code": "3205050",
+    "regency_code": "3205",
+    "name": "PAKENJENG"
+  },
+  {
+    "code": "3205060",
+    "regency_code": "3205",
+    "name": "CIKELET"
+  },
+  {
+    "code": "3205070",
+    "regency_code": "3205",
+    "name": "PAMEUNGPEUK"
+  },
+  {
+    "code": "3205080",
+    "regency_code": "3205",
+    "name": "CIBALONG"
+  },
+  {
+    "code": "3205090",
+    "regency_code": "3205",
+    "name": "CISOMPET"
+  },
+  {
+    "code": "3205100",
+    "regency_code": "3205",
+    "name": "PEUNDEUY"
+  },
+  {
+    "code": "3205110",
+    "regency_code": "3205",
+    "name": "SINGAJAYA"
+  },
+  {
+    "code": "3205111",
+    "regency_code": "3205",
+    "name": "CIHURIP"
+  },
+  {
+    "code": "3205120",
+    "regency_code": "3205",
+    "name": "CIKAJANG"
+  },
+  {
+    "code": "3205130",
+    "regency_code": "3205",
+    "name": "BANJARWANGI"
+  },
+  {
+    "code": "3205140",
+    "regency_code": "3205",
+    "name": "CILAWU"
+  },
+  {
+    "code": "3205150",
+    "regency_code": "3205",
+    "name": "BAYONGBONG"
+  },
+  {
+    "code": "3205151",
+    "regency_code": "3205",
+    "name": "CIGEDUG"
+  },
+  {
+    "code": "3205160",
+    "regency_code": "3205",
+    "name": "CISURUPAN"
+  },
+  {
+    "code": "3205161",
+    "regency_code": "3205",
+    "name": "SUKARESMI"
+  },
+  {
+    "code": "3205170",
+    "regency_code": "3205",
+    "name": "SAMARANG"
+  },
+  {
+    "code": "3205171",
+    "regency_code": "3205",
+    "name": "PASIRWANGI"
+  },
+  {
+    "code": "3205181",
+    "regency_code": "3205",
+    "name": "TAROGONG KIDUL"
+  },
+  {
+    "code": "3205182",
+    "regency_code": "3205",
+    "name": "TAROGONG KALER"
+  },
+  {
+    "code": "3205190",
+    "regency_code": "3205",
+    "name": "GARUT KOTA"
+  },
+  {
+    "code": "3205200",
+    "regency_code": "3205",
+    "name": "KARANGPAWITAN"
+  },
+  {
+    "code": "3205210",
+    "regency_code": "3205",
+    "name": "WANARAJA"
+  },
+  {
+    "code": "3205211",
+    "regency_code": "3205",
+    "name": "SUCINARAJA"
+  },
+  {
+    "code": "3205212",
+    "regency_code": "3205",
+    "name": "PANGATIKAN"
+  },
+  {
+    "code": "3205220",
+    "regency_code": "3205",
+    "name": "SUKAWENING"
+  },
+  {
+    "code": "3205221",
+    "regency_code": "3205",
+    "name": "KARANGTENGAH"
+  },
+  {
+    "code": "3205230",
+    "regency_code": "3205",
+    "name": "BANYURESMI"
+  },
+  {
+    "code": "3205240",
+    "regency_code": "3205",
+    "name": "LELES"
+  },
+  {
+    "code": "3205250",
+    "regency_code": "3205",
+    "name": "LEUWIGOONG"
+  },
+  {
+    "code": "3205260",
+    "regency_code": "3205",
+    "name": "CIBATU"
+  },
+  {
+    "code": "3205261",
+    "regency_code": "3205",
+    "name": "KERSAMANAH"
+  },
+  {
+    "code": "3205270",
+    "regency_code": "3205",
+    "name": "CIBIUK"
+  },
+  {
+    "code": "3205280",
+    "regency_code": "3205",
+    "name": "KADUNGORA"
+  },
+  {
+    "code": "3205290",
+    "regency_code": "3205",
+    "name": "BLUBUR LIMBANGAN"
+  },
+  {
+    "code": "3205300",
+    "regency_code": "3205",
+    "name": "SELAAWI"
+  },
+  {
+    "code": "3205310",
+    "regency_code": "3205",
+    "name": "MALANGBONG"
+  },
+  {
+    "code": "3206010",
+    "regency_code": "3206",
+    "name": "CIPATUJAH"
+  },
+  {
+    "code": "3206020",
+    "regency_code": "3206",
+    "name": "KARANGNUNGGAL"
+  },
+  {
+    "code": "3206030",
+    "regency_code": "3206",
+    "name": "CIKALONG"
+  },
+  {
+    "code": "3206040",
+    "regency_code": "3206",
+    "name": "PANCATENGAH"
+  },
+  {
+    "code": "3206050",
+    "regency_code": "3206",
+    "name": "CIKATOMAS"
+  },
+  {
+    "code": "3206060",
+    "regency_code": "3206",
+    "name": "CIBALONG"
+  },
+  {
+    "code": "3206061",
+    "regency_code": "3206",
+    "name": "PARUNGPONTENG"
+  },
+  {
+    "code": "3206070",
+    "regency_code": "3206",
+    "name": "BANTARKALONG"
+  },
+  {
+    "code": "3206071",
+    "regency_code": "3206",
+    "name": "BOJONGASIH"
+  },
+  {
+    "code": "3206072",
+    "regency_code": "3206",
+    "name": "CULAMEGA"
+  },
+  {
+    "code": "3206080",
+    "regency_code": "3206",
+    "name": "BOJONGGAMBIR"
+  },
+  {
+    "code": "3206090",
+    "regency_code": "3206",
+    "name": "SODONGHILIR"
+  },
+  {
+    "code": "3206100",
+    "regency_code": "3206",
+    "name": "TARAJU"
+  },
+  {
+    "code": "3206110",
+    "regency_code": "3206",
+    "name": "SALAWU"
+  },
+  {
+    "code": "3206111",
+    "regency_code": "3206",
+    "name": "PUSPAHIANG"
+  },
+  {
+    "code": "3206120",
+    "regency_code": "3206",
+    "name": "TANJUNGJAYA"
+  },
+  {
+    "code": "3206130",
+    "regency_code": "3206",
+    "name": "SUKARAJA"
+  },
+  {
+    "code": "3206140",
+    "regency_code": "3206",
+    "name": "SALOPA"
+  },
+  {
+    "code": "3206141",
+    "regency_code": "3206",
+    "name": "JATIWARAS"
+  },
+  {
+    "code": "3206150",
+    "regency_code": "3206",
+    "name": "CINEAM"
+  },
+  {
+    "code": "3206151",
+    "regency_code": "3206",
+    "name": "KARANGJAYA"
+  },
+  {
+    "code": "3206160",
+    "regency_code": "3206",
+    "name": "MANONJAYA"
+  },
+  {
+    "code": "3206161",
+    "regency_code": "3206",
+    "name": "GUNUNGTANJUNG"
+  },
+  {
+    "code": "3206190",
+    "regency_code": "3206",
+    "name": "SINGAPARNA"
+  },
+  {
+    "code": "3206191",
+    "regency_code": "3206",
+    "name": "SUKARAME"
+  },
+  {
+    "code": "3206192",
+    "regency_code": "3206",
+    "name": "MANGUNREJA"
+  },
+  {
+    "code": "3206200",
+    "regency_code": "3206",
+    "name": "CIGALONTANG"
+  },
+  {
+    "code": "3206210",
+    "regency_code": "3206",
+    "name": "LEUWISARI"
+  },
+  {
+    "code": "3206211",
+    "regency_code": "3206",
+    "name": "SARIWANGI"
+  },
+  {
+    "code": "3206212",
+    "regency_code": "3206",
+    "name": "PADAKEMBANG"
+  },
+  {
+    "code": "3206221",
+    "regency_code": "3206",
+    "name": "SUKARATU"
+  },
+  {
+    "code": "3206230",
+    "regency_code": "3206",
+    "name": "CISAYONG"
+  },
+  {
+    "code": "3206231",
+    "regency_code": "3206",
+    "name": "SUKAHENING"
+  },
+  {
+    "code": "3206240",
+    "regency_code": "3206",
+    "name": "RAJAPOLAH"
+  },
+  {
+    "code": "3206250",
+    "regency_code": "3206",
+    "name": "JAMANIS"
+  },
+  {
+    "code": "3206260",
+    "regency_code": "3206",
+    "name": "CIAWI"
+  },
+  {
+    "code": "3206261",
+    "regency_code": "3206",
+    "name": "KADIPATEN"
+  },
+  {
+    "code": "3206270",
+    "regency_code": "3206",
+    "name": "PAGERAGEUNG"
+  },
+  {
+    "code": "3206271",
+    "regency_code": "3206",
+    "name": "SUKARESIK"
+  },
+  {
+    "code": "3207100",
+    "regency_code": "3207",
+    "name": "BANJARSARI"
+  },
+  {
+    "code": "3207101",
+    "regency_code": "3207",
+    "name": "BANJARANYAR"
+  },
+  {
+    "code": "3207110",
+    "regency_code": "3207",
+    "name": "LAKBOK"
+  },
+  {
+    "code": "3207111",
+    "regency_code": "3207",
+    "name": "PURWADADI"
+  },
+  {
+    "code": "3207120",
+    "regency_code": "3207",
+    "name": "PAMARICAN"
+  },
+  {
+    "code": "3207130",
+    "regency_code": "3207",
+    "name": "CIDOLOG"
+  },
+  {
+    "code": "3207140",
+    "regency_code": "3207",
+    "name": "CIMARAGAS"
+  },
+  {
+    "code": "3207150",
+    "regency_code": "3207",
+    "name": "CIJEUNGJING"
+  },
+  {
+    "code": "3207160",
+    "regency_code": "3207",
+    "name": "CISAGA"
+  },
+  {
+    "code": "3207170",
+    "regency_code": "3207",
+    "name": "TAMBAKSARI"
+  },
+  {
+    "code": "3207180",
+    "regency_code": "3207",
+    "name": "RANCAH"
+  },
+  {
+    "code": "3207190",
+    "regency_code": "3207",
+    "name": "RAJADESA"
+  },
+  {
+    "code": "3207200",
+    "regency_code": "3207",
+    "name": "SUKADANA"
+  },
+  {
+    "code": "3207210",
+    "regency_code": "3207",
+    "name": "CIAMIS"
+  },
+  {
+    "code": "3207211",
+    "regency_code": "3207",
+    "name": "BAREGBEG"
+  },
+  {
+    "code": "3207220",
+    "regency_code": "3207",
+    "name": "CIKONENG"
+  },
+  {
+    "code": "3207221",
+    "regency_code": "3207",
+    "name": "SINDANGKASIH"
+  },
+  {
+    "code": "3207230",
+    "regency_code": "3207",
+    "name": "CIHAURBEUTI"
+  },
+  {
+    "code": "3207240",
+    "regency_code": "3207",
+    "name": "SADANANYA"
+  },
+  {
+    "code": "3207250",
+    "regency_code": "3207",
+    "name": "CIPAKU"
+  },
+  {
+    "code": "3207260",
+    "regency_code": "3207",
+    "name": "JATINAGARA"
+  },
+  {
+    "code": "3207270",
+    "regency_code": "3207",
+    "name": "PANAWANGAN"
+  },
+  {
+    "code": "3207280",
+    "regency_code": "3207",
+    "name": "KAWALI"
+  },
+  {
+    "code": "3207281",
+    "regency_code": "3207",
+    "name": "LUMBUNG"
+  },
+  {
+    "code": "3207290",
+    "regency_code": "3207",
+    "name": "PANJALU"
+  },
+  {
+    "code": "3207291",
+    "regency_code": "3207",
+    "name": "SUKAMANTRI"
+  },
+  {
+    "code": "3207300",
+    "regency_code": "3207",
+    "name": "PANUMBANGAN"
+  },
+  {
+    "code": "3208010",
+    "regency_code": "3208",
+    "name": "DARMA"
+  },
+  {
+    "code": "3208020",
+    "regency_code": "3208",
+    "name": "KADUGEDE"
+  },
+  {
+    "code": "3208021",
+    "regency_code": "3208",
+    "name": "NUSAHERANG"
+  },
+  {
+    "code": "3208030",
+    "regency_code": "3208",
+    "name": "CINIRU"
+  },
+  {
+    "code": "3208031",
+    "regency_code": "3208",
+    "name": "HANTARA"
+  },
+  {
+    "code": "3208040",
+    "regency_code": "3208",
+    "name": "SELAJAMBE"
+  },
+  {
+    "code": "3208050",
+    "regency_code": "3208",
+    "name": "SUBANG"
+  },
+  {
+    "code": "3208051",
+    "regency_code": "3208",
+    "name": "CILEBAK"
+  },
+  {
+    "code": "3208060",
+    "regency_code": "3208",
+    "name": "CIWARU"
+  },
+  {
+    "code": "3208061",
+    "regency_code": "3208",
+    "name": "KARANGKANCANA"
+  },
+  {
+    "code": "3208070",
+    "regency_code": "3208",
+    "name": "CIBINGBIN"
+  },
+  {
+    "code": "3208071",
+    "regency_code": "3208",
+    "name": "CIBEUREUM"
+  },
+  {
+    "code": "3208080",
+    "regency_code": "3208",
+    "name": "LURAGUNG"
+  },
+  {
+    "code": "3208081",
+    "regency_code": "3208",
+    "name": "CIMAHI"
+  },
+  {
+    "code": "3208090",
+    "regency_code": "3208",
+    "name": "CIDAHU"
+  },
+  {
+    "code": "3208091",
+    "regency_code": "3208",
+    "name": "KALIMANGGIS"
+  },
+  {
+    "code": "3208100",
+    "regency_code": "3208",
+    "name": "CIAWIGEBANG"
+  },
+  {
+    "code": "3208101",
+    "regency_code": "3208",
+    "name": "CIPICUNG"
+  },
+  {
+    "code": "3208110",
+    "regency_code": "3208",
+    "name": "LEBAKWANGI"
+  },
+  {
+    "code": "3208111",
+    "regency_code": "3208",
+    "name": "MALEBER"
+  },
+  {
+    "code": "3208120",
+    "regency_code": "3208",
+    "name": "GARAWANGI"
+  },
+  {
+    "code": "3208121",
+    "regency_code": "3208",
+    "name": "SINDANGAGUNG"
+  },
+  {
+    "code": "3208130",
+    "regency_code": "3208",
+    "name": "KUNINGAN"
+  },
+  {
+    "code": "3208140",
+    "regency_code": "3208",
+    "name": "CIGUGUR"
+  },
+  {
+    "code": "3208150",
+    "regency_code": "3208",
+    "name": "KRAMATMULYA"
+  },
+  {
+    "code": "3208160",
+    "regency_code": "3208",
+    "name": "JALAKSANA"
+  },
+  {
+    "code": "3208161",
+    "regency_code": "3208",
+    "name": "JAPARA"
+  },
+  {
+    "code": "3208170",
+    "regency_code": "3208",
+    "name": "CILIMUS"
+  },
+  {
+    "code": "3208171",
+    "regency_code": "3208",
+    "name": "CIGANDAMEKAR"
+  },
+  {
+    "code": "3208180",
+    "regency_code": "3208",
+    "name": "MANDIRANCAN"
+  },
+  {
+    "code": "3208181",
+    "regency_code": "3208",
+    "name": "PANCALANG"
+  },
+  {
+    "code": "3208190",
+    "regency_code": "3208",
+    "name": "PASAWAHAN"
+  },
+  {
+    "code": "3209010",
+    "regency_code": "3209",
+    "name": "WALED"
+  },
+  {
+    "code": "3209011",
+    "regency_code": "3209",
+    "name": "PASALEMAN"
+  },
+  {
+    "code": "3209020",
+    "regency_code": "3209",
+    "name": "CILEDUG"
+  },
+  {
+    "code": "3209021",
+    "regency_code": "3209",
+    "name": "PABUARAN"
+  },
+  {
+    "code": "3209030",
+    "regency_code": "3209",
+    "name": "LOSARI"
+  },
+  {
+    "code": "3209031",
+    "regency_code": "3209",
+    "name": "PABEDILAN"
+  },
+  {
+    "code": "3209040",
+    "regency_code": "3209",
+    "name": "BABAKAN"
+  },
+  {
+    "code": "3209041",
+    "regency_code": "3209",
+    "name": "GEBANG"
+  },
+  {
+    "code": "3209050",
+    "regency_code": "3209",
+    "name": "KARANGSEMBUNG"
+  },
+  {
+    "code": "3209051",
+    "regency_code": "3209",
+    "name": "KARANGWARENG"
+  },
+  {
+    "code": "3209060",
+    "regency_code": "3209",
+    "name": "LEMAHABANG"
+  },
+  {
+    "code": "3209061",
+    "regency_code": "3209",
+    "name": "SUSUKANLEBAK"
+  },
+  {
+    "code": "3209070",
+    "regency_code": "3209",
+    "name": "SEDONG"
+  },
+  {
+    "code": "3209080",
+    "regency_code": "3209",
+    "name": "ASTANAJAPURA"
+  },
+  {
+    "code": "3209081",
+    "regency_code": "3209",
+    "name": "PANGENAN"
+  },
+  {
+    "code": "3209090",
+    "regency_code": "3209",
+    "name": "MUNDU"
+  },
+  {
+    "code": "3209100",
+    "regency_code": "3209",
+    "name": "BEBER"
+  },
+  {
+    "code": "3209101",
+    "regency_code": "3209",
+    "name": "GREGED"
+  },
+  {
+    "code": "3209111",
+    "regency_code": "3209",
+    "name": "TALUN"
+  },
+  {
+    "code": "3209120",
+    "regency_code": "3209",
+    "name": "SUMBER"
+  },
+  {
+    "code": "3209121",
+    "regency_code": "3209",
+    "name": "DUKUPUNTANG"
+  },
+  {
+    "code": "3209130",
+    "regency_code": "3209",
+    "name": "PALIMANAN"
+  },
+  {
+    "code": "3209140",
+    "regency_code": "3209",
+    "name": "PLUMBON"
+  },
+  {
+    "code": "3209141",
+    "regency_code": "3209",
+    "name": "DEPOK"
+  },
+  {
+    "code": "3209150",
+    "regency_code": "3209",
+    "name": "WERU"
+  },
+  {
+    "code": "3209151",
+    "regency_code": "3209",
+    "name": "PLERED"
+  },
+  {
+    "code": "3209161",
+    "regency_code": "3209",
+    "name": "TENGAH TANI"
+  },
+  {
+    "code": "3209162",
+    "regency_code": "3209",
+    "name": "KEDAWUNG"
+  },
+  {
+    "code": "3209171",
+    "regency_code": "3209",
+    "name": "GUNUNGJATI"
+  },
+  {
+    "code": "3209180",
+    "regency_code": "3209",
+    "name": "KAPETAKAN"
+  },
+  {
+    "code": "3209181",
+    "regency_code": "3209",
+    "name": "SURANENGGALA"
+  },
+  {
+    "code": "3209190",
+    "regency_code": "3209",
+    "name": "KLANGENAN"
+  },
+  {
+    "code": "3209191",
+    "regency_code": "3209",
+    "name": "JAMBLANG"
+  },
+  {
+    "code": "3209200",
+    "regency_code": "3209",
+    "name": "ARJAWINANGUN"
+  },
+  {
+    "code": "3209201",
+    "regency_code": "3209",
+    "name": "PANGURAGAN"
+  },
+  {
+    "code": "3209210",
+    "regency_code": "3209",
+    "name": "CIWARINGIN"
+  },
+  {
+    "code": "3209211",
+    "regency_code": "3209",
+    "name": "GEMPOL"
+  },
+  {
+    "code": "3209220",
+    "regency_code": "3209",
+    "name": "SUSUKAN"
+  },
+  {
+    "code": "3209230",
+    "regency_code": "3209",
+    "name": "GEGESIK"
+  },
+  {
+    "code": "3209231",
+    "regency_code": "3209",
+    "name": "KALIWEDI"
+  },
+  {
+    "code": "3210010",
+    "regency_code": "3210",
+    "name": "LEMAHSUGIH"
+  },
+  {
+    "code": "3210020",
+    "regency_code": "3210",
+    "name": "BANTARUJEG"
+  },
+  {
+    "code": "3210021",
+    "regency_code": "3210",
+    "name": "MALAUSMA"
+  },
+  {
+    "code": "3210030",
+    "regency_code": "3210",
+    "name": "CIKIJING"
+  },
+  {
+    "code": "3210031",
+    "regency_code": "3210",
+    "name": "CINGAMBUL"
+  },
+  {
+    "code": "3210040",
+    "regency_code": "3210",
+    "name": "TALAGA"
+  },
+  {
+    "code": "3210041",
+    "regency_code": "3210",
+    "name": "BANJARAN"
+  },
+  {
+    "code": "3210050",
+    "regency_code": "3210",
+    "name": "ARGAPURA"
+  },
+  {
+    "code": "3210060",
+    "regency_code": "3210",
+    "name": "MAJA"
+  },
+  {
+    "code": "3210070",
+    "regency_code": "3210",
+    "name": "MAJALENGKA"
+  },
+  {
+    "code": "3210080",
+    "regency_code": "3210",
+    "name": "CIGASONG"
+  },
+  {
+    "code": "3210090",
+    "regency_code": "3210",
+    "name": "SUKAHAJI"
+  },
+  {
+    "code": "3210091",
+    "regency_code": "3210",
+    "name": "SINDANG"
+  },
+  {
+    "code": "3210100",
+    "regency_code": "3210",
+    "name": "RAJAGALUH"
+  },
+  {
+    "code": "3210110",
+    "regency_code": "3210",
+    "name": "SINDANGWANGI"
+  },
+  {
+    "code": "3210120",
+    "regency_code": "3210",
+    "name": "LEUWIMUNDING"
+  },
+  {
+    "code": "3210130",
+    "regency_code": "3210",
+    "name": "PALASAH"
+  },
+  {
+    "code": "3210140",
+    "regency_code": "3210",
+    "name": "JATIWANGI"
+  },
+  {
+    "code": "3210150",
+    "regency_code": "3210",
+    "name": "DAWUAN"
+  },
+  {
+    "code": "3210151",
+    "regency_code": "3210",
+    "name": "KASOKANDEL"
+  },
+  {
+    "code": "3210160",
+    "regency_code": "3210",
+    "name": "PANYINGKIRAN"
+  },
+  {
+    "code": "3210170",
+    "regency_code": "3210",
+    "name": "KADIPATEN"
+  },
+  {
+    "code": "3210180",
+    "regency_code": "3210",
+    "name": "KERTAJATI"
+  },
+  {
+    "code": "3210190",
+    "regency_code": "3210",
+    "name": "JATITUJUH"
+  },
+  {
+    "code": "3210200",
+    "regency_code": "3210",
+    "name": "LIGUNG"
+  },
+  {
+    "code": "3210210",
+    "regency_code": "3210",
+    "name": "SUMBERJAYA"
+  },
+  {
+    "code": "3211010",
+    "regency_code": "3211",
+    "name": "JATINANGOR"
+  },
+  {
+    "code": "3211020",
+    "regency_code": "3211",
+    "name": "CIMANGGUNG"
+  },
+  {
+    "code": "3211030",
+    "regency_code": "3211",
+    "name": "TANJUNGSARI"
+  },
+  {
+    "code": "3211031",
+    "regency_code": "3211",
+    "name": "SUKASARI"
+  },
+  {
+    "code": "3211032",
+    "regency_code": "3211",
+    "name": "PAMULIHAN"
+  },
+  {
+    "code": "3211040",
+    "regency_code": "3211",
+    "name": "RANCAKALONG"
+  },
+  {
+    "code": "3211050",
+    "regency_code": "3211",
+    "name": "SUMEDANG SELATAN"
+  },
+  {
+    "code": "3211060",
+    "regency_code": "3211",
+    "name": "SUMEDANG UTARA"
+  },
+  {
+    "code": "3211061",
+    "regency_code": "3211",
+    "name": "GANEAS"
+  },
+  {
+    "code": "3211070",
+    "regency_code": "3211",
+    "name": "SITURAJA"
+  },
+  {
+    "code": "3211071",
+    "regency_code": "3211",
+    "name": "CISITU"
+  },
+  {
+    "code": "3211080",
+    "regency_code": "3211",
+    "name": "DARMARAJA"
+  },
+  {
+    "code": "3211090",
+    "regency_code": "3211",
+    "name": "CIBUGEL"
+  },
+  {
+    "code": "3211100",
+    "regency_code": "3211",
+    "name": "WADO"
+  },
+  {
+    "code": "3211101",
+    "regency_code": "3211",
+    "name": "JATINUNGGAL"
+  },
+  {
+    "code": "3211111",
+    "regency_code": "3211",
+    "name": "JATIGEDE"
+  },
+  {
+    "code": "3211120",
+    "regency_code": "3211",
+    "name": "TOMO"
+  },
+  {
+    "code": "3211130",
+    "regency_code": "3211",
+    "name": "UJUNG JAYA"
+  },
+  {
+    "code": "3211140",
+    "regency_code": "3211",
+    "name": "CONGGEANG"
+  },
+  {
+    "code": "3211150",
+    "regency_code": "3211",
+    "name": "PASEH"
+  },
+  {
+    "code": "3211160",
+    "regency_code": "3211",
+    "name": "CIMALAKA"
+  },
+  {
+    "code": "3211161",
+    "regency_code": "3211",
+    "name": "CISARUA"
+  },
+  {
+    "code": "3211170",
+    "regency_code": "3211",
+    "name": "TANJUNGKERTA"
+  },
+  {
+    "code": "3211171",
+    "regency_code": "3211",
+    "name": "TANJUNGMEDAR"
+  },
+  {
+    "code": "3211180",
+    "regency_code": "3211",
+    "name": "BUAHDUA"
+  },
+  {
+    "code": "3211181",
+    "regency_code": "3211",
+    "name": "SURIAN"
+  },
+  {
+    "code": "3212010",
+    "regency_code": "3212",
+    "name": "HAURGEULIS"
+  },
+  {
+    "code": "3212011",
+    "regency_code": "3212",
+    "name": "GANTAR"
+  },
+  {
+    "code": "3212020",
+    "regency_code": "3212",
+    "name": "KROYA"
+  },
+  {
+    "code": "3212030",
+    "regency_code": "3212",
+    "name": "GABUSWETAN"
+  },
+  {
+    "code": "3212040",
+    "regency_code": "3212",
+    "name": "CIKEDUNG"
+  },
+  {
+    "code": "3212041",
+    "regency_code": "3212",
+    "name": "TERISI"
+  },
+  {
+    "code": "3212050",
+    "regency_code": "3212",
+    "name": "LELEA"
+  },
+  {
+    "code": "3212060",
+    "regency_code": "3212",
+    "name": "BANGODUA"
+  },
+  {
+    "code": "3212061",
+    "regency_code": "3212",
+    "name": "TUKDANA"
+  },
+  {
+    "code": "3212070",
+    "regency_code": "3212",
+    "name": "WIDASARI"
+  },
+  {
+    "code": "3212080",
+    "regency_code": "3212",
+    "name": "KERTASEMAYA"
+  },
+  {
+    "code": "3212081",
+    "regency_code": "3212",
+    "name": "SUKAGUMIWANG"
+  },
+  {
+    "code": "3212090",
+    "regency_code": "3212",
+    "name": "KRANGKENG"
+  },
+  {
+    "code": "3212100",
+    "regency_code": "3212",
+    "name": "KARANGAMPEL"
+  },
+  {
+    "code": "3212101",
+    "regency_code": "3212",
+    "name": "KEDOKAN BUNDER"
+  },
+  {
+    "code": "3212110",
+    "regency_code": "3212",
+    "name": "JUNTINYUAT"
+  },
+  {
+    "code": "3212120",
+    "regency_code": "3212",
+    "name": "SLIYEG"
+  },
+  {
+    "code": "3212130",
+    "regency_code": "3212",
+    "name": "JATIBARANG"
+  },
+  {
+    "code": "3212140",
+    "regency_code": "3212",
+    "name": "BALONGAN"
+  },
+  {
+    "code": "3212150",
+    "regency_code": "3212",
+    "name": "INDRAMAYU"
+  },
+  {
+    "code": "3212160",
+    "regency_code": "3212",
+    "name": "SINDANG"
+  },
+  {
+    "code": "3212161",
+    "regency_code": "3212",
+    "name": "CANTIGI"
+  },
+  {
+    "code": "3212162",
+    "regency_code": "3212",
+    "name": "PASEKAN"
+  },
+  {
+    "code": "3212170",
+    "regency_code": "3212",
+    "name": "LOHBENER"
+  },
+  {
+    "code": "3212171",
+    "regency_code": "3212",
+    "name": "ARAHAN"
+  },
+  {
+    "code": "3212180",
+    "regency_code": "3212",
+    "name": "LOSARANG"
+  },
+  {
+    "code": "3212190",
+    "regency_code": "3212",
+    "name": "KANDANGHAUR"
+  },
+  {
+    "code": "3212200",
+    "regency_code": "3212",
+    "name": "BONGAS"
+  },
+  {
+    "code": "3212210",
+    "regency_code": "3212",
+    "name": "ANJATAN"
+  },
+  {
+    "code": "3212220",
+    "regency_code": "3212",
+    "name": "SUKRA"
+  },
+  {
+    "code": "3212221",
+    "regency_code": "3212",
+    "name": "PATROL"
+  },
+  {
+    "code": "3213010",
+    "regency_code": "3213",
+    "name": "SAGALAHERANG"
+  },
+  {
+    "code": "3213011",
+    "regency_code": "3213",
+    "name": "SERANGPANJANG"
+  },
+  {
+    "code": "3213020",
+    "regency_code": "3213",
+    "name": "JALANCAGAK"
+  },
+  {
+    "code": "3213021",
+    "regency_code": "3213",
+    "name": "CIATER"
+  },
+  {
+    "code": "3213030",
+    "regency_code": "3213",
+    "name": "CISALAK"
+  },
+  {
+    "code": "3213031",
+    "regency_code": "3213",
+    "name": "KASOMALANG"
+  },
+  {
+    "code": "3213040",
+    "regency_code": "3213",
+    "name": "TANJUNGSIANG"
+  },
+  {
+    "code": "3213050",
+    "regency_code": "3213",
+    "name": "CIJAMBE"
+  },
+  {
+    "code": "3213060",
+    "regency_code": "3213",
+    "name": "CIBOGO"
+  },
+  {
+    "code": "3213070",
+    "regency_code": "3213",
+    "name": "SUBANG"
+  },
+  {
+    "code": "3213080",
+    "regency_code": "3213",
+    "name": "KALIJATI"
+  },
+  {
+    "code": "3213081",
+    "regency_code": "3213",
+    "name": "DAWUAN"
+  },
+  {
+    "code": "3213090",
+    "regency_code": "3213",
+    "name": "CIPEUNDEUY"
+  },
+  {
+    "code": "3213100",
+    "regency_code": "3213",
+    "name": "PABUARAN"
+  },
+  {
+    "code": "3213110",
+    "regency_code": "3213",
+    "name": "PATOKBEUSI"
+  },
+  {
+    "code": "3213120",
+    "regency_code": "3213",
+    "name": "PURWADADI"
+  },
+  {
+    "code": "3213130",
+    "regency_code": "3213",
+    "name": "CIKAUM"
+  },
+  {
+    "code": "3213140",
+    "regency_code": "3213",
+    "name": "PAGADEN"
+  },
+  {
+    "code": "3213141",
+    "regency_code": "3213",
+    "name": "PAGADEN BARAT"
+  },
+  {
+    "code": "3213150",
+    "regency_code": "3213",
+    "name": "CIPUNAGARA"
+  },
+  {
+    "code": "3213160",
+    "regency_code": "3213",
+    "name": "COMPRENG"
+  },
+  {
+    "code": "3213170",
+    "regency_code": "3213",
+    "name": "BINONG"
+  },
+  {
+    "code": "3213171",
+    "regency_code": "3213",
+    "name": "TAMBAKDAHAN"
+  },
+  {
+    "code": "3213180",
+    "regency_code": "3213",
+    "name": "CIASEM"
+  },
+  {
+    "code": "3213190",
+    "regency_code": "3213",
+    "name": "PAMANUKAN"
+  },
+  {
+    "code": "3213191",
+    "regency_code": "3213",
+    "name": "SUKASARI"
+  },
+  {
+    "code": "3213200",
+    "regency_code": "3213",
+    "name": "PUSAKANAGARA"
+  },
+  {
+    "code": "3213201",
+    "regency_code": "3213",
+    "name": "PUSAKAJAYA"
+  },
+  {
+    "code": "3213210",
+    "regency_code": "3213",
+    "name": "LEGONKULON"
+  },
+  {
+    "code": "3213220",
+    "regency_code": "3213",
+    "name": "BLANAKAN"
+  },
+  {
+    "code": "3214010",
+    "regency_code": "3214",
+    "name": "JATILUHUR"
+  },
+  {
+    "code": "3214011",
+    "regency_code": "3214",
+    "name": "SUKASARI"
+  },
+  {
+    "code": "3214020",
+    "regency_code": "3214",
+    "name": "MANIIS"
+  },
+  {
+    "code": "3214030",
+    "regency_code": "3214",
+    "name": "TEGAL WARU"
+  },
+  {
+    "code": "3214040",
+    "regency_code": "3214",
+    "name": "PLERED"
+  },
+  {
+    "code": "3214050",
+    "regency_code": "3214",
+    "name": "SUKATANI"
+  },
+  {
+    "code": "3214060",
+    "regency_code": "3214",
+    "name": "DARANGDAN"
+  },
+  {
+    "code": "3214070",
+    "regency_code": "3214",
+    "name": "BOJONG"
+  },
+  {
+    "code": "3214080",
+    "regency_code": "3214",
+    "name": "WANAYASA"
+  },
+  {
+    "code": "3214081",
+    "regency_code": "3214",
+    "name": "KIARAPEDES"
+  },
+  {
+    "code": "3214090",
+    "regency_code": "3214",
+    "name": "PASAWAHAN"
+  },
+  {
+    "code": "3214091",
+    "regency_code": "3214",
+    "name": "PONDOK SALAM"
+  },
+  {
+    "code": "3214100",
+    "regency_code": "3214",
+    "name": "PURWAKARTA"
+  },
+  {
+    "code": "3214101",
+    "regency_code": "3214",
+    "name": "BABAKANCIKAO"
+  },
+  {
+    "code": "3214110",
+    "regency_code": "3214",
+    "name": "CAMPAKA"
+  },
+  {
+    "code": "3214111",
+    "regency_code": "3214",
+    "name": "CIBATU"
+  },
+  {
+    "code": "3214112",
+    "regency_code": "3214",
+    "name": "BUNGURSARI"
+  },
+  {
+    "code": "3215010",
+    "regency_code": "3215",
+    "name": "PANGKALAN"
+  },
+  {
+    "code": "3215011",
+    "regency_code": "3215",
+    "name": "TEGALWARU"
+  },
+  {
+    "code": "3215020",
+    "regency_code": "3215",
+    "name": "CIAMPEL"
+  },
+  {
+    "code": "3215031",
+    "regency_code": "3215",
+    "name": "TELUKJAMBE TIMUR"
+  },
+  {
+    "code": "3215032",
+    "regency_code": "3215",
+    "name": "TELUKJAMBE BARAT"
+  },
+  {
+    "code": "3215040",
+    "regency_code": "3215",
+    "name": "KLARI"
+  },
+  {
+    "code": "3215050",
+    "regency_code": "3215",
+    "name": "CIKAMPEK"
+  },
+  {
+    "code": "3215051",
+    "regency_code": "3215",
+    "name": "PURWASARI"
+  },
+  {
+    "code": "3215060",
+    "regency_code": "3215",
+    "name": "TIRTAMULYA"
+  },
+  {
+    "code": "3215070",
+    "regency_code": "3215",
+    "name": "JATISARI"
+  },
+  {
+    "code": "3215071",
+    "regency_code": "3215",
+    "name": "BANYUSARI"
+  },
+  {
+    "code": "3215072",
+    "regency_code": "3215",
+    "name": "KOTABARU"
+  },
+  {
+    "code": "3215081",
+    "regency_code": "3215",
+    "name": "CILAMAYA WETAN"
+  },
+  {
+    "code": "3215082",
+    "regency_code": "3215",
+    "name": "CILAMAYA KULON"
+  },
+  {
+    "code": "3215090",
+    "regency_code": "3215",
+    "name": "LEMAHABANG"
+  },
+  {
+    "code": "3215100",
+    "regency_code": "3215",
+    "name": "TALAGASARI"
+  },
+  {
+    "code": "3215111",
+    "regency_code": "3215",
+    "name": "MAJALAYA"
+  },
+  {
+    "code": "3215112",
+    "regency_code": "3215",
+    "name": "KARAWANG TIMUR"
+  },
+  {
+    "code": "3215113",
+    "regency_code": "3215",
+    "name": "KARAWANG BARAT"
+  },
+  {
+    "code": "3215120",
+    "regency_code": "3215",
+    "name": "RAWAMERTA"
+  },
+  {
+    "code": "3215130",
+    "regency_code": "3215",
+    "name": "TEMPURAN"
+  },
+  {
+    "code": "3215140",
+    "regency_code": "3215",
+    "name": "KUTAWALUYA"
+  },
+  {
+    "code": "3215150",
+    "regency_code": "3215",
+    "name": "RENGASDENGKLOK"
+  },
+  {
+    "code": "3215151",
+    "regency_code": "3215",
+    "name": "JAYAKERTA"
+  },
+  {
+    "code": "3215160",
+    "regency_code": "3215",
+    "name": "PEDES"
+  },
+  {
+    "code": "3215161",
+    "regency_code": "3215",
+    "name": "CILEBAR"
+  },
+  {
+    "code": "3215170",
+    "regency_code": "3215",
+    "name": "CIBUAYA"
+  },
+  {
+    "code": "3215180",
+    "regency_code": "3215",
+    "name": "TIRTAJAYA"
+  },
+  {
+    "code": "3215190",
+    "regency_code": "3215",
+    "name": "BATUJAYA"
+  },
+  {
+    "code": "3215200",
+    "regency_code": "3215",
+    "name": "PAKISJAYA"
+  },
+  {
+    "code": "3216010",
+    "regency_code": "3216",
+    "name": "SETU"
+  },
+  {
+    "code": "3216021",
+    "regency_code": "3216",
+    "name": "SERANG BARU"
+  },
+  {
+    "code": "3216022",
+    "regency_code": "3216",
+    "name": "CIKARANG PUSAT"
+  },
+  {
+    "code": "3216023",
+    "regency_code": "3216",
+    "name": "CIKARANG SELATAN"
+  },
+  {
+    "code": "3216030",
+    "regency_code": "3216",
+    "name": "CIBARUSAH"
+  },
+  {
+    "code": "3216031",
+    "regency_code": "3216",
+    "name": "BOJONGMANGU"
+  },
+  {
+    "code": "3216041",
+    "regency_code": "3216",
+    "name": "CIKARANG TIMUR"
+  },
+  {
+    "code": "3216050",
+    "regency_code": "3216",
+    "name": "KEDUNGWARINGIN"
+  },
+  {
+    "code": "3216061",
+    "regency_code": "3216",
+    "name": "CIKARANG UTARA"
+  },
+  {
+    "code": "3216062",
+    "regency_code": "3216",
+    "name": "KARANGBAHAGIA"
+  },
+  {
+    "code": "3216070",
+    "regency_code": "3216",
+    "name": "CIBITUNG"
+  },
+  {
+    "code": "3216071",
+    "regency_code": "3216",
+    "name": "CIKARANG BARAT"
+  },
+  {
+    "code": "3216081",
+    "regency_code": "3216",
+    "name": "TAMBUN SELATAN"
+  },
+  {
+    "code": "3216082",
+    "regency_code": "3216",
+    "name": "TAMBUN UTARA"
+  },
+  {
+    "code": "3216090",
+    "regency_code": "3216",
+    "name": "BABELAN"
+  },
+  {
+    "code": "3216100",
+    "regency_code": "3216",
+    "name": "TARUMAJAYA"
+  },
+  {
+    "code": "3216110",
+    "regency_code": "3216",
+    "name": "TAMBELANG"
+  },
+  {
+    "code": "3216111",
+    "regency_code": "3216",
+    "name": "SUKAWANGI"
+  },
+  {
+    "code": "3216120",
+    "regency_code": "3216",
+    "name": "SUKATANI"
+  },
+  {
+    "code": "3216121",
+    "regency_code": "3216",
+    "name": "SUKAKARYA"
+  },
+  {
+    "code": "3216130",
+    "regency_code": "3216",
+    "name": "PEBAYURAN"
+  },
+  {
+    "code": "3216140",
+    "regency_code": "3216",
+    "name": "CABANGBUNGIN"
+  },
+  {
+    "code": "3216150",
+    "regency_code": "3216",
+    "name": "MUARA GEMBONG"
+  },
+  {
+    "code": "3217010",
+    "regency_code": "3217",
+    "name": "RONGGA"
+  },
+  {
+    "code": "3217020",
+    "regency_code": "3217",
+    "name": "GUNUNGHALU"
+  },
+  {
+    "code": "3217030",
+    "regency_code": "3217",
+    "name": "SINDANGKERTA"
+  },
+  {
+    "code": "3217040",
+    "regency_code": "3217",
+    "name": "CILILIN"
+  },
+  {
+    "code": "3217050",
+    "regency_code": "3217",
+    "name": "CIHAMPELAS"
+  },
+  {
+    "code": "3217060",
+    "regency_code": "3217",
+    "name": "CIPONGKOR"
+  },
+  {
+    "code": "3217070",
+    "regency_code": "3217",
+    "name": "BATUJAJAR"
+  },
+  {
+    "code": "3217071",
+    "regency_code": "3217",
+    "name": "SAGULING"
+  },
+  {
+    "code": "3217080",
+    "regency_code": "3217",
+    "name": "CIPATAT"
+  },
+  {
+    "code": "3217090",
+    "regency_code": "3217",
+    "name": "PADALARANG"
+  },
+  {
+    "code": "3217100",
+    "regency_code": "3217",
+    "name": "NGAMPRAH"
+  },
+  {
+    "code": "3217110",
+    "regency_code": "3217",
+    "name": "PARONGPONG"
+  },
+  {
+    "code": "3217120",
+    "regency_code": "3217",
+    "name": "LEMBANG"
+  },
+  {
+    "code": "3217130",
+    "regency_code": "3217",
+    "name": "CISARUA"
+  },
+  {
+    "code": "3217140",
+    "regency_code": "3217",
+    "name": "CIKALONG WETAN"
+  },
+  {
+    "code": "3217150",
+    "regency_code": "3217",
+    "name": "CIPEUNDEUY"
+  },
+  {
+    "code": "3218010",
+    "regency_code": "3218",
+    "name": "CIMERAK"
+  },
+  {
+    "code": "3218020",
+    "regency_code": "3218",
+    "name": "CIJULANG"
+  },
+  {
+    "code": "3218030",
+    "regency_code": "3218",
+    "name": "CIGUGUR"
+  },
+  {
+    "code": "3218040",
+    "regency_code": "3218",
+    "name": "LANGKAPLANCAR"
+  },
+  {
+    "code": "3218050",
+    "regency_code": "3218",
+    "name": "PARIGI"
+  },
+  {
+    "code": "3218060",
+    "regency_code": "3218",
+    "name": "SIDAMULIH"
+  },
+  {
+    "code": "3218070",
+    "regency_code": "3218",
+    "name": "PANGANDARAN"
+  },
+  {
+    "code": "3218080",
+    "regency_code": "3218",
+    "name": "KALIPUCANG"
+  },
+  {
+    "code": "3218090",
+    "regency_code": "3218",
+    "name": "PADAHERANG"
+  },
+  {
+    "code": "3218100",
+    "regency_code": "3218",
+    "name": "MANGUNJAYA"
+  },
+  {
+    "code": "3271010",
+    "regency_code": "3271",
+    "name": "BOGOR SELATAN"
+  },
+  {
+    "code": "3271020",
+    "regency_code": "3271",
+    "name": "BOGOR TIMUR"
+  },
+  {
+    "code": "3271030",
+    "regency_code": "3271",
+    "name": "BOGOR UTARA"
+  },
+  {
+    "code": "3271040",
+    "regency_code": "3271",
+    "name": "BOGOR TENGAH"
+  },
+  {
+    "code": "3271050",
+    "regency_code": "3271",
+    "name": "BOGOR BARAT"
+  },
+  {
+    "code": "3271060",
+    "regency_code": "3271",
+    "name": "TANAH SEREAL"
+  },
+  {
+    "code": "3272010",
+    "regency_code": "3272",
+    "name": "BAROS"
+  },
+  {
+    "code": "3272011",
+    "regency_code": "3272",
+    "name": "LEMBURSITU"
+  },
+  {
+    "code": "3272012",
+    "regency_code": "3272",
+    "name": "CIBEUREUM"
+  },
+  {
+    "code": "3272020",
+    "regency_code": "3272",
+    "name": "CITAMIANG"
+  },
+  {
+    "code": "3272030",
+    "regency_code": "3272",
+    "name": "WARUDOYONG"
+  },
+  {
+    "code": "3272040",
+    "regency_code": "3272",
+    "name": "GUNUNG PUYUH"
+  },
+  {
+    "code": "3272050",
+    "regency_code": "3272",
+    "name": "CIKOLE"
+  },
+  {
+    "code": "3273010",
+    "regency_code": "3273",
+    "name": "BANDUNG KULON"
+  },
+  {
+    "code": "3273020",
+    "regency_code": "3273",
+    "name": "BABAKAN CIPARAY"
+  },
+  {
+    "code": "3273030",
+    "regency_code": "3273",
+    "name": "BOJONGLOA KALER"
+  },
+  {
+    "code": "3273040",
+    "regency_code": "3273",
+    "name": "BOJONGLOA KIDUL"
+  },
+  {
+    "code": "3273050",
+    "regency_code": "3273",
+    "name": "ASTANAANYAR"
+  },
+  {
+    "code": "3273060",
+    "regency_code": "3273",
+    "name": "REGOL"
+  },
+  {
+    "code": "3273070",
+    "regency_code": "3273",
+    "name": "LENGKONG"
+  },
+  {
+    "code": "3273080",
+    "regency_code": "3273",
+    "name": "BANDUNG KIDUL"
+  },
+  {
+    "code": "3273090",
+    "regency_code": "3273",
+    "name": "BUAHBATU"
+  },
+  {
+    "code": "3273100",
+    "regency_code": "3273",
+    "name": "RANCASARI"
+  },
+  {
+    "code": "3273101",
+    "regency_code": "3273",
+    "name": "GEDEBAGE"
+  },
+  {
+    "code": "3273110",
+    "regency_code": "3273",
+    "name": "CIBIRU"
+  },
+  {
+    "code": "3273111",
+    "regency_code": "3273",
+    "name": "PANYILEUKAN"
+  },
+  {
+    "code": "3273120",
+    "regency_code": "3273",
+    "name": "UJUNG BERUNG"
+  },
+  {
+    "code": "3273121",
+    "regency_code": "3273",
+    "name": "CINAMBO"
+  },
+  {
+    "code": "3273130",
+    "regency_code": "3273",
+    "name": "ARCAMANIK"
+  },
+  {
+    "code": "3273141",
+    "regency_code": "3273",
+    "name": "ANTAPANI"
+  },
+  {
+    "code": "3273142",
+    "regency_code": "3273",
+    "name": "MANDALAJATI"
+  },
+  {
+    "code": "3273150",
+    "regency_code": "3273",
+    "name": "KIARACONDONG"
+  },
+  {
+    "code": "3273160",
+    "regency_code": "3273",
+    "name": "BATUNUNGGAL"
+  },
+  {
+    "code": "3273170",
+    "regency_code": "3273",
+    "name": "SUMUR BANDUNG"
+  },
+  {
+    "code": "3273180",
+    "regency_code": "3273",
+    "name": "ANDIR"
+  },
+  {
+    "code": "3273190",
+    "regency_code": "3273",
+    "name": "CICENDO"
+  },
+  {
+    "code": "3273200",
+    "regency_code": "3273",
+    "name": "BANDUNG WETAN"
+  },
+  {
+    "code": "3273210",
+    "regency_code": "3273",
+    "name": "CIBEUNYING KIDUL"
+  },
+  {
+    "code": "3273220",
+    "regency_code": "3273",
+    "name": "CIBEUNYING KALER"
+  },
+  {
+    "code": "3273230",
+    "regency_code": "3273",
+    "name": "COBLONG"
+  },
+  {
+    "code": "3273240",
+    "regency_code": "3273",
+    "name": "SUKAJADI"
+  },
+  {
+    "code": "3273250",
+    "regency_code": "3273",
+    "name": "SUKASARI"
+  },
+  {
+    "code": "3273260",
+    "regency_code": "3273",
+    "name": "CIDADAP"
+  },
+  {
+    "code": "3274010",
+    "regency_code": "3274",
+    "name": "HARJAMUKTI"
+  },
+  {
+    "code": "3274020",
+    "regency_code": "3274",
+    "name": "LEMAHWUNGKUK"
+  },
+  {
+    "code": "3274030",
+    "regency_code": "3274",
+    "name": "PEKALIPAN"
+  },
+  {
+    "code": "3274040",
+    "regency_code": "3274",
+    "name": "KESAMBI"
+  },
+  {
+    "code": "3274050",
+    "regency_code": "3274",
+    "name": "KEJAKSAN"
+  },
+  {
+    "code": "3275010",
+    "regency_code": "3275",
+    "name": "PONDOKGEDE"
+  },
+  {
+    "code": "3275011",
+    "regency_code": "3275",
+    "name": "JATISAMPURNA"
+  },
+  {
+    "code": "3275012",
+    "regency_code": "3275",
+    "name": "PONDOKMELATI"
+  },
+  {
+    "code": "3275020",
+    "regency_code": "3275",
+    "name": "JATIASIH"
+  },
+  {
+    "code": "3275030",
+    "regency_code": "3275",
+    "name": "BANTARGEBANG"
+  },
+  {
+    "code": "3275031",
+    "regency_code": "3275",
+    "name": "MUSTIKAJAYA"
+  },
+  {
+    "code": "3275040",
+    "regency_code": "3275",
+    "name": "BEKASI TIMUR"
+  },
+  {
+    "code": "3275041",
+    "regency_code": "3275",
+    "name": "RAWALUMBU"
+  },
+  {
+    "code": "3275050",
+    "regency_code": "3275",
+    "name": "BEKASI SELATAN"
+  },
+  {
+    "code": "3275060",
+    "regency_code": "3275",
+    "name": "BEKASI BARAT"
+  },
+  {
+    "code": "3275061",
+    "regency_code": "3275",
+    "name": "MEDAN SATRIA"
+  },
+  {
+    "code": "3275070",
+    "regency_code": "3275",
+    "name": "BEKASI UTARA"
+  },
+  {
+    "code": "3276010",
+    "regency_code": "3276",
+    "name": "SAWANGAN"
+  },
+  {
+    "code": "3276011",
+    "regency_code": "3276",
+    "name": "BOJONGSARI"
+  },
+  {
+    "code": "3276020",
+    "regency_code": "3276",
+    "name": "PANCORAN MAS"
+  },
+  {
+    "code": "3276021",
+    "regency_code": "3276",
+    "name": "CIPAYUNG"
+  },
+  {
+    "code": "3276030",
+    "regency_code": "3276",
+    "name": "SUKMA JAYA"
+  },
+  {
+    "code": "3276031",
+    "regency_code": "3276",
+    "name": "CILODONG"
+  },
+  {
+    "code": "3276040",
+    "regency_code": "3276",
+    "name": "CIMANGGIS"
+  },
+  {
+    "code": "3276041",
+    "regency_code": "3276",
+    "name": "TAPOS"
+  },
+  {
+    "code": "3276050",
+    "regency_code": "3276",
+    "name": "BEJI"
+  },
+  {
+    "code": "3276060",
+    "regency_code": "3276",
+    "name": "LIMO"
+  },
+  {
+    "code": "3276061",
+    "regency_code": "3276",
+    "name": "CINERE"
+  },
+  {
+    "code": "3277010",
+    "regency_code": "3277",
+    "name": "CIMAHI SELATAN"
+  },
+  {
+    "code": "3277020",
+    "regency_code": "3277",
+    "name": "CIMAHI TENGAH"
+  },
+  {
+    "code": "3277030",
+    "regency_code": "3277",
+    "name": "CIMAHI UTARA"
+  },
+  {
+    "code": "3278010",
+    "regency_code": "3278",
+    "name": "KAWALU"
+  },
+  {
+    "code": "3278020",
+    "regency_code": "3278",
+    "name": "TAMANSARI"
+  },
+  {
+    "code": "3278030",
+    "regency_code": "3278",
+    "name": "CIBEUREUM"
+  },
+  {
+    "code": "3278031",
+    "regency_code": "3278",
+    "name": "PURBARATU"
+  },
+  {
+    "code": "3278040",
+    "regency_code": "3278",
+    "name": "TAWANG"
+  },
+  {
+    "code": "3278050",
+    "regency_code": "3278",
+    "name": "CIHIDEUNG"
+  },
+  {
+    "code": "3278060",
+    "regency_code": "3278",
+    "name": "MANGKUBUMI"
+  },
+  {
+    "code": "3278070",
+    "regency_code": "3278",
+    "name": "INDIHIANG"
+  },
+  {
+    "code": "3278071",
+    "regency_code": "3278",
+    "name": "BUNGURSARI"
+  },
+  {
+    "code": "3278080",
+    "regency_code": "3278",
+    "name": "CIPEDES"
+  },
+  {
+    "code": "3279010",
+    "regency_code": "3279",
+    "name": "BANJAR"
+  },
+  {
+    "code": "3279020",
+    "regency_code": "3279",
+    "name": "PURWAHARJA"
+  },
+  {
+    "code": "3279030",
+    "regency_code": "3279",
+    "name": "PATARUMAN"
+  },
+  {
+    "code": "3279040",
+    "regency_code": "3279",
+    "name": "LANGENSARI"
+  },
+  {
+    "code": "3601010",
+    "regency_code": "3601",
+    "name": "SUMUR"
+  },
+  {
+    "code": "3601020",
+    "regency_code": "3601",
+    "name": "CIMANGGU"
+  },
+  {
+    "code": "3601030",
+    "regency_code": "3601",
+    "name": "CIBALIUNG"
+  },
+  {
+    "code": "3601031",
+    "regency_code": "3601",
+    "name": "CIBITUNG"
+  },
+  {
+    "code": "3601040",
+    "regency_code": "3601",
+    "name": "CIKEUSIK"
+  },
+  {
+    "code": "3601050",
+    "regency_code": "3601",
+    "name": "CIGEULIS"
+  },
+  {
+    "code": "3601060",
+    "regency_code": "3601",
+    "name": "PANIMBANG"
+  },
+  {
+    "code": "3601061",
+    "regency_code": "3601",
+    "name": "SOBANG"
+  },
+  {
+    "code": "3601070",
+    "regency_code": "3601",
+    "name": "MUNJUL"
+  },
+  {
+    "code": "3601071",
+    "regency_code": "3601",
+    "name": "ANGSANA"
+  },
+  {
+    "code": "3601072",
+    "regency_code": "3601",
+    "name": "SINDANGRESMI"
+  },
+  {
+    "code": "3601080",
+    "regency_code": "3601",
+    "name": "PICUNG"
+  },
+  {
+    "code": "3601090",
+    "regency_code": "3601",
+    "name": "BOJONG"
+  },
+  {
+    "code": "3601100",
+    "regency_code": "3601",
+    "name": "SAKETI"
+  },
+  {
+    "code": "3601101",
+    "regency_code": "3601",
+    "name": "CISATA"
+  },
+  {
+    "code": "3601110",
+    "regency_code": "3601",
+    "name": "PAGELARAN"
+  },
+  {
+    "code": "3601111",
+    "regency_code": "3601",
+    "name": "PATIA"
+  },
+  {
+    "code": "3601112",
+    "regency_code": "3601",
+    "name": "SUKARESMI"
+  },
+  {
+    "code": "3601120",
+    "regency_code": "3601",
+    "name": "LABUAN"
+  },
+  {
+    "code": "3601121",
+    "regency_code": "3601",
+    "name": "CARITA"
+  },
+  {
+    "code": "3601130",
+    "regency_code": "3601",
+    "name": "JIPUT"
+  },
+  {
+    "code": "3601131",
+    "regency_code": "3601",
+    "name": "CIKEDAL"
+  },
+  {
+    "code": "3601140",
+    "regency_code": "3601",
+    "name": "MENES"
+  },
+  {
+    "code": "3601141",
+    "regency_code": "3601",
+    "name": "PULOSARI"
+  },
+  {
+    "code": "3601150",
+    "regency_code": "3601",
+    "name": "MANDALAWANGI"
+  },
+  {
+    "code": "3601160",
+    "regency_code": "3601",
+    "name": "CIMANUK"
+  },
+  {
+    "code": "3601161",
+    "regency_code": "3601",
+    "name": "CIPEUCANG"
+  },
+  {
+    "code": "3601170",
+    "regency_code": "3601",
+    "name": "BANJAR"
+  },
+  {
+    "code": "3601171",
+    "regency_code": "3601",
+    "name": "KADUHEJO"
+  },
+  {
+    "code": "3601172",
+    "regency_code": "3601",
+    "name": "MEKARJAYA"
+  },
+  {
+    "code": "3601180",
+    "regency_code": "3601",
+    "name": "PANDEGLANG"
+  },
+  {
+    "code": "3601181",
+    "regency_code": "3601",
+    "name": "MAJASARI"
+  },
+  {
+    "code": "3601190",
+    "regency_code": "3601",
+    "name": "CADASARI"
+  },
+  {
+    "code": "3601191",
+    "regency_code": "3601",
+    "name": "KARANGTANJUNG"
+  },
+  {
+    "code": "3601192",
+    "regency_code": "3601",
+    "name": "KORONCONG"
+  },
+  {
+    "code": "3602010",
+    "regency_code": "3602",
+    "name": "MALINGPING"
+  },
+  {
+    "code": "3602011",
+    "regency_code": "3602",
+    "name": "WANASALAM"
+  },
+  {
+    "code": "3602020",
+    "regency_code": "3602",
+    "name": "PANGGARANGAN"
+  },
+  {
+    "code": "3602021",
+    "regency_code": "3602",
+    "name": "CIHARA"
+  },
+  {
+    "code": "3602030",
+    "regency_code": "3602",
+    "name": "BAYAH"
+  },
+  {
+    "code": "3602031",
+    "regency_code": "3602",
+    "name": "CILOGRANG"
+  },
+  {
+    "code": "3602040",
+    "regency_code": "3602",
+    "name": "CIBEBER"
+  },
+  {
+    "code": "3602050",
+    "regency_code": "3602",
+    "name": "CIJAKU"
+  },
+  {
+    "code": "3602051",
+    "regency_code": "3602",
+    "name": "CIGEMBLONG"
+  },
+  {
+    "code": "3602060",
+    "regency_code": "3602",
+    "name": "BANJARSARI"
+  },
+  {
+    "code": "3602070",
+    "regency_code": "3602",
+    "name": "CILELES"
+  },
+  {
+    "code": "3602080",
+    "regency_code": "3602",
+    "name": "GUNUNG KENCANA"
+  },
+  {
+    "code": "3602090",
+    "regency_code": "3602",
+    "name": "BOJONGMANIK"
+  },
+  {
+    "code": "3602091",
+    "regency_code": "3602",
+    "name": "CIRINTEN"
+  },
+  {
+    "code": "3602100",
+    "regency_code": "3602",
+    "name": "LEUWIDAMAR"
+  },
+  {
+    "code": "3602110",
+    "regency_code": "3602",
+    "name": "MUNCANG"
+  },
+  {
+    "code": "3602111",
+    "regency_code": "3602",
+    "name": "SOBANG"
+  },
+  {
+    "code": "3602120",
+    "regency_code": "3602",
+    "name": "CIPANAS"
+  },
+  {
+    "code": "3602121",
+    "regency_code": "3602",
+    "name": "LEBAKGEDONG"
+  },
+  {
+    "code": "3602130",
+    "regency_code": "3602",
+    "name": "SAJIRA"
+  },
+  {
+    "code": "3602140",
+    "regency_code": "3602",
+    "name": "CIMARGA"
+  },
+  {
+    "code": "3602150",
+    "regency_code": "3602",
+    "name": "CIKULUR"
+  },
+  {
+    "code": "3602160",
+    "regency_code": "3602",
+    "name": "WARUNGGUNUNG"
+  },
+  {
+    "code": "3602170",
+    "regency_code": "3602",
+    "name": "CIBADAK"
+  },
+  {
+    "code": "3602180",
+    "regency_code": "3602",
+    "name": "RANGKASBITUNG"
+  },
+  {
+    "code": "3602181",
+    "regency_code": "3602",
+    "name": "KALANGANYAR"
+  },
+  {
+    "code": "3602190",
+    "regency_code": "3602",
+    "name": "MAJA"
+  },
+  {
+    "code": "3602191",
+    "regency_code": "3602",
+    "name": "CURUGBITUNG"
+  },
+  {
+    "code": "3603010",
+    "regency_code": "3603",
+    "name": "CISOKA"
+  },
+  {
+    "code": "3603011",
+    "regency_code": "3603",
+    "name": "SOLEAR"
+  },
+  {
+    "code": "3603020",
+    "regency_code": "3603",
+    "name": "TIGARAKSA"
+  },
+  {
+    "code": "3603021",
+    "regency_code": "3603",
+    "name": "JAMBE"
+  },
+  {
+    "code": "3603030",
+    "regency_code": "3603",
+    "name": "CIKUPA"
+  },
+  {
+    "code": "3603040",
+    "regency_code": "3603",
+    "name": "PANONGAN"
+  },
+  {
+    "code": "3603050",
+    "regency_code": "3603",
+    "name": "CURUG"
+  },
+  {
+    "code": "3603051",
+    "regency_code": "3603",
+    "name": "KELAPA DUA"
+  },
+  {
+    "code": "3603060",
+    "regency_code": "3603",
+    "name": "LEGOK"
+  },
+  {
+    "code": "3603070",
+    "regency_code": "3603",
+    "name": "PAGEDANGAN"
+  },
+  {
+    "code": "3603081",
+    "regency_code": "3603",
+    "name": "CISAUK"
+  },
+  {
+    "code": "3603120",
+    "regency_code": "3603",
+    "name": "PASARKEMIS"
+  },
+  {
+    "code": "3603121",
+    "regency_code": "3603",
+    "name": "SINDANG JAYA"
+  },
+  {
+    "code": "3603130",
+    "regency_code": "3603",
+    "name": "BALARAJA"
+  },
+  {
+    "code": "3603131",
+    "regency_code": "3603",
+    "name": "JAYANTI"
+  },
+  {
+    "code": "3603132",
+    "regency_code": "3603",
+    "name": "SUKAMULYA"
+  },
+  {
+    "code": "3603140",
+    "regency_code": "3603",
+    "name": "KRESEK"
+  },
+  {
+    "code": "3603141",
+    "regency_code": "3603",
+    "name": "GUNUNG KALER"
+  },
+  {
+    "code": "3603150",
+    "regency_code": "3603",
+    "name": "KRONJO"
+  },
+  {
+    "code": "3603151",
+    "regency_code": "3603",
+    "name": "MEKAR BARU"
+  },
+  {
+    "code": "3603160",
+    "regency_code": "3603",
+    "name": "MAUK"
+  },
+  {
+    "code": "3603161",
+    "regency_code": "3603",
+    "name": "KEMIRI"
+  },
+  {
+    "code": "3603162",
+    "regency_code": "3603",
+    "name": "SUKADIRI"
+  },
+  {
+    "code": "3603170",
+    "regency_code": "3603",
+    "name": "RAJEG"
+  },
+  {
+    "code": "3603180",
+    "regency_code": "3603",
+    "name": "SEPATAN"
+  },
+  {
+    "code": "3603181",
+    "regency_code": "3603",
+    "name": "SEPATAN TIMUR"
+  },
+  {
+    "code": "3603190",
+    "regency_code": "3603",
+    "name": "PAKUHAJI"
+  },
+  {
+    "code": "3603200",
+    "regency_code": "3603",
+    "name": "TELUKNAGA"
+  },
+  {
+    "code": "3603210",
+    "regency_code": "3603",
+    "name": "KOSAMBI"
+  },
+  {
+    "code": "3604010",
+    "regency_code": "3604",
+    "name": "CINANGKA"
+  },
+  {
+    "code": "3604020",
+    "regency_code": "3604",
+    "name": "PADARINCANG"
+  },
+  {
+    "code": "3604030",
+    "regency_code": "3604",
+    "name": "CIOMAS"
+  },
+  {
+    "code": "3604040",
+    "regency_code": "3604",
+    "name": "PABUARAN"
+  },
+  {
+    "code": "3604041",
+    "regency_code": "3604",
+    "name": "GUNUNG SARI"
+  },
+  {
+    "code": "3604050",
+    "regency_code": "3604",
+    "name": "BAROS"
+  },
+  {
+    "code": "3604060",
+    "regency_code": "3604",
+    "name": "PETIR"
+  },
+  {
+    "code": "3604061",
+    "regency_code": "3604",
+    "name": "TUNJUNG TEJA"
+  },
+  {
+    "code": "3604080",
+    "regency_code": "3604",
+    "name": "CIKEUSAL"
+  },
+  {
+    "code": "3604090",
+    "regency_code": "3604",
+    "name": "PAMARAYAN"
+  },
+  {
+    "code": "3604091",
+    "regency_code": "3604",
+    "name": "BANDUNG"
+  },
+  {
+    "code": "3604100",
+    "regency_code": "3604",
+    "name": "JAWILAN"
+  },
+  {
+    "code": "3604110",
+    "regency_code": "3604",
+    "name": "KOPO"
+  },
+  {
+    "code": "3604120",
+    "regency_code": "3604",
+    "name": "CIKANDE"
+  },
+  {
+    "code": "3604121",
+    "regency_code": "3604",
+    "name": "KIBIN"
+  },
+  {
+    "code": "3604130",
+    "regency_code": "3604",
+    "name": "KRAGILAN"
+  },
+  {
+    "code": "3604180",
+    "regency_code": "3604",
+    "name": "WARINGINKURUNG"
+  },
+  {
+    "code": "3604190",
+    "regency_code": "3604",
+    "name": "MANCAK"
+  },
+  {
+    "code": "3604200",
+    "regency_code": "3604",
+    "name": "ANYAR"
+  },
+  {
+    "code": "3604210",
+    "regency_code": "3604",
+    "name": "BOJONEGARA"
+  },
+  {
+    "code": "3604211",
+    "regency_code": "3604",
+    "name": "PULO AMPEL"
+  },
+  {
+    "code": "3604220",
+    "regency_code": "3604",
+    "name": "KRAMATWATU"
+  },
+  {
+    "code": "3604240",
+    "regency_code": "3604",
+    "name": "CIRUAS"
+  },
+  {
+    "code": "3604250",
+    "regency_code": "3604",
+    "name": "PONTANG"
+  },
+  {
+    "code": "3604251",
+    "regency_code": "3604",
+    "name": "LEBAK WANGI"
+  },
+  {
+    "code": "3604260",
+    "regency_code": "3604",
+    "name": "CARENANG"
+  },
+  {
+    "code": "3604261",
+    "regency_code": "3604",
+    "name": "BINUANG"
+  },
+  {
+    "code": "3604270",
+    "regency_code": "3604",
+    "name": "TIRTAYASA"
+  },
+  {
+    "code": "3604271",
+    "regency_code": "3604",
+    "name": "TANARA"
+  },
+  {
+    "code": "3671010",
+    "regency_code": "3671",
+    "name": "CILEDUG"
+  },
+  {
+    "code": "3671011",
+    "regency_code": "3671",
+    "name": "LARANGAN"
+  },
+  {
+    "code": "3671012",
+    "regency_code": "3671",
+    "name": "KARANG TENGAH"
+  },
+  {
+    "code": "3671020",
+    "regency_code": "3671",
+    "name": "CIPONDOH"
+  },
+  {
+    "code": "3671021",
+    "regency_code": "3671",
+    "name": "PINANG"
+  },
+  {
+    "code": "3671030",
+    "regency_code": "3671",
+    "name": "TANGERANG"
+  },
+  {
+    "code": "3671031",
+    "regency_code": "3671",
+    "name": "KARAWACI"
+  },
+  {
+    "code": "3671040",
+    "regency_code": "3671",
+    "name": "JATI UWUNG"
+  },
+  {
+    "code": "3671041",
+    "regency_code": "3671",
+    "name": "CIBODAS"
+  },
+  {
+    "code": "3671042",
+    "regency_code": "3671",
+    "name": "PERIUK"
+  },
+  {
+    "code": "3671050",
+    "regency_code": "3671",
+    "name": "BATUCEPER"
+  },
+  {
+    "code": "3671051",
+    "regency_code": "3671",
+    "name": "NEGLASARI"
+  },
+  {
+    "code": "3671060",
+    "regency_code": "3671",
+    "name": "BENDA"
+  },
+  {
+    "code": "3672010",
+    "regency_code": "3672",
+    "name": "CIWANDAN"
+  },
+  {
+    "code": "3672011",
+    "regency_code": "3672",
+    "name": "CITANGKIL"
+  },
+  {
+    "code": "3672020",
+    "regency_code": "3672",
+    "name": "PULOMERAK"
+  },
+  {
+    "code": "3672021",
+    "regency_code": "3672",
+    "name": "PURWAKARTA"
+  },
+  {
+    "code": "3672022",
+    "regency_code": "3672",
+    "name": "GROGOL"
+  },
+  {
+    "code": "3672030",
+    "regency_code": "3672",
+    "name": "CILEGON"
+  },
+  {
+    "code": "3672031",
+    "regency_code": "3672",
+    "name": "JOMBANG"
+  },
+  {
+    "code": "3672040",
+    "regency_code": "3672",
+    "name": "CIBEBER"
+  },
+  {
+    "code": "3673010",
+    "regency_code": "3673",
+    "name": "CURUG"
+  },
+  {
+    "code": "3673020",
+    "regency_code": "3673",
+    "name": "WALANTAKA"
+  },
+  {
+    "code": "3673030",
+    "regency_code": "3673",
+    "name": "CIPOCOK JAYA"
+  },
+  {
+    "code": "3673040",
+    "regency_code": "3673",
+    "name": "SERANG"
+  },
+  {
+    "code": "3673050",
+    "regency_code": "3673",
+    "name": "TAKTAKAN"
+  },
+  {
+    "code": "3673060",
+    "regency_code": "3673",
+    "name": "KASEMEN"
+  },
+  {
+    "code": "3674010",
+    "regency_code": "3674",
+    "name": "SETU"
+  },
+  {
+    "code": "3674020",
+    "regency_code": "3674",
+    "name": "SERPONG"
+  },
+  {
+    "code": "3674030",
+    "regency_code": "3674",
+    "name": "PAMULANG"
+  },
+  {
+    "code": "3674040",
+    "regency_code": "3674",
+    "name": "CIPUTAT"
+  },
+  {
+    "code": "3674050",
+    "regency_code": "3674",
+    "name": "CIPUTAT TIMUR"
+  },
+  {
+    "code": "3674060",
+    "regency_code": "3674",
+    "name": "PONDOK AREN"
+  },
+  {
+    "code": "3674070",
+    "regency_code": "3674",
+    "name": "SERPONG UTARA"
+  }
+]
