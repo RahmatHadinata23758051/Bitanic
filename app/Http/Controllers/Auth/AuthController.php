@@ -56,6 +56,15 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+        if ($user instanceof User && isset($user->is_active) && ! $user->is_active) {
+            Auth::logout();
+            RateLimiter::hit($throttleKey, 60);
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun Anda telah dinonaktifkan oleh administrator sekolah. Silakan hubungi pihak sekolah.',
+            ]);
+        }
+
         $isSuperuser = $user instanceof User && $user->isSuperuser();
         $schoolIsActive = $user instanceof User
             && $user->school_id !== null

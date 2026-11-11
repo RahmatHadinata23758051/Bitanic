@@ -201,6 +201,7 @@ class BulkImportUsersAction
                     'role' => $role,
                     'password' => Hash::make($initialPassword),
                     'must_change_password' => true,
+                    'is_active' => true,
                 ]);
 
                 $classroomId = null;
@@ -246,6 +247,7 @@ class BulkImportUsersAction
 
             if ($actor && count($imported) > 0) {
                 AuditLog::create([
+                    'school_id' => $schoolId,
                     'user_id' => $actor->id,
                     'actor_name' => $actor->name,
                     'actor_role' => $actor->role,

@@ -91,6 +91,15 @@ Route::get('/users-data', [UserDirectoryController::class, 'index'])
     ->middleware(['auth', 'role:guru,superuser'])
     ->name('users.index');
 
+Route::middleware(['auth', 'role:admin,admin_sekolah,superuser'])->group(function () {
+    Route::post('/users', [UserDirectoryController::class, 'store'])->name('users.store');
+    Route::put('/users/{user}', [UserDirectoryController::class, 'update'])->name('users.update');
+    Route::match(['PATCH', 'POST'], '/users/{user}/toggle-status', [UserDirectoryController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::delete('/users/{user}', [UserDirectoryController::class, 'destroy'])->name('users.destroy');
+    Route::post('/users/import/preview', [UserImportController::class, 'preview'])->name('users.import.preview');
+    Route::post('/users/import/execute', [UserImportController::class, 'execute'])->name('users.import.execute');
+});
+
 Route::middleware(['auth', 'role:guru'])->group(function () {
     Route::get('/classes', [ClassroomController::class, 'index'])->name('classes.index');
     Route::post('/classes', [ClassroomController::class, 'store'])->name('classes.store');
@@ -100,8 +109,7 @@ Route::middleware(['auth', 'role:guru'])->group(function () {
     Route::put('/groups/{group}', [ClassroomController::class, 'updateGroup'])->name('groups.update');
     Route::delete('/groups/{group}', [ClassroomController::class, 'destroyGroup'])->name('groups.destroy');
     Route::post('/students/{student}/allocation', [ClassroomController::class, 'allocateStudent'])->name('students.allocate');
-    Route::post('/users/import/preview', [UserImportController::class, 'preview'])->name('users.import.preview');
-    Route::post('/users/import/execute', [UserImportController::class, 'execute'])->name('users.import.execute');
+    Route::post('/classes/academic-year', [ClassroomController::class, 'updateAcademicSettings'])->name('classes.academic-year.update');
 });
 
 // 10. Manajemen Armada Trainer Kit Hardware & Kalibrasi Sensor

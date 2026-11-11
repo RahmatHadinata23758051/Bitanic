@@ -18,7 +18,7 @@ class BulkUserImportTest extends TestCase
 
     public function test_bulk_import_users_preview_and_execution_via_csv(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         $device = Device::create(['code' => 'TK-01', 'name' => 'Meja 1', 'is_active' => true]);
 
         $csvContent = "name,email,role,identifier_number,class_grade,group_name,assigned_kit\n".
@@ -26,7 +26,7 @@ class BulkUserImportTest extends TestCase
                       "Siti Guru Baru,siti.baru@smk.id,guru,NIP987654321,Guru Agronomi,,\n".
                       'Invalid Role User,invalid@smk.id,hacker,NISN999999,X ATPH 2,,';
 
-        $previewResponse = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+        $previewResponse = $this->actingAs($admin)->postJson(route('users.import.preview'), [
             'file' => UploadedFile::fake()->createWithContent('users_sample.csv', $csvContent),
         ]);
 
@@ -42,7 +42,7 @@ class BulkUserImportTest extends TestCase
         $this->assertEquals(2, $data['valid_count']);
         $this->assertEquals(1, $data['invalid_count']);
 
-        $executeResponse = $this->actingAs($teacher)->postJson(route('users.import.execute'), [
+        $executeResponse = $this->actingAs($admin)->postJson(route('users.import.execute'), [
             'rows' => array_values(array_filter($data['rows'], fn ($row) => $row['is_valid'])),
         ]);
 
@@ -60,7 +60,7 @@ class BulkUserImportTest extends TestCase
 
     public function test_preview_rejects_duplicate_existing_and_invalid_assignment_references(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         $existing = User::factory()->create(['email' => 'existing@smk.id']);
         UserProfile::create(['user_id' => $existing->id, 'type' => 'siswa', 'identifier_number' => 'NIS-EXISTING']);
         $device = Device::create(['code' => 'TK-EXISTING', 'name' => 'Meja Existing', 'is_active' => true]);
@@ -71,7 +71,7 @@ class BulkUserImportTest extends TestCase
             "Kit Tidak Valid,kit@smk.id,siswa,NIS-KIT,XI ATPH 1,Kelompok A,TK-MISSING\n".
             'Kelompok Tanpa Kelas,group@smk.id,siswa,NIS-GROUP,,Kelompok A,TK-EXISTING';
 
-        $response = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+        $response = $this->actingAs($admin)->postJson(route('users.import.preview'), [
             'file' => UploadedFile::fake()->createWithContent('invalid_assignments.csv', $csv),
         ]);
 
@@ -88,9 +88,9 @@ class BulkUserImportTest extends TestCase
     {
         Notification::fake();
         config(['auth.default_import_password' => 'DoNotUseSharedPassword']);
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
 
-        $response = $this->actingAs($teacher)->postJson(route('users.import.execute'), [
+        $response = $this->actingAs($admin)->postJson(route('users.import.execute'), [
             'rows' => [
                 [
                     'name' => 'Password Test A',
@@ -125,8 +125,8 @@ class BulkUserImportTest extends TestCase
 
     public function test_preview_and_classroom_import_page_never_expose_initial_password(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
-        $preview = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
+        $preview = $this->actingAs($admin)->postJson(route('users.import.preview'), [
             'file' => UploadedFile::fake()->createWithContent('users.csv', 'name,email,role\\nSiswa,password.preview@smk.id,siswa'),
         ]);
 
@@ -140,10 +140,10 @@ class BulkUserImportTest extends TestCase
 
     public function test_import_rejects_inactive_or_foreign_trainer_kit_before_writes(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         $inactive = Device::create(['code' => 'TK-INACTIVE', 'name' => 'Nonaktif', 'is_active' => false]);
 
-        $response = $this->actingAs($teacher)->postJson(route('users.import.execute'), [
+        $response = $this->actingAs($admin)->postJson(route('users.import.execute'), [
             'rows' => [[
                 'name' => 'Invalid Kit User',
                 'email' => 'invalid.kit@smk.id',
@@ -158,7 +158,7 @@ class BulkUserImportTest extends TestCase
 
     public function test_bulk_import_xlsx_file_preview(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         Device::create(['code' => 'TK-99', 'name' => 'Meja 99', 'is_active' => true]);
         $tempXlsx = tempnam(sys_get_temp_dir(), 'xlsx_test_').'.xlsx';
         $zip = new \ZipArchive;
@@ -207,7 +207,7 @@ class BulkUserImportTest extends TestCase
 
         try {
             $uploadedFile = new UploadedFile($tempXlsx, 'sample.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
-            $previewResponse = $this->actingAs($teacher)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
+            $previewResponse = $this->actingAs($admin)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
             $previewResponse->assertOk()->assertJsonPath('total_rows', 1)->assertJsonPath('valid_count', 1)->assertJsonPath('rows.0.email', 'dewa.xlsx@smk.id');
         } finally {
             @unlink($tempXlsx);
@@ -216,7 +216,7 @@ class BulkUserImportTest extends TestCase
 
     public function test_csv_with_quoted_multiline_cells_parses_without_splitting_rows(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         Device::create(['code' => 'TK-MULTI', 'name' => 'Meja Multiline', 'is_active' => true]);
 
         // Group name and class grade contain multiline quoted text:
@@ -224,7 +224,7 @@ class BulkUserImportTest extends TestCase
             "\"Ahmad\nFauzi\",fauzi@smk.id,siswa,NISN-FAUZI,\"X ATPH 1\nUnggulan\",\"Kelompok A\nSesi Pagi\",TK-MULTI\n".
             "\"Siti\nNurhaliza\",siti.multi@smk.id,siswa,NISN-SITI,\"X ATPH 1\nUnggulan\",\"Kelompok B\nSesi Siang\",TK-MULTI\n";
 
-        $response = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+        $response = $this->actingAs($admin)->postJson(route('users.import.preview'), [
             'file' => UploadedFile::fake()->createWithContent('multiline.csv', $csvContent),
         ]);
 
@@ -237,14 +237,14 @@ class BulkUserImportTest extends TestCase
 
     public function test_csv_with_semicolon_and_tab_delimiters_and_bom_is_parsed_correctly(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         Device::create(['code' => 'TK-BOM', 'name' => 'Meja BOM', 'is_active' => true]);
 
         // UTF-8 BOM + semicolon delimited
         $csvSemicolon = "\xEF\xBB\xBFname;email;role;identifier_number;class_grade;group_name;assigned_kit\r\n".
             "Rian Siswa;rian.semi@smk.id;siswa;NISN-SEMI;X ATPH 1;Kelompok S;TK-BOM\r\n";
 
-        $responseSemi = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+        $responseSemi = $this->actingAs($admin)->postJson(route('users.import.preview'), [
             'file' => UploadedFile::fake()->createWithContent('semicolon.csv', $csvSemicolon),
         ]);
 
@@ -257,7 +257,7 @@ class BulkUserImportTest extends TestCase
         $csvTab = "name\temail\trole\tidentifier_number\tclass_grade\tgroup_name\tassigned_kit\n".
             "Doni Siswa\tdoni.tab@smk.id\tsiswa\tNISN-TAB\tX ATPH 1\tKelompok T\tTK-BOM\n";
 
-        $responseTab = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+        $responseTab = $this->actingAs($admin)->postJson(route('users.import.preview'), [
             'file' => UploadedFile::fake()->createWithContent('tab.csv', $csvTab),
         ]);
 
@@ -269,7 +269,7 @@ class BulkUserImportTest extends TestCase
 
     public function test_xlsx_with_sparse_cells_preserves_column_alignment(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         Device::create(['code' => 'TK-SPARSE', 'name' => 'Meja Sparse', 'is_active' => true]);
 
         $tempXlsx = tempnam(sys_get_temp_dir(), 'xlsx_sparse_').'.xlsx';
@@ -301,7 +301,7 @@ class BulkUserImportTest extends TestCase
 
         try {
             $uploadedFile = new UploadedFile($tempXlsx, 'sparse.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
-            $previewResponse = $this->actingAs($teacher)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
+            $previewResponse = $this->actingAs($admin)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
             $previewResponse->assertOk()
                 ->assertJsonPath('total_rows', 1)
                 ->assertJsonPath('valid_count', 1)
@@ -319,7 +319,7 @@ class BulkUserImportTest extends TestCase
 
     public function test_xlsx_resolves_sheet_target_from_workbook_and_handles_inlinestr(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         Device::create(['code' => 'TK-INLINE', 'name' => 'Meja Inline', 'is_active' => true]);
 
         $tempXlsx = tempnam(sys_get_temp_dir(), 'xlsx_inline_').'.xlsx';
@@ -374,7 +374,7 @@ class BulkUserImportTest extends TestCase
 
         try {
             $uploadedFile = new UploadedFile($tempXlsx, 'inline.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
-            $previewResponse = $this->actingAs($teacher)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
+            $previewResponse = $this->actingAs($admin)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
             $previewResponse->assertOk()
                 ->assertJsonPath('total_rows', 1)
                 ->assertJsonPath('valid_count', 1)
@@ -388,13 +388,13 @@ class BulkUserImportTest extends TestCase
 
     public function test_import_preview_rejects_file_exceeding_500_data_rows(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         $csv = "name,email,role\n";
         for ($i = 1; $i <= 501; $i++) {
             $csv .= "User {$i},user{$i}@smk.id,siswa\n";
         }
 
-        $response = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+        $response = $this->actingAs($admin)->postJson(route('users.import.preview'), [
             'file' => UploadedFile::fake()->createWithContent('too_large.csv', $csv),
         ]);
 
@@ -405,10 +405,10 @@ class BulkUserImportTest extends TestCase
 
     public function test_xlsx_with_corrupt_archive_fails_gracefully_with_validation_error(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         $corruptFile = UploadedFile::fake()->createWithContent('corrupt.xlsx', 'PKThisIsCorruptedNotAZipArchive');
 
-        $response = $this->actingAs($teacher)->postJson(route('users.import.preview'), [
+        $response = $this->actingAs($admin)->postJson(route('users.import.preview'), [
             'file' => $corruptFile,
         ]);
 
@@ -418,7 +418,7 @@ class BulkUserImportTest extends TestCase
 
     public function test_xlsx_with_malformed_xml_fails_gracefully_with_validation_error(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         $tempXlsx = tempnam(sys_get_temp_dir(), 'xlsx_malformed_').'.xlsx';
         $zip = new \ZipArchive;
         $zip->open($tempXlsx, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
@@ -428,7 +428,7 @@ class BulkUserImportTest extends TestCase
 
         try {
             $uploadedFile = new UploadedFile($tempXlsx, 'malformed.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
-            $response = $this->actingAs($teacher)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
+            $response = $this->actingAs($admin)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
             $response->assertUnprocessable()->assertJsonValidationErrors('file');
         } finally {
             @unlink($tempXlsx);
@@ -437,7 +437,7 @@ class BulkUserImportTest extends TestCase
 
     public function test_xlsx_rejects_dtd_and_external_entity_declarations(): void
     {
-        $teacher = User::factory()->create(['role' => 'guru']);
+        $admin = User::factory()->create(['role' => 'admin_sekolah']);
         $tempXlsx = tempnam(sys_get_temp_dir(), 'xlsx_entity_').'.xlsx';
         $zip = new \ZipArchive;
         $zip->open($tempXlsx, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
@@ -447,7 +447,7 @@ class BulkUserImportTest extends TestCase
 
         try {
             $uploadedFile = new UploadedFile($tempXlsx, 'entity.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
-            $response = $this->actingAs($teacher)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
+            $response = $this->actingAs($admin)->postJson(route('users.import.preview'), ['file' => $uploadedFile]);
             $response->assertUnprocessable()->assertJsonValidationErrors('file');
         } finally {
             @unlink($tempXlsx);
@@ -456,25 +456,58 @@ class BulkUserImportTest extends TestCase
 
     public function test_unassigned_school_actor_fails_closed_on_import_preview_and_execute(): void
     {
-        $unassignedTeacher = User::factory()->create(['role' => 'guru']);
+        $unassignedAdmin = User::factory()->create(['role' => 'admin_sekolah']);
         // Force null school_id after model boot event
-        $unassignedTeacher->forceFill(['school_id' => null])->save();
-        $unassignedTeacher->refresh();
+        $unassignedAdmin->forceFill(['school_id' => null])->save();
+        $unassignedAdmin->refresh();
         $csv = "name,email,role\nSiswa,siswa@smk.id,siswa\n";
 
-        $this->actingAs($unassignedTeacher)
+        $this->actingAs($unassignedAdmin)
             ->postJson(route('users.import.preview'), [
                 'file' => UploadedFile::fake()->createWithContent('users.csv', $csv),
             ])
             ->assertForbidden();
 
-        $this->actingAs($unassignedTeacher)
+        $this->actingAs($unassignedAdmin)
             ->postJson(route('users.import.execute'), [
                 'rows' => [[
                     'name' => 'Siswa Baru',
                     'email' => 'siswa.baru@smk.id',
                     'role' => 'siswa',
                 ]],
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_teacher_and_student_are_forbidden_from_import_preview_and_execute(): void
+    {
+        $teacher = User::factory()->create(['role' => 'guru']);
+        $student = User::factory()->create(['role' => 'siswa']);
+        $csv = "name,email,role\nSiswa,siswa@smk.id,siswa\n";
+
+        // Teacher forbidden
+        $this->actingAs($teacher)
+            ->postJson(route('users.import.preview'), [
+                'file' => UploadedFile::fake()->createWithContent('users.csv', $csv),
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->postJson(route('users.import.execute'), [
+                'rows' => [['name' => 'Siswa Baru', 'email' => 'siswa.baru@smk.id', 'role' => 'siswa']],
+            ])
+            ->assertForbidden();
+
+        // Student forbidden
+        $this->actingAs($student)
+            ->postJson(route('users.import.preview'), [
+                'file' => UploadedFile::fake()->createWithContent('users.csv', $csv),
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($student)
+            ->postJson(route('users.import.execute'), [
+                'rows' => [['name' => 'Siswa Baru', 'email' => 'siswa.baru@smk.id', 'role' => 'siswa']],
             ])
             ->assertForbidden();
     }
