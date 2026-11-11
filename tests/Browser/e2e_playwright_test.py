@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 BASE_URL = "http://127.0.0.1:8008"
 
 def run_tests():
-    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (15 SCENARIOS) ===")
+    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (18 SCENARIOS) ===")
     results = {}
 
     with sync_playwright() as p:
@@ -919,6 +919,291 @@ def run_tests():
             results["Scenario 15: Master Routes Security & Role Isolation"] = f"FAIL: {e}"
         finally:
             context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 16: SCHOOL TEACHER & STUDENT MASTER MANAGEMENT (MASTER-03-03)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 16] School Teacher & Student Master Management (MASTER-03-03)...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            # 16.1 Login as Admin Sekolah
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "admin@smk.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+            assert "/login" not in page.url, "Login failed for admin"
+
+            # 16.2 Visit User Directory
+            resp = page.goto(f"{BASE_URL}/users-data")
+            assert resp.status == 200, f"Expected 200 on /users-data, got {resp.status}"
+            content = page.content()
+            assert "Direktori" in content, "Expected Direktori page header"
+            assert "Tambah Pengguna" in content, "Expected Tambah Pengguna button for admin"
+            print("  ✓ Admin Sekolah accessed User Directory with management toolbar")
+
+            csrf_token = page.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers = {"X-CSRF-TOKEN": csrf_token, "Accept": "application/json"}
+
+            # 16.3 Create Teacher with Specialization
+            teacher_email = f"guru.playwright.{int(time.time())}@smk.id"
+            create_guru_res = context.request.post(
+                f"{BASE_URL}/users",
+                data={
+                    "name": "Guru Agribisnis E2E",
+                    "email": teacher_email,
+                    "role": "guru",
+                    "identifier_number": "NIP-998877",
+                    "specialization": "Agribisnis Pangan & Hortikultura",
+                    "department": "Jurusan ATPH",
+                },
+                headers=headers,
+            )
+            assert create_guru_res.status in [200, 302], f"Expected 200/302 creating teacher, got {create_guru_res.status}"
+
+            # Verify Teacher created in list
+            page.goto(f"{BASE_URL}/users-data?q=Guru+Agribisnis+E2E")
+            page.wait_for_load_state("networkidle")
+            content_guru = page.content()
+            assert "Guru Agribisnis E2E" in content_guru, "Newly created teacher must appear in directory"
+            assert "NIP-998877" in content_guru, "Teacher identifier must appear in table"
+            print("  ✓ Teacher created with specialization and verified in directory")
+
+            # 16.4 Create Student with Optional NISN
+            student_email = f"siswa.playwright.{int(time.time())}@smk.id"
+            create_siswa_res = context.request.post(
+                f"{BASE_URL}/users",
+                data={
+                    "name": "Siswa Calon Praktikan E2E",
+                    "email": student_email,
+                    "role": "siswa",
+                    "identifier_number": "0098765432",
+                },
+                headers=headers,
+            )
+            assert create_siswa_res.status in [200, 302], f"Expected 200/302 creating student, got {create_siswa_res.status}"
+
+            # Verify Student created in list
+            page.goto(f"{BASE_URL}/users-data?q=Siswa+Calon+Praktikan+E2E")
+            page.wait_for_load_state("networkidle")
+            content_siswa = page.content()
+            assert "Siswa Calon Praktikan E2E" in content_siswa, "Newly created student must appear in directory"
+            assert "0098765432" in content_siswa, "Optional student NISN must be rendered"
+            print("  ✓ Student created with optional NISN and verified in directory")
+
+            # 16.5 Toggle Active Status (Deactivate Siswa Baseline -> Login Guard -> Reactivate)
+            page.goto(f"{BASE_URL}/users-data?q=siswa%40smk.id")
+            page.wait_for_load_state("networkidle")
+            toggle_btn = page.locator("button[title='Nonaktifkan Akun']")
+            assert toggle_btn.count() > 0, "Expected toggle status button for active siswa"
+
+            siswa_toggle_form = toggle_btn.first.locator("xpath=..")
+            action_url = siswa_toggle_form.get_attribute("action")
+            assert action_url and "/toggle-status" in action_url, f"Expected valid toggle-status action URL, got {action_url}"
+            deact_res = context.request.post(action_url, data={"_method": "PATCH"}, headers=headers)
+            assert deact_res.status in [200, 302], f"Expected success toggling status, got {deact_res.status}"
+
+            # Verify deactivated user cannot log in
+            context_deact = browser.new_context()
+            page_deact = context_deact.new_page()
+            try:
+                page_deact.goto(f"{BASE_URL}/login")
+                page_deact.fill("#email", "siswa@smk.id")
+                page_deact.fill("#password", "Password123!")
+                page_deact.click("button[type='submit']")
+                page_deact.wait_for_load_state("networkidle")
+                assert "/login" in page_deact.url, "Deactivated user must NOT be allowed to log in"
+                assert "dinonaktifkan" in page_deact.content(), "Expected deactivation notification error message"
+                print("  ✓ Deactivated user login blocked with explicit deactivation notice")
+            finally:
+                context_deact.close()
+
+            # Reactivate siswa
+            react_res = context.request.post(action_url, data={"_method": "PATCH"}, headers=headers)
+            assert react_res.status in [200, 302], f"Expected success reactivating status, got {react_res.status}"
+
+            # Verify reactivated user can log in again
+            context_react = browser.new_context()
+            page_react = context_react.new_page()
+            try:
+                page_react.goto(f"{BASE_URL}/login")
+                page_react.fill("#email", "siswa@smk.id")
+                page_react.fill("#password", "Password123!")
+                page_react.click("button[type='submit']")
+                page_react.wait_for_load_state("networkidle")
+                assert "/login" not in page_react.url, "Reactivated user must be able to log in"
+                print("  ✓ Reactivated user successfully logged in")
+            finally:
+                context_react.close()
+
+            results["Scenario 16: School Teacher & Student Master Management"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 16 Failed: {e}")
+            results["Scenario 16: School Teacher & Student Master Management"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 17: ACADEMIC MASTER & ALLOCATION (MASTER-03-04)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 17] Academic Master & Student Allocation (MASTER-03-04)...")
+        context = browser.new_context()
+        page = context.new_page()
+        try:
+            # 17.1 Login as Admin Sekolah
+            page.goto(f"{BASE_URL}/login")
+            page.fill("#email", "admin@smk.id")
+            page.fill("#password", "Password123!")
+            page.click("button[type='submit']")
+            page.wait_for_load_state("networkidle")
+
+            # 17.2 Visit Classes & Academic Page
+            resp = page.goto(f"{BASE_URL}/classes")
+            assert resp.status == 200, f"Expected 200 on /classes, got {resp.status}"
+            content = page.content()
+            assert "Kelas &" in content, "Expected Kelas & Akademik header"
+            assert "Tahun Ajaran" in content, "Expected Tahun Ajaran button"
+            print("  ✓ Admin Sekolah accessed Classroom & Academic Management")
+
+            csrf_token = page.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers = {"X-CSRF-TOKEN": csrf_token, "Accept": "application/json"}
+
+            # 17.3 Update Academic Year & Semester Configuration
+            academic_res = context.request.post(
+                f"{BASE_URL}/classes/academic-year",
+                data={
+                    "academic_year": "2026/2027",
+                    "semester": "Genap",
+                },
+                headers=headers,
+            )
+            assert academic_res.status in [200, 302], f"Expected 200/302 updating academic year, got {academic_res.status}"
+            page.reload()
+            page.wait_for_load_state("networkidle")
+            assert "Semester Genap" in page.content(), "Updated semester Genap must appear in academic banner"
+            print("  ✓ Academic year & semester updated and verified in banner")
+
+            # 17.4 Create Classroom
+            class_name = f"XII ATPH E2E {int(time.time())}"
+            create_class_res = context.request.post(
+                f"{BASE_URL}/classes",
+                data={
+                    "name": class_name,
+                    "academic_year": "2026/2027",
+                    "description": "Kelas ATPH Pengujian Playwright",
+                },
+                headers=headers,
+            )
+            assert create_class_res.status in [200, 302], f"Expected 200/302 creating class, got {create_class_res.status}"
+            page.reload()
+            page.wait_for_load_state("networkidle")
+            assert class_name in page.content(), "Newly created class must appear in list"
+            print("  ✓ Classroom created and rendered in academic list")
+
+            # 17.5 Allocate Student
+            # Dynamically extract target classroom ID and student ID from page
+            allocate_btn = page.locator("button:has-text('Alokasi Siswa')").first
+            allocate_attr = allocate_btn.get_attribute("@click")
+            target_class_id = allocate_attr.split("(")[1].split(",")[0].strip()
+
+            first_student_option = page.locator("select[name='student_id'] option").nth(1)
+            target_student_id = first_student_option.get_attribute("value")
+
+            alloc_user_res = context.request.post(
+                f"{BASE_URL}/students/{target_student_id}/allocation",
+                data={
+                    "classroom_id": target_class_id,
+                    "assigned_kit_id": "TK-01",
+                },
+                headers=headers,
+            )
+            assert alloc_user_res.status in [200, 302], f"Allocation expected 200/302, got {alloc_user_res.status}"
+            print("  ✓ Student allocated to Classroom and Trainer Kit workstation")
+
+            results["Scenario 17: Academic Master & Student Allocation"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 17 Failed: {e}")
+            results["Scenario 17: Academic Master & Student Allocation"] = f"FAIL: {e}"
+        finally:
+            context.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 18: NEGATIVE AUTHORIZATION ON USER IMPORT & MUTATIONS
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 18] Negative Authorization on User Import & Academic Mutations...")
+        context_guru = browser.new_context()
+        page_guru = context_guru.new_page()
+        try:
+            # 18.1 Guru Login
+            page_guru.goto(f"{BASE_URL}/login")
+            page_guru.fill("#email", "guru@smk.id")
+            page_guru.fill("#password", "Password123!")
+            page_guru.click("button[type='submit']")
+            page_guru.wait_for_load_state("networkidle")
+
+            csrf_guru = page_guru.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers_guru = {"X-CSRF-TOKEN": csrf_guru, "Accept": "application/json"}
+
+            # Guru strictly denied from User Import Preview (403)
+            imp_prev = context_guru.request.post(f"{BASE_URL}/users/import/preview", headers=headers_guru)
+            assert imp_prev.status == 403, f"Guru must receive 403 on /users/import/preview, got {imp_prev.status}"
+
+            # Guru strictly denied from User Import Execute (403)
+            imp_exec = context_guru.request.post(f"{BASE_URL}/users/import/execute", headers=headers_guru)
+            assert imp_exec.status == 403, f"Guru must receive 403 on /users/import/execute, got {imp_exec.status}"
+
+            # Guru strictly denied from User Creation (403)
+            usr_create = context_guru.request.post(
+                f"{BASE_URL}/users",
+                data={"name": "Illegal User", "email": "illegal@smk.id", "role": "guru"},
+                headers=headers_guru
+            )
+            assert usr_create.status == 403, f"Guru must receive 403 on POST /users, got {usr_create.status}"
+            print("  ✓ Guru strictly denied (HTTP 403) from User Import and User Creation mutations")
+        finally:
+            context_guru.close()
+
+        context_siswa = browser.new_context()
+        page_siswa = context_siswa.new_page()
+        try:
+            # 18.2 Siswa Login
+            page_siswa.goto(f"{BASE_URL}/login")
+            page_siswa.fill("#email", "siswa@smk.id")
+            page_siswa.fill("#password", "Password123!")
+            page_siswa.click("button[type='submit']")
+            page_siswa.wait_for_load_state("networkidle")
+
+            csrf_siswa = page_siswa.evaluate("document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || ''")
+            headers_siswa = {"X-CSRF-TOKEN": csrf_siswa, "Accept": "application/json"}
+
+            # Siswa strictly denied from User Directory (403)
+            resp_dir = page_siswa.goto(f"{BASE_URL}/users-data")
+            assert resp_dir.status == 403, f"Siswa must receive 403 on /users-data, got {resp_dir.status}"
+
+            # Siswa strictly denied from Class Creation (403)
+            resp_cls = context_siswa.request.post(
+                f"{BASE_URL}/classes",
+                data={"name": "Illegal Class"},
+                headers=headers_siswa
+            )
+            assert resp_cls.status == 403, f"Siswa must receive 403 on POST /classes, got {resp_cls.status}"
+
+            # Siswa strictly denied from Academic Year configuration (403)
+            resp_ay = context_siswa.request.post(
+                f"{BASE_URL}/classes/academic-year",
+                data={"academic_year": "2026/2027", "semester": "Ganjil"},
+                headers=headers_siswa
+            )
+            assert resp_ay.status == 403, f"Siswa must receive 403 on POST /classes/academic-year, got {resp_ay.status}"
+            print("  ✓ Siswa strictly denied (HTTP 403) from User Directory and Academic mutations")
+
+            results["Scenario 18: Negative Authorization on User Import & Mutations"] = "PASS"
+        except Exception as e:
+            print(f"  ✗ Scenario 18 Failed: {e}")
+            results["Scenario 18: Negative Authorization on User Import & Mutations"] = f"FAIL: {e}"
+        finally:
+            context_siswa.close()
 
         browser.close()
 

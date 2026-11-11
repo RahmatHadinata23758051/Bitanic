@@ -2,10 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Classroom;
 use App\Models\Device;
 use App\Models\ModulePracticum;
 use App\Models\School;
 use App\Models\SchoolSetting;
+use App\Models\StudentGroup;
 use App\Models\TelemetryReading;
 use App\Models\User;
 use App\Models\UserProfile;
@@ -212,6 +214,25 @@ class SetupBrowserE2eFixturesCommand extends Command
             'provenance' => 'hardware',
             'recorded_at' => now(),
         ]);
+
+        // 8. Academic Classroom & Group
+        $classroom = Classroom::firstOrCreate(
+            ['school_id' => 1, 'name' => 'XII ATPH 1'],
+            [
+                'academic_year' => '2026/2027',
+                'description' => 'Kelas ATPH Unggulan',
+                'homeroom_teacher_id' => $guru->id,
+            ]
+        );
+
+        StudentGroup::firstOrCreate(
+            ['classroom_id' => $classroom->id, 'name' => 'Kelompok 1 (Melon Hidroponik)'],
+            [
+                'school_id' => 1,
+                'device_id' => $deviceA->id,
+                'leader_id' => $siswa->id,
+            ]
+        );
 
         $this->info('Browser E2E fixtures configured successfully!');
 
