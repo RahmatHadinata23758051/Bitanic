@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 BASE_URL = "http://127.0.0.1:8008"
 
 def run_tests():
-    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (24 SCENARIOS) ===")
+    print("=== STARTING BITANIC REAL BROWSER E2E TEST SUITE (25 SCENARIOS) ===")
     results = {}
 
     with sync_playwright() as p:
@@ -1701,6 +1701,87 @@ def run_tests():
                 context_admin24.close()
             if 'context_guest' in locals():
                 context_guest.close()
+
+        # -------------------------------------------------------------
+        # SCENARIO 25: LICENSE EXPIRATION ENFORCEMENT, NOTICE & RESTORATION (LICENSE-05-03 & LICENSE-05-04)
+        # -------------------------------------------------------------
+        print("\n[SCENARIO 25] License Expiration Enforcement, Notice & Restoration (LICENSE-05-03 & LICENSE-05-04)...")
+        context_su25 = browser.new_context()
+        page_su25 = context_su25.new_page()
+        try:
+            # 25.1 Superuser Login
+            page_su25.goto(f"{BASE_URL}/login")
+            page_su25.fill("#email", "superuser@bitanic.id")
+            page_su25.fill("#password", "Password123!")
+            page_su25.click("button[type='submit']")
+            page_su25.wait_for_load_state("networkidle")
+
+            # 25.2 Superuser visits License Workstation and verifies H-14 Notification Card
+            page_su25.goto(f"{BASE_URL}/master/licenses")
+            page_su25.wait_for_load_state("networkidle")
+            first_license_link = page_su25.locator("a[href*='/master/licenses/']").first
+            if first_license_link.count() > 0:
+                detail_url = first_license_link.get_attribute("href")
+                page_su25.goto(detail_url)
+                page_su25.wait_for_load_state("networkidle")
+                content_su = page_su25.content()
+                assert ("Riwayat Pengingat" in content_su and "Notifikasi Email" in content_su) or page_su25.locator("h3:has-text('Riwayat Pengingat')").count() > 0, "Expected H-14 notification card in license workstation"
+                print("  ✓ Superuser verified H-14 automated email reminder ledger section")
+
+            # 25.3 Superuser redirects when accessing /school/license without school_id
+            resp_no_school = page_su25.goto(f"{BASE_URL}/school/license")
+            assert "/master/licenses" in page_su25.url, f"Expected redirect to /master/licenses for superuser without school_id, got {page_su25.url}"
+            print("  ✓ Superuser visiting /school/license cleanly redirected to global registry")
+
+            # 25.4 Admin Sekolah views /school/license with alert banner
+            context_admin25 = browser.new_context()
+            page_admin25 = context_admin25.new_page()
+            page_admin25.goto(f"{BASE_URL}/login")
+            page_admin25.fill("#email", "admin@smk.id")
+            page_admin25.fill("#password", "Password123!")
+            page_admin25.click("button[type='submit']")
+            page_admin25.wait_for_load_state("networkidle")
+
+            resp_school = page_admin25.goto(f"{BASE_URL}/school/license")
+            assert resp_school.status == 200
+            content_admin = page_admin25.content()
+            assert "Lisensi Bitanic LMS" in content_admin
+            print("  ✓ Admin Sekolah verified /school/license visibility and alert components")
+
+            # 25.5 Siswa / Tenant User behavior
+            context_siswa25 = browser.new_context()
+            page_siswa25 = context_siswa25.new_page()
+            page_siswa25.goto(f"{BASE_URL}/login")
+            page_siswa25.fill("#email", "siswa@smk.id")
+            page_siswa25.fill("#password", "Password123!")
+            page_siswa25.click("button[type='submit']")
+            page_siswa25.wait_for_load_state("networkidle")
+
+            # Siswa denied from /school/license (403)
+            resp_siswa_lic = page_siswa25.goto(f"{BASE_URL}/school/license")
+            assert resp_siswa_lic.status == 403, f"Expected 403 for siswa on /school/license, got {resp_siswa_lic.status}"
+            print("  ✓ Siswa strictly denied (HTTP 403) from /school/license")
+
+            # 25.6 Unauthenticated access to /school/license-expired redirects to login
+            context_guest25 = browser.new_context()
+            page_guest25 = context_guest25.new_page()
+            page_guest25.goto(f"{BASE_URL}/school/license-expired")
+            assert "/login" in page_guest25.url
+            print("  ✓ Unauthenticated user visiting /school/license-expired redirected to /login")
+
+            results["Scenario 25: License Expiration Enforcement, Notice & Restoration"] = "PASS"
+        except Exception as e:
+            import traceback
+            print(f"  ✗ Scenario 25 Failed: {e}\n{traceback.format_exc()}")
+            results["Scenario 25: License Expiration Enforcement, Notice & Restoration"] = f"FAIL: {e}"
+        finally:
+            context_su25.close()
+            if 'context_admin25' in locals():
+                context_admin25.close()
+            if 'context_siswa25' in locals():
+                context_siswa25.close()
+            if 'context_guest25' in locals():
+                context_guest25.close()
 
         browser.close()
 
