@@ -302,8 +302,8 @@ class DashboardController extends Controller
             $studentsCount = User::where('role', 'siswa')->where('school_id', $school->id)->count();
             $teachersCount = User::where('role', 'guru')->where('school_id', $school->id)->count();
 
-            $isVerified = (bool) $school->coordinates_verified;
-            $hasCoords = $isVerified && $school->latitude !== null && $school->longitude !== null;
+            $isVerified = $school->coordinate_verified_at !== null;
+            $hasCoords = $school->latitude !== null && $school->longitude !== null;
 
             return [
                 'id' => $school->id,
