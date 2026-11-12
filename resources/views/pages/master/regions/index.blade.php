@@ -191,6 +191,15 @@
         <!-- Search Bar -->
         <form method="GET" action="{{ route('master.regions.index') }}" class="flex items-center gap-2">
             <input type="hidden" name="status" value="{{ $distribution['filters']['status'] }}">
+            @if(!empty($distribution['filters']['province_code']))
+                <input type="hidden" name="province_code" value="{{ $distribution['filters']['province_code'] }}">
+            @endif
+            @if(!empty($distribution['filters']['regency_code']))
+                <input type="hidden" name="regency_code" value="{{ $distribution['filters']['regency_code'] }}">
+            @endif
+            @if(!empty($distribution['filters']['district_code']))
+                <input type="hidden" name="district_code" value="{{ $distribution['filters']['district_code'] }}">
+            @endif
             <div class="relative w-full md:w-64">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                 <input
@@ -203,13 +212,59 @@
             </div>
             @if(!empty($distribution['filters']['search']))
                 <a
-                    href="{{ route('master.regions.index', ['status' => $distribution['filters']['status']]) }}"
+                    href="{{ route('master.regions.index', array_filter(['status' => $distribution['filters']['status'], 'province_code' => $distribution['filters']['province_code'], 'regency_code' => $distribution['filters']['regency_code'], 'district_code' => $distribution['filters']['district_code']])) }}"
                     class="px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
                 >
                     Reset
                 </a>
             @endif
         </form>
+    </div>
+
+    <!-- Linked Geographic Scope Breadcrumbs & Clear Controls -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-3 px-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center flex-wrap gap-2 text-slate-700">
+            <span class="text-slate-400 font-medium flex items-center gap-1.5">
+                <i data-lucide="navigation" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span>Cakupan Wilayah:</span>
+            </span>
+            @foreach($distribution['breadcrumbs'] as $idx => $bc)
+                @if($idx > 0)
+                    <span class="text-slate-300">/</span>
+                @endif
+                @if($bc['active'] && $loop->last && ($distribution['selected_region']['has_selection'] ?? false))
+                    <span class="font-bold text-[#0c3c26] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <i data-lucide="map-pin" class="w-3 h-3 text-emerald-600"></i>
+                        <span>{{ $bc['label'] }}</span>
+                    </span>
+                @else
+                    <a
+                        href="{{ route('master.regions.index', array_filter(['status' => $distribution['filters']['status'], 'search' => $distribution['filters']['search'], 'province_code' => $bc['province_code'], 'regency_code' => $bc['regency_code'], 'district_code' => $bc['district_code']])) }}"
+                        class="text-slate-600 hover:text-[#0c3c26] font-medium hover:underline transition-colors"
+                    >
+                        {{ $bc['label'] }}
+                    </a>
+                @endif
+            @endforeach
+        </div>
+
+        @if($distribution['selected_region']['has_selection'] ?? false)
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="text-[11px] text-slate-500 font-medium">Filter wilayah aktif</span>
+                <a
+                    href="{{ route('master.regions.index', array_filter(['status' => $distribution['filters']['status'], 'search' => $distribution['filters']['search']])) }}"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition-colors"
+                    title="Tampilkan seluruh sekolah mitra di semua provinsi"
+                >
+                    <i data-lucide="x" class="w-3 h-3 text-slate-500"></i>
+                    <span>Tampilkan Seluruh Wilayah</span>
+                </a>
+            </div>
+        @else
+            <div class="text-[11px] text-slate-400 font-medium">
+                Menampilkan sebaran di seluruh provinsi terdaftar
+            </div>
+        @endif
     </div>
 
     <!-- MAIN VISUALIZATION: INTERACTIVE INDONESIA MAP -->
@@ -283,52 +338,79 @@
             <!-- Hierarchy Accordion -->
             <div class="divide-y divide-slate-100 text-xs max-h-[560px] overflow-y-auto">
                 @forelse($distribution['hierarchy'] as $provIndex => $prov)
-                    <div x-data="{ openProv: {{ $provIndex === 0 ? 'true' : 'false' }} }" class="bg-white">
+                    <div x-data="{ openProv: {{ ($distribution['filters']['province_code'] ?? '') === $prov['code'] || (empty($distribution['filters']['province_code']) && $provIndex === 0) ? 'true' : 'false' }} }" class="bg-white {{ ($distribution['filters']['province_code'] ?? '') === $prov['code'] ? 'bg-emerald-50/20' : '' }}">
                         <!-- Province Header -->
-                        <button
-                            type="button"
-                            @click="openProv = !openProv"
-                            class="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-slate-50/90 transition-colors"
-                        >
-                            <div class="flex items-center gap-2.5">
-                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90 text-[#0c3c26]': openProv }"></i>
-                                <span class="font-bold text-slate-900">{{ $prov['name'] }}</span>
+                        <div class="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/90 transition-colors">
+                            <button
+                                type="button"
+                                @click="openProv = !openProv"
+                                class="flex items-center gap-2.5 text-left grow focus:outline-hidden"
+                            >
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0" :class="{ 'rotate-90 text-[#0c3c26]': openProv }"></i>
+                                <span class="font-bold text-slate-900 {{ ($distribution['filters']['province_code'] ?? '') === $prov['code'] ? 'text-[#0c3c26]' : '' }}">{{ $prov['name'] }}</span>
+                            </button>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 font-tabular border border-emerald-200/70">
+                                    {{ $prov['schools_count'] }} Sekolah
+                                </span>
+                                <a
+                                    href="{{ route('master.regions.index', array_filter(['status' => $distribution['filters']['status'], 'search' => $distribution['filters']['search'], 'province_code' => $prov['code']])) }}"
+                                    class="px-2 py-0.5 rounded text-[10px] font-semibold transition-colors {{ ($distribution['filters']['province_code'] ?? '') === $prov['code'] && empty($distribution['filters']['regency_code']) ? 'bg-[#0c3c26] text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-emerald-100 hover:text-emerald-900' }}"
+                                    title="Filter peta & direktori untuk provinsi ini"
+                                >
+                                    {{ ($distribution['filters']['province_code'] ?? '') === $prov['code'] && empty($distribution['filters']['regency_code']) ? 'Terpilih' : 'Filter' }}
+                                </a>
                             </div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 font-tabular border border-emerald-200/70">
-                                {{ $prov['schools_count'] }} Sekolah
-                            </span>
-                        </button>
+                        </div>
 
                         <!-- Regencies List within Province -->
                         <div x-show="openProv" x-collapse class="bg-slate-50/50 border-t border-slate-100 pl-6 pr-3 py-2 space-y-2">
                             @foreach($prov['regencies'] as $regIndex => $reg)
-                                <div x-data="{ openReg: {{ $regIndex === 0 ? 'true' : 'false' }} }" class="bg-white rounded-xl border border-slate-200/70 overflow-hidden">
+                                <div x-data="{ openReg: {{ ($distribution['filters']['regency_code'] ?? '') === $reg['code'] || (empty($distribution['filters']['regency_code']) && $regIndex === 0) ? 'true' : 'false' }} }" class="bg-white rounded-xl border border-slate-200/70 overflow-hidden {{ ($distribution['filters']['regency_code'] ?? '') === $reg['code'] ? 'ring-1 ring-emerald-500' : '' }}">
                                     <!-- Regency Header -->
-                                    <button
-                                        type="button"
-                                        @click="openReg = !openReg"
-                                        class="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90 text-emerald-700': openReg }"></i>
-                                            <span class="font-semibold text-slate-800 text-[11px]">{{ $reg['name'] }}</span>
+                                    <div class="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                                        <button
+                                            type="button"
+                                            @click="openReg = !openReg"
+                                            class="flex items-center gap-2 text-left grow focus:outline-hidden"
+                                        >
+                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0" :class="{ 'rotate-90 text-emerald-700': openReg }"></i>
+                                            <span class="font-semibold text-slate-800 text-[11px] {{ ($distribution['filters']['regency_code'] ?? '') === $reg['code'] ? 'text-emerald-800' : '' }}">{{ $reg['name'] }}</span>
+                                        </button>
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 font-tabular">
+                                                {{ $reg['schools_count'] }} Sekolah
+                                            </span>
+                                            <a
+                                                href="{{ route('master.regions.index', array_filter(['status' => $distribution['filters']['status'], 'search' => $distribution['filters']['search'], 'province_code' => $prov['code'], 'regency_code' => $reg['code']])) }}"
+                                                class="px-2 py-0.5 rounded text-[10px] font-semibold transition-colors {{ ($distribution['filters']['regency_code'] ?? '') === $reg['code'] && empty($distribution['filters']['district_code']) ? 'bg-[#0c3c26] text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-emerald-100 hover:text-emerald-900' }}"
+                                                title="Filter peta & direktori untuk kabupaten/kota ini"
+                                            >
+                                                {{ ($distribution['filters']['regency_code'] ?? '') === $reg['code'] && empty($distribution['filters']['district_code']) ? 'Terpilih' : 'Filter' }}
+                                            </a>
                                         </div>
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 font-tabular">
-                                            {{ $reg['schools_count'] }} Sekolah
-                                        </span>
-                                    </button>
+                                    </div>
 
                                     <!-- Districts and Schools List -->
                                     <div x-show="openReg" x-collapse class="border-t border-slate-100 p-2.5 space-y-2 bg-slate-50/40">
                                         @foreach($reg['districts'] as $dist)
-                                            <div class="border-l-2 border-emerald-600 pl-2.5 py-0.5">
+                                            <div class="border-l-2 border-emerald-600 pl-2.5 py-0.5 {{ ($distribution['filters']['district_code'] ?? '') === $dist['code'] ? 'bg-emerald-50/60 rounded-r-lg' : '' }}">
                                                 <div class="flex items-center justify-between mb-1">
-                                                    <span class="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                                                    <span class="font-bold text-slate-700 text-[11px] uppercase tracking-wider {{ ($distribution['filters']['district_code'] ?? '') === $dist['code'] ? 'text-[#0c3c26]' : '' }}">
                                                         KEC. {{ $dist['name'] }}
                                                     </span>
-                                                    <span class="text-[10px] font-medium text-slate-400 font-tabular">
-                                                        {{ $dist['schools_count'] }} sekolah
-                                                    </span>
+                                                    <div class="flex items-center gap-1.5">
+                                                        <span class="text-[10px] font-medium text-slate-400 font-tabular">
+                                                            {{ $dist['schools_count'] }} sekolah
+                                                        </span>
+                                                        <a
+                                                            href="{{ route('master.regions.index', array_filter(['status' => $distribution['filters']['status'], 'search' => $distribution['filters']['search'], 'province_code' => $prov['code'], 'regency_code' => $reg['code'], 'district_code' => $dist['code']])) }}"
+                                                            class="px-1.5 py-0.2 rounded text-[9px] font-semibold transition-colors {{ ($distribution['filters']['district_code'] ?? '') === $dist['code'] ? 'bg-[#0c3c26] text-white' : 'bg-slate-200/80 text-slate-700 hover:bg-emerald-100 hover:text-emerald-900' }}"
+                                                            title="Filter peta & direktori untuk kecamatan ini"
+                                                        >
+                                                            {{ ($distribution['filters']['district_code'] ?? '') === $dist['code'] ? 'Terpilih' : 'Filter' }}
+                                                        </a>
+                                                    </div>
                                                 </div>
                                                 <ul class="space-y-1">
                                                     @foreach($dist['schools'] as $schoolItem)
@@ -410,14 +492,21 @@
                                     <div class="text-[11px] text-slate-500 font-mono font-tabular mt-0.5">
                                         NPSN: {{ $s['npsn'] ?? '—' }} &bull; No: {{ $s['license_number'] }}
                                     </div>
-                                    @if($s['has_coordinates'])
+                                    @if(($s['coordinate_status'] ?? '') === 'verified')
                                         <div class="text-[10px] text-emerald-700 font-mono font-tabular mt-0.5 flex items-center gap-1">
-                                            <i data-lucide="map-pin" class="w-2.5 h-2.5"></i>
+                                            <i data-lucide="map-pin-check" class="w-3 h-3 text-emerald-600"></i>
                                             <span>{{ number_format($s['latitude'], 4) }}, {{ number_format($s['longitude'], 4) }}</span>
+                                            <span class="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-sans font-medium">Terverifikasi</span>
+                                        </div>
+                                    @elseif(($s['coordinate_status'] ?? '') === 'unverified')
+                                        <div class="text-[10px] text-amber-700 font-mono font-tabular mt-0.5 flex items-center gap-1">
+                                            <i data-lucide="map-pin" class="w-3 h-3 text-amber-600"></i>
+                                            <span>{{ number_format($s['latitude'], 4) }}, {{ number_format($s['longitude'], 4) }}</span>
+                                            <span class="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-800 font-sans font-medium" title="Koordinat dicatat namun belum diverifikasi oleh Superuser (dikecualikan dari pin peta)">Menunggu Verifikasi</span>
                                         </div>
                                     @else
-                                        <span class="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] bg-slate-100 text-slate-500 border border-slate-200">
-                                            Lokasi belum dipetakan
+                                        <span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-500 border border-slate-200">
+                                            Lokasi belum dicatat
                                         </span>
                                     @endif
                                 </td>
@@ -578,32 +667,87 @@ function schoolDistributionApp(markersData) {
 
                 const marker = L.marker([item.lat, item.lng], { icon: customIcon });
 
-                const popupHtml = `
-                    <div style="font-family: Inter, sans-serif; min-width: 220px; padding: 4px;">
-                        <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
-                            ${item.name}
-                        </div>
-                        <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">
-                            NPSN: ${item.npsn} &bull; ${item.regency}, ${item.province}
-                        </div>
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 11px;">
-                            <span style="font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: ${item.status === 'active' ? '#dcfce7; color: #166534;' : (item.status === 'pending' ? '#fef3c7; color: #92400e;' : '#ffe4e6; color: #9f1239;')}">
-                                ${item.status_label}
-                            </span>
-                            <span style="color: #475569; font-weight: 500;">
-                                ${item.kits_count} Unit Kit
-                            </span>
-                        </div>
-                        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
-                            Lisensi: <strong>${item.license_number}</strong>
-                        </div>
-                        <a href="${item.detail_url}" style="display: block; text-align: center; background-color: #0c3c26; color: #ffffff; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; text-decoration: none;">
-                            Buka Detail Stasiun & Sekolah &rarr;
-                        </a>
-                    </div>
-                `;
+                // Construct popup safely using DOM methods to prevent any persistent XSS
+                const popup = document.createElement('div');
+                popup.style.fontFamily = 'Inter, sans-serif';
+                popup.style.minWidth = '220px';
+                popup.style.padding = '4px';
 
-                marker.bindPopup(popupHtml);
+                const titleEl = document.createElement('div');
+                titleEl.style.fontSize = '13px';
+                titleEl.style.fontWeight = '700';
+                titleEl.style.color = '#0f172a';
+                titleEl.style.marginBottom = '2px';
+                titleEl.textContent = item.name || '';
+                popup.appendChild(titleEl);
+
+                const metaEl = document.createElement('div');
+                metaEl.style.fontSize = '11px';
+                metaEl.style.color = '#64748b';
+                metaEl.style.marginBottom = '6px';
+                metaEl.textContent = `NPSN: ${item.npsn || '—'} • ${item.regency || ''}, ${item.province || ''}`;
+                popup.appendChild(metaEl);
+
+                const badgeRow = document.createElement('div');
+                badgeRow.style.display = 'flex';
+                badgeRow.style.alignItems = 'center';
+                badgeRow.style.justifyContent = 'space-between';
+                badgeRow.style.marginBottom = '8px';
+                badgeRow.style.fontSize = '11px';
+
+                const statusBadge = document.createElement('span');
+                statusBadge.style.fontWeight = '600';
+                statusBadge.style.padding = '2px 8px';
+                statusBadge.style.borderRadius = '9999px';
+                if (item.status === 'active') {
+                    statusBadge.style.background = '#dcfce7';
+                    statusBadge.style.color = '#166534';
+                } else if (item.status === 'pending') {
+                    statusBadge.style.background = '#fef3c7';
+                    statusBadge.style.color = '#92400e';
+                } else {
+                    statusBadge.style.background = '#ffe4e6';
+                    statusBadge.style.color = '#9f1239';
+                }
+                statusBadge.textContent = item.status_label || '';
+                badgeRow.appendChild(statusBadge);
+
+                const kitCount = document.createElement('span');
+                kitCount.style.color = '#475569';
+                kitCount.style.fontWeight = '500';
+                kitCount.textContent = `${item.kits_count || 0} Unit Kit`;
+                badgeRow.appendChild(kitCount);
+                popup.appendChild(badgeRow);
+
+                const licenseRow = document.createElement('div');
+                licenseRow.style.fontSize = '11px';
+                licenseRow.style.color = '#64748b';
+                licenseRow.style.marginBottom = '8px';
+                licenseRow.textContent = 'Lisensi: ';
+                const strongLic = document.createElement('strong');
+                strongLic.textContent = item.license_number || '—';
+                licenseRow.appendChild(strongLic);
+                popup.appendChild(licenseRow);
+
+                const linkBtn = document.createElement('a');
+                let targetUrl = '#';
+                if (typeof item.detail_url === 'string' && (item.detail_url.startsWith('/') || item.detail_url.startsWith(window.location.origin))) {
+                    targetUrl = item.detail_url;
+                }
+                linkBtn.setAttribute('href', targetUrl);
+                linkBtn.style.display = 'block';
+                linkBtn.style.textAlign = 'center';
+                linkBtn.style.backgroundColor = '#0c3c26';
+                linkBtn.style.color = '#ffffff';
+                linkBtn.style.padding = '6px 12px';
+                linkBtn.style.borderRadius = '8px';
+                linkBtn.style.fontSize = '11px';
+                linkBtn.style.fontWeight = '600';
+                linkBtn.style.textDecoration = 'none';
+                linkBtn.textContent = 'Buka Detail Stasiun & Sekolah →';
+                popup.appendChild(linkBtn);
+
+                marker.bindPopup(popup);
                 this.markersGroup.addLayer(marker);
                 this.markerMap[item.id] = marker;
             });

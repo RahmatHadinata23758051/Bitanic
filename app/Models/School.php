@@ -26,6 +26,7 @@ class School extends Model
         'longitude',
         'coordinate_source',
         'coordinate_verified_at',
+        'coordinate_verified_by',
         'phone',
         'status',
         'settings',
@@ -46,6 +47,11 @@ class School extends Model
         return $this->latitude !== null
             && $this->longitude !== null
             && $this->coordinate_verified_at !== null;
+    }
+
+    public function coordinateVerifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'coordinate_verified_by');
     }
 
     public function provinceRelation(): BelongsTo

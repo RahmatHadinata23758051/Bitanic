@@ -67,7 +67,7 @@
     @endif
 
     <!-- Key Associated Resource Metric Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-medium text-slate-500">Total Pengguna Terdaftar</span>
@@ -99,6 +99,43 @@
             </div>
             <p class="text-2xl font-bold text-slate-900 font-tabular">{{ $school->schedules_count }}</p>
             <p class="text-[11px] text-slate-400 mt-1">Sesi jadwal tercatat</p>
+        </div>
+
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-slate-500">Status Lisensi LMS</span>
+                <div class="w-8 h-8 rounded-lg bg-[#0c3c26]/10 text-[#0c3c26] flex items-center justify-center">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                </div>
+            </div>
+            @if($school->license)
+                @php
+                    $licStatus = $school->license->computed_status;
+                    $licBadge = match($licStatus) {
+                        'active' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                        'pending' => 'bg-amber-50 text-amber-700 border-amber-200',
+                        'expired' => 'bg-rose-50 text-rose-700 border-rose-200',
+                        default => 'bg-slate-100 text-slate-700 border-slate-200'
+                    };
+                @endphp
+                <div class="mt-1">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border {{ $licBadge }}">
+                        {{ $school->license->status_label }}
+                    </span>
+                </div>
+                <a href="{{ route('master.licenses.show', $school->license) }}" class="text-[11px] font-mono text-[#0c3c26] hover:underline mt-1.5 inline-block">
+                    {{ $school->license->license_number }} &rarr;
+                </a>
+            @else
+                <div class="mt-1">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border bg-slate-100 text-slate-600 border-slate-200">
+                        Belum Memiliki Lisensi
+                    </span>
+                </div>
+                <a href="{{ route('master.licenses.index') }}" class="text-[11px] text-[#0c3c26] hover:underline mt-1.5 inline-block">
+                    Inisialisasi di Master Lisensi &rarr;
+                </a>
+            @endif
         </div>
     </div>
 
@@ -181,18 +218,69 @@
 
                 <div class="sm:col-span-2 border-b border-slate-100 pb-3">
                     <dt class="text-slate-500 mb-0.5">Koordinat Geografis (Peta GIS)</dt>
-                    <dd class="font-medium text-slate-900 flex items-center gap-3">
+                    <dd class="font-medium text-slate-900">
                         @if($school->hasVerifiedCoordinates())
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs">
-                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
-                                <span class="font-mono font-bold">{{ number_format($school->latitude, 6) }}, {{ number_format($school->longitude, 6) }}</span>
-                            </span>
-                            <span class="text-xs text-slate-400">Sumber: {{ $school->coordinate_source ?? 'manual_input' }}</span>
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs">
+                                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                        <span class="font-mono font-bold">{{ number_format($school->latitude, 6) }}, {{ number_format($school->longitude, 6) }}</span>
+                                    </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+                                        Terverifikasi
+                                    </span>
+                                    <span class="text-xs text-slate-400">
+                                        Diverifikasi {{ $school->coordinate_verified_at->translatedFormat('d M Y H:i') }}
+                                    </span>
+                                </div>
+                                <form action="{{ route('master.schools.unverify-coordinates', $school) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button
+                                        type="submit"
+                                        class="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors"
+                                        onclick="return confirm('Cabut verifikasi koordinat sekolah ini? Pin peta akan dinonaktifkan.');"
+                                    >
+                                        Cabut Verifikasi
+                                    </button>
+                                </form>
+                            </div>
+                        @elseif($school->latitude !== null && $school->longitude !== null)
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs">
+                                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-amber-600"></i>
+                                        <span class="font-mono font-bold">{{ number_format($school->latitude, 6) }}, {{ number_format($school->longitude, 6) }}</span>
+                                    </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800">
+                                        Menunggu Verifikasi
+                                    </span>
+                                    <span class="text-xs text-amber-700">
+                                        Dikecualikan dari pin peta sampai diverifikasi.
+                                    </span>
+                                </div>
+                                <form action="{{ route('master.schools.verify-coordinates', $school) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button
+                                        type="submit"
+                                        class="px-3 py-1 text-xs font-semibold rounded-lg bg-[#0c3c26] text-white hover:bg-[#082819] shadow-xs transition-colors"
+                                    >
+                                        Verifikasi Koordinat
+                                    </button>
+                                </form>
+                            </div>
                         @else
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 text-xs">
-                                <i data-lucide="map-pin-off" class="w-3.5 h-3.5 text-slate-400"></i>
-                                <span>Lokasi belum dipetakan</span>
-                            </span>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 text-xs">
+                                        <i data-lucide="map-pin-off" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        <span>Lokasi belum dipetakan</span>
+                                    </span>
+                                    <span class="text-xs text-slate-400">Belum ada data koordinat lintang/bujur.</span>
+                                </div>
+                                <a href="{{ route('master.schools.edit', $school) }}" class="text-xs text-[#0c3c26] hover:underline font-semibold">
+                                    + Input Koordinat
+                                </a>
+                            </div>
                         @endif
                     </dd>
                 </div>

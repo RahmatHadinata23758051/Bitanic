@@ -9,8 +9,11 @@ use App\Models\District;
 use App\Models\Province;
 use App\Models\Regency;
 use App\Models\School;
+use App\Models\SchoolLicense;
+use App\Models\SchoolLicenseTerm;
 use App\Models\TrainerKitInventory;
 use App\Models\User;
+use App\Services\License\SchoolLicenseResolver;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -68,6 +71,7 @@ class SchoolDistributionAndMasterUxTest extends TestCase
             'longitude' => 107.619123,
             'coordinate_source' => 'manual_input',
             'coordinate_verified_at' => now(),
+            'coordinate_verified_by' => $this->superuser->id,
         ]);
 
         $this->schoolB = School::factory()->create([
@@ -80,6 +84,8 @@ class SchoolDistributionAndMasterUxTest extends TestCase
             'status' => 'active',
             'latitude' => null,
             'longitude' => null,
+            'coordinate_verified_at' => null,
+            'coordinate_verified_by' => null,
         ]);
     }
 
@@ -131,7 +137,7 @@ class SchoolDistributionAndMasterUxTest extends TestCase
         $initAction = app(InitializeSchoolLicenseAction::class);
         $actAction = app(ActivateFirstYearLicenseAction::class);
 
-        // School A has coordinates, School B does not
+        // School A has verified coordinates, School B does not
         $licA = $initAction->execute($this->schoolA);
         $actAction->execute($licA, ['start_date' => Carbon::today()->subMonths(1)->toDateString()]);
 
@@ -145,8 +151,301 @@ class SchoolDistributionAndMasterUxTest extends TestCase
         $response->assertSee('-6.917464');
         $response->assertSee('107.619123');
 
-        // School B is rendered with unmapped location indicator
-        $response->assertSee('Lokasi belum dipetakan');
+        // School B is rendered with honest missing coordinate indicator
+        $response->assertSee('Lokasi belum dicatat');
+    }
+
+    public function test_unverified_coordinates_excluded_from_map_and_reported_honestly(): void
+    {
+        $initAction = app(InitializeSchoolLicenseAction::class);
+        $actAction = app(ActivateFirstYearLicenseAction::class);
+
+        // School C: Has coordinates recorded (-6.500000, 107.100000), but coordinate_verified_at is NULL
+        $schoolC = School::factory()->create([
+            'name' => 'SMKN 3 Pelabuhan Unverified',
+            'slug' => 'smkn-3-pelabuhan-unverified',
+            'npsn' => '88000003',
+            'province_code' => '32',
+            'regency_code' => '3202',
+            'district_code' => '320201',
+            'status' => 'active',
+            'latitude' => -6.500000,
+            'longitude' => 107.100000,
+            'coordinate_source' => 'manual_input',
+            'coordinate_verified_at' => null,
+            'coordinate_verified_by' => null,
+        ]);
+
+        $licA = $initAction->execute($this->schoolA);
+        $actAction->execute($licA, ['start_date' => Carbon::today()->subMonths(1)->toDateString()]);
+
+        $licC = $initAction->execute($schoolC);
+        $actAction->execute($licC, ['start_date' => Carbon::today()->subMonths(1)->toDateString()]);
+
+        $response = $this->actingAs($this->superuser)->get(route('master.regions.index'));
+        $response->assertOk();
+
+        // Verified School A appears in Leaflet map markers
+        $response->assertSee($this->schoolA->name);
+        $response->assertSee('-6.917464');
+        $response->assertSee('Terverifikasi');
+
+        // Unverified School C appears in Directory with 'Menunggu Verifikasi', but NOT in map markers
+        $response->assertSee($schoolC->name);
+        $response->assertSee('Menunggu Verifikasi');
+        $response->assertSee('1 sekolah mitra');
+        $response->assertSee('belum memiliki koordinat geografis terverifikasi');
+    }
+
+    public function test_geographic_drilldown_filters_schools_and_markers_linked_hierarchy(): void
+    {
+        $initAction = app(InitializeSchoolLicenseAction::class);
+        $actAction = app(ActivateFirstYearLicenseAction::class);
+
+        // Create Regency Bandung & District Coblong
+        $regencyBandung = Regency::firstOrCreate(
+            ['code' => '3273'],
+            ['province_code' => '32', 'name' => 'KOTA BANDUNG']
+        );
+        $districtCoblong = District::firstOrCreate(
+            ['code' => '327301'],
+            ['regency_code' => '3273', 'name' => 'COBLONG']
+        );
+
+        // School A is in Sukabumi (3202)
+        $licA = $initAction->execute($this->schoolA);
+        $actAction->execute($licA, ['start_date' => Carbon::today()->subMonths(1)->toDateString()]);
+
+        // School D is in Kota Bandung (3273)
+        $schoolD = School::factory()->create([
+            'name' => 'SMKN 7 Bandung Mitra',
+            'slug' => 'smkn-7-bandung-mitra',
+            'npsn' => '88000004',
+            'province_code' => '32',
+            'regency_code' => '3273',
+            'district_code' => '327301',
+            'status' => 'active',
+            'latitude' => -6.890000,
+            'longitude' => 107.610000,
+            'coordinate_verified_at' => now(),
+            'coordinate_verified_by' => $this->superuser->id,
+        ]);
+        $licD = $initAction->execute($schoolD);
+        $actAction->execute($licD, ['start_date' => Carbon::today()->subMonths(1)->toDateString()]);
+
+        // 1. Unfiltered: Both schools appear in directory table
+        $resAll = $this->actingAs($this->superuser)->get(route('master.regions.index'));
+        $resAll->assertOk();
+        $resAll->assertSee('id="school-row-'.$this->schoolA->id.'"', false);
+        $resAll->assertSee('id="school-row-'.$schoolD->id.'"', false);
+
+        // 2. Filter by Sukabumi: Only School A appears in directory table, School D excluded
+        $resSukabumi = $this->actingAs($this->superuser)->get(route('master.regions.index', [
+            'province_code' => '32',
+            'regency_code' => '3202',
+        ]));
+        $resSukabumi->assertOk();
+        $resSukabumi->assertSee('id="school-row-'.$this->schoolA->id.'"', false);
+        $resSukabumi->assertDontSee('id="school-row-'.$schoolD->id.'"', false);
+        $resSukabumi->assertSee('KABUPATEN SUKABUMI');
+        $resSukabumi->assertSee('Tampilkan Seluruh Wilayah');
+
+        // 3. Filter by Bandung: Only School D appears in directory table, School A excluded
+        $resBandung = $this->actingAs($this->superuser)->get(route('master.regions.index', [
+            'province_code' => '32',
+            'regency_code' => '3273',
+        ]));
+        $resBandung->assertOk();
+        $resBandung->assertSee('id="school-row-'.$schoolD->id.'"', false);
+        $resBandung->assertDontSee('id="school-row-'.$this->schoolA->id.'"', false);
+        $resBandung->assertSee('KOTA BANDUNG');
+    }
+
+    public function test_superuser_can_verify_and_unverify_school_coordinates(): void
+    {
+        $school = School::factory()->create([
+            'name' => 'SMKN 4 Cisaat Geo',
+            'slug' => 'smkn-4-cisaat-geo',
+            'npsn' => '88000005',
+            'province_code' => '32',
+            'regency_code' => '3202',
+            'district_code' => '320201',
+            'status' => 'active',
+            'latitude' => -6.920000,
+            'longitude' => 106.910000,
+            'coordinate_source' => 'manual_input',
+            'coordinate_verified_at' => null,
+            'coordinate_verified_by' => null,
+        ]);
+
+        $this->assertFalse($school->hasVerifiedCoordinates());
+
+        // 1. Superuser verifies coordinates
+        $resVerify = $this->actingAs($this->superuser)->post(route('master.schools.verify-coordinates', $school));
+        $resVerify->assertRedirect();
+        $resVerify->assertSessionHas('success');
+
+        $school->refresh();
+        $this->assertTrue($school->hasVerifiedCoordinates());
+        $this->assertNotNull($school->coordinate_verified_at);
+        $this->assertEquals($this->superuser->id, $school->coordinate_verified_by);
+
+        // Audit log created
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'school.coordinates_verified',
+            'user_id' => $this->superuser->id,
+            'school_id' => $school->id,
+        ]);
+
+        // 2. Superuser unverifies coordinates
+        $resUnverify = $this->actingAs($this->superuser)->post(route('master.schools.unverify-coordinates', $school));
+        $resUnverify->assertRedirect();
+        $resUnverify->assertSessionHas('success');
+
+        $school->refresh();
+        $this->assertFalse($school->hasVerifiedCoordinates());
+        $this->assertNull($school->coordinate_verified_at);
+        $this->assertNull($school->coordinate_verified_by);
+
+        // Audit log created
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'school.coordinates_unverified',
+            'user_id' => $this->superuser->id,
+            'school_id' => $school->id,
+        ]);
+    }
+
+    public function test_malicious_school_names_are_properly_escaped_preventing_xss(): void
+    {
+        $initAction = app(InitializeSchoolLicenseAction::class);
+        $actAction = app(ActivateFirstYearLicenseAction::class);
+
+        $maliciousSchool = School::factory()->create([
+            'name' => 'SMK Pertanian <script>alert("xss")</script> & <img src=x onerror=alert(1)>',
+            'slug' => 'smk-pertanian-malicious-xss',
+            'npsn' => '88000999',
+            'province_code' => '32',
+            'regency_code' => '3202',
+            'district_code' => '320201',
+            'status' => 'active',
+            'latitude' => -6.917000,
+            'longitude' => 107.619000,
+            'coordinate_verified_at' => now(),
+            'coordinate_verified_by' => $this->superuser->id,
+        ]);
+
+        $lic = $initAction->execute($maliciousSchool);
+        $actAction->execute($lic, ['start_date' => Carbon::today()->subMonths(1)->toDateString()]);
+
+        $response = $this->actingAs($this->superuser)->get(route('master.regions.index'));
+        $response->assertOk();
+
+        // In Blade HTML output, characters must be properly escaped
+        $response->assertDontSee('<script>alert("xss")</script>', false);
+        $response->assertDontSee('<img src=x onerror=alert(1)>', false);
+        $response->assertSee('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;', false);
+    }
+
+    public function test_license_registry_consistency_across_all_entitlement_states(): void
+    {
+        $initAction = app(InitializeSchoolLicenseAction::class);
+        $actAction = app(ActivateFirstYearLicenseAction::class);
+        $resolver = app(SchoolLicenseResolver::class);
+        $today = Carbon::today('Asia/Jakarta');
+
+        // State 1: No License (School 1)
+        $school1 = School::factory()->create(['name' => 'SMK State 1 No License']);
+
+        // State 2: Unactivated (School 2 - License initialized without terms)
+        $school2 = School::factory()->create(['name' => 'SMK State 2 Unactivated']);
+        $lic2 = $initAction->execute($school2);
+
+        // State 3: Pending Future Term (School 3)
+        $school3 = School::factory()->create(['name' => 'SMK State 3 Future Pending']);
+        $lic3 = $initAction->execute($school3);
+        $actAction->execute($lic3, ['start_date' => $today->copy()->addMonths(1)->toDateString()]);
+
+        // State 4: Active Entitlement (School 4)
+        $school4 = School::factory()->create(['name' => 'SMK State 4 Active Current']);
+        $lic4 = $initAction->execute($school4);
+        $actAction->execute($lic4, ['start_date' => $today->copy()->subMonths(2)->toDateString()]);
+
+        // State 5: Expired Entitlement (School 5)
+        $school5 = School::factory()->create(['name' => 'SMK State 5 Expired Past']);
+        $lic5 = $initAction->execute($school5);
+        $actAction->execute($lic5, ['start_date' => $today->copy()->subYears(2)->toDateString()]);
+
+        // State 6: Expired with Future Renewal Gap (School 6)
+        $school6 = School::factory()->create(['name' => 'SMK State 6 Renewal Gap']);
+        $lic6 = $initAction->execute($school6);
+        $actAction->execute($lic6, ['start_date' => $today->copy()->subYears(2)->toDateString()]);
+        // Add future renewal starting next month
+        SchoolLicenseTerm::create([
+            'license_id' => $lic6->id,
+            'term_type' => 'annual_renewal',
+            'start_date' => $today->copy()->addMonths(1)->toDateString(),
+            'expiration_date' => $today->copy()->addMonths(13)->toDateString(),
+            'notes' => 'Renewal with gap',
+            'authorized_by' => $this->superuser->id,
+        ]);
+
+        // State 7: Multiple Consecutive Renewals (School 7)
+        $school7 = School::factory()->create(['name' => 'SMK State 7 Consecutive']);
+        $lic7 = $initAction->execute($school7);
+        $actAction->execute($lic7, ['start_date' => $today->copy()->subMonths(6)->toDateString()]);
+        // Add consecutive renewal
+        SchoolLicenseTerm::create([
+            'license_id' => $lic7->id,
+            'term_type' => 'annual_renewal',
+            'start_date' => $today->copy()->addMonths(6)->toDateString(),
+            'expiration_date' => $today->copy()->addMonths(18)->toDateString(),
+            'notes' => 'Consecutive renewal',
+            'authorized_by' => $this->superuser->id,
+        ]);
+
+        // Verify resolver results
+        $res2 = $resolver->resolve($lic2->fresh(), $today);
+        $res3 = $resolver->resolve($lic3->fresh(), $today);
+        $res4 = $resolver->resolve($lic4->fresh(), $today);
+        $res5 = $resolver->resolve($lic5->fresh(), $today);
+        $res6 = $resolver->resolve($lic6->fresh(), $today);
+        $res7 = $resolver->resolve($lic7->fresh(), $today);
+
+        $this->assertEquals(SchoolLicense::STATUS_PENDING, $res2['status']);
+        $this->assertEquals(SchoolLicense::STATUS_PENDING, $res3['status']);
+        $this->assertEquals(SchoolLicense::STATUS_ACTIVE, $res4['status']);
+        $this->assertEquals(SchoolLicense::STATUS_EXPIRED, $res5['status']);
+        $this->assertEquals(SchoolLicense::STATUS_EXPIRED, $res6['status']); // Gap must be expired!
+        $this->assertEquals(SchoolLicense::STATUS_ACTIVE, $res7['status']);
+
+        // Test /master/licenses table and KPIs
+        $response = $this->actingAs($this->superuser)->get(route('master.licenses.index'));
+        $response->assertOk();
+
+        // All schools must appear in the directory (1 row per school)
+        $response->assertSee($school1->name);
+        $response->assertSee($school2->name);
+        $response->assertSee($school3->name);
+        $response->assertSee($school4->name);
+        $response->assertSee($school5->name);
+        $response->assertSee($school6->name);
+        $response->assertSee($school7->name);
+
+        // Verify Status Filter: Active
+        $resActive = $this->actingAs($this->superuser)->get(route('master.licenses.index', ['status' => 'active']));
+        $resActive->assertOk();
+        $resActive->assertSee($school4->name);
+        $resActive->assertSee($school7->name);
+        $resActive->assertDontSee($school5->name);
+        $resActive->assertDontSee($school6->name);
+
+        // Verify Status Filter: Expired
+        $resExpired = $this->actingAs($this->superuser)->get(route('master.licenses.index', ['status' => 'expired']));
+        $resExpired->assertOk();
+        $resExpired->assertSee($school5->name);
+        $resExpired->assertSee($school6->name);
+        $resExpired->assertDontSee($school4->name);
+        $resExpired->assertDontSee($school7->name);
     }
 
     public function test_administrative_reference_view_preserved(): void
@@ -268,7 +567,9 @@ class SchoolDistributionAndMasterUxTest extends TestCase
         $this->assertEquals(-6.938812, (float) $school->latitude);
         $this->assertEquals(106.921455, (float) $school->longitude);
         $this->assertEquals('manual_input', $school->coordinate_source);
-        $this->assertNotNull($school->coordinate_verified_at);
+        // Under verified coordinates doctrine, new coordinates start unverified
+        $this->assertNull($school->coordinate_verified_at);
+        $this->assertNull($school->coordinate_verified_by);
 
         // Update coordinates
         $resUpdate = $this->actingAs($this->superuser)->put(route('master.schools.update', $school), array_merge($payload, [
@@ -280,5 +581,8 @@ class SchoolDistributionAndMasterUxTest extends TestCase
         $school->refresh();
         $this->assertEquals(-6.950000, (float) $school->latitude);
         $this->assertEquals(106.930000, (float) $school->longitude);
+        // Still unverified
+        $this->assertNull($school->coordinate_verified_at);
+        $this->assertNull($school->coordinate_verified_by);
     }
 }

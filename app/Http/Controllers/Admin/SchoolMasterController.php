@@ -140,14 +140,17 @@ class SchoolMasterController extends Controller
         $validated['province'] = $province?->name ?? '';
         $validated['city'] = $regency->name;
 
+        // Coordinate handling on new school record
         if (! empty($validated['latitude']) && ! empty($validated['longitude'])) {
             $validated['coordinate_source'] = $validated['coordinate_source'] ?? 'manual_input';
-            $validated['coordinate_verified_at'] = now();
+            $validated['coordinate_verified_at'] = null;
+            $validated['coordinate_verified_by'] = null;
         } else {
             $validated['latitude'] = null;
             $validated['longitude'] = null;
             $validated['coordinate_source'] = null;
             $validated['coordinate_verified_at'] = null;
+            $validated['coordinate_verified_by'] = null;
         }
 
         $school = DB::transaction(function () use ($validated) {
@@ -273,14 +276,21 @@ class SchoolMasterController extends Controller
         $validated['province'] = $province?->name ?? '';
         $validated['city'] = $regency->name;
 
+        $latChanged = (string) ($validated['latitude'] ?? '') !== (string) ($school->latitude ?? '');
+        $lngChanged = (string) ($validated['longitude'] ?? '') !== (string) ($school->longitude ?? '');
+
         if (! empty($validated['latitude']) && ! empty($validated['longitude'])) {
             $validated['coordinate_source'] = $validated['coordinate_source'] ?? 'manual_input';
-            $validated['coordinate_verified_at'] = now();
+            if ($latChanged || $lngChanged) {
+                $validated['coordinate_verified_at'] = null;
+                $validated['coordinate_verified_by'] = null;
+            }
         } else {
             $validated['latitude'] = null;
             $validated['longitude'] = null;
             $validated['coordinate_source'] = null;
             $validated['coordinate_verified_at'] = null;
+            $validated['coordinate_verified_by'] = null;
         }
 
         $oldAttributes = $school->only(['name', 'npsn', 'slug', 'province_code', 'regency_code', 'district_code', 'status', 'address', 'phone', 'latitude', 'longitude']);
@@ -410,5 +420,76 @@ class SchoolMasterController extends Controller
 
         return redirect()->route('master.schools.index')
             ->with('success', "Sekolah '{$schoolName}' berhasil dihapus dari direktori.");
+    }
+
+    /**
+     * Explicitly verify geographic coordinates for a partner school.
+     */
+    public function verifyCoordinates(Request $request, School $school): RedirectResponse
+    {
+        Gate::authorize('update', $school);
+
+        if ($school->latitude === null || $school->longitude === null) {
+            return redirect()->back()
+                ->with('error', 'Sekolah belum memiliki data koordinat untuk diverifikasi.');
+        }
+
+        $user = Auth::user();
+
+        DB::transaction(function () use ($school, $user, $request) {
+            $school->update([
+                'coordinate_verified_at' => now(),
+                'coordinate_verified_by' => $user?->id,
+            ]);
+
+            AuditLog::create([
+                'school_id' => $school->id,
+                'user_id' => $user?->id,
+                'actor_name' => $user?->name ?? 'Superuser',
+                'actor_role' => $user?->role ?? 'superuser',
+                'action' => 'school.coordinates_verified',
+                'target_type' => 'school',
+                'target_id' => (string) $school->id,
+                'correlation_id' => (string) Str::uuid(),
+                'details' => "Koordinat geografis diverifikasi: Lat {$school->latitude}, Lng {$school->longitude}",
+                'ip_address' => $request->ip(),
+            ]);
+        });
+
+        return redirect()->back()
+            ->with('success', "Koordinat geografis sekolah '{$school->name}' berhasil diverifikasi oleh {$user?->name}.");
+    }
+
+    /**
+     * Revoke geographic coordinate verification for a partner school.
+     */
+    public function unverifyCoordinates(Request $request, School $school): RedirectResponse
+    {
+        Gate::authorize('update', $school);
+
+        $user = Auth::user();
+
+        DB::transaction(function () use ($school, $user, $request) {
+            $school->update([
+                'coordinate_verified_at' => null,
+                'coordinate_verified_by' => null,
+            ]);
+
+            AuditLog::create([
+                'school_id' => $school->id,
+                'user_id' => $user?->id,
+                'actor_name' => $user?->name ?? 'Superuser',
+                'actor_role' => $user?->role ?? 'superuser',
+                'action' => 'school.coordinates_unverified',
+                'target_type' => 'school',
+                'target_id' => (string) $school->id,
+                'correlation_id' => (string) Str::uuid(),
+                'details' => "Status verifikasi koordinat dicabut untuk sekolah {$school->name}",
+                'ip_address' => $request->ip(),
+            ]);
+        });
+
+        return redirect()->back()
+            ->with('success', "Status verifikasi koordinat sekolah '{$school->name}' berhasil dicabut.");
     }
 }

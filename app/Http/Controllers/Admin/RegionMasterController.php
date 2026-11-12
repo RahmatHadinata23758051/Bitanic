@@ -97,9 +97,9 @@ class RegionMasterController extends Controller
         // Primary: Persebaran Sekolah Mitra BITANIC Dashboard
         $statusFilter = (string) $request->query('status', 'all');
         $search = $request->query('search');
-        $selectedProvince = $request->query('province_code');
-        $selectedRegency = $request->query('regency_code');
-        $selectedDistrict = $request->query('district_code');
+        $selectedProvince = $request->query('province_code') ?? $request->query('province');
+        $selectedRegency = $request->query('regency_code') ?? $request->query('regency');
+        $selectedDistrict = $request->query('district_code') ?? $request->query('district');
 
         $distribution = $this->distributionService->getDistributionData(
             statusFilter: $statusFilter,

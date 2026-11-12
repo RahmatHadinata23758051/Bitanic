@@ -3,7 +3,7 @@ import sys
 import time
 from playwright.sync_api import sync_playwright
 
-BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8008")
+BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8000")
 OUT_DIR = os.path.abspath("docs/screenshots")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -19,7 +19,7 @@ def run():
         # 1. Login as superuser
         page.goto(f"{BASE_URL}/login")
         page.fill("#email", "superuser@bitanic.id")
-        page.fill("#password", "Password123!")
+        page.fill("#password", "password123")
         page.click("button[type='submit']")
         page.wait_for_load_state("networkidle")
         assert "/login" not in page.url, "Login failed for superuser"
@@ -80,7 +80,33 @@ def run():
         page.screenshot(path=lic_registry_path, full_page=True)
         print(f"Captured: {lic_registry_path}")
 
+        # 7. School Detail & Coordinates Verification (Desktop)
+        print("Navigating to /master/schools/1 (GIS Verification)...")
+        page.goto(f"{BASE_URL}/master/schools/1")
+        page.wait_for_selector('h1')
+        time.sleep(1)
+        school_gis_path = os.path.join(OUT_DIR, "school_detail_gis_desktop.png")
+        page.screenshot(path=school_gis_path, full_page=True)
+        print(f"Captured: {school_gis_path}")
+
         context_desktop.close()
+
+        # Tablet context (768 x 1024 iPad Mini)
+        print("Capturing Tablet views (768px)...")
+        context_tablet = browser.new_context(viewport={"width": 768, "height": 1024})
+        page_t = context_tablet.new_page()
+        page_t.goto(f"{BASE_URL}/login")
+        page_t.fill("#email", "superuser@bitanic.id")
+        page_t.fill("#password", "password123")
+        page_t.click("button[type='submit']")
+        page_t.wait_for_load_state("networkidle")
+        page_t.goto(f"{BASE_URL}/master/regions")
+        page_t.wait_for_selector('#school-distribution-map')
+        time.sleep(2)
+        t_wilayah_path = os.path.join(OUT_DIR, "wilayah_overview_tablet.png")
+        page_t.screenshot(path=t_wilayah_path, full_page=True)
+        print(f"Captured: {t_wilayah_path}")
+        context_tablet.close()
 
         # Mobile context (390 x 844 iPhone 12/13/14 size)
         print("Capturing Mobile views...")
@@ -90,7 +116,7 @@ def run():
         # Login mobile
         page_m.goto(f"{BASE_URL}/login")
         page_m.fill("#email", "superuser@bitanic.id")
-        page_m.fill("#password", "Password123!")
+        page_m.fill("#password", "password123")
         page_m.click("button[type='submit']")
         page_m.wait_for_load_state("networkidle")
         assert "/login" not in page_m.url, "Mobile login failed"
