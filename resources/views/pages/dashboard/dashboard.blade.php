@@ -674,34 +674,65 @@
 
                 {{-- Quick Action Shortcuts --}}
                 <div class="pt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <a
-                        href="{{ url('/iot-monitoring') }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
-                    >
-                        <i data-lucide="gauge" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span>Monitoring IoT</span>
-                    </a>
-                    <a
-                        href="{{ url('/trainer-kits') }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
-                    >
-                        <i data-lucide="cpu" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span>Trainer Kit</span>
-                    </a>
-                    <a
-                        href="{{ url('/raw-logs') }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
-                    >
-                        <i data-lucide="terminal" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span>Debugger RS485</span>
-                    </a>
-                    <a
-                        href="{{ url('/telemetry/history') }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
-                    >
-                        <i data-lucide="database" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <span>Riwayat Telemetri</span>
-                    </a>
+                    @if($isSiswa)
+                        <a
+                            href="{{ url('/iot-monitoring') }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                        >
+                            <i data-lucide="gauge" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            <span>Monitoring IoT</span>
+                        </a>
+                        <a
+                            href="{{ url('/modules') }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                        >
+                            <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Modul Praktikum</span>
+                        </a>
+                        <a
+                            href="{{ url('/reports') }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                        >
+                            <i data-lucide="file-check" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>LKS Saya</span>
+                        </a>
+                        <a
+                            href="{{ url('/assessment') }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                        >
+                            <i data-lucide="award" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Rapor Saya</span>
+                        </a>
+                    @else
+                        <a
+                            href="{{ url('/iot-monitoring') }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                        >
+                            <i data-lucide="gauge" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Monitoring IoT</span>
+                        </a>
+                        <a
+                            href="{{ url('/trainer-kits') }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                        >
+                            <i data-lucide="cpu" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Trainer Kit</span>
+                        </a>
+                        <a
+                            href="{{ url('/raw-logs') }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                        >
+                            <i data-lucide="terminal" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Debugger RS485</span>
+                        </a>
+                        <a
+                            href="{{ url('/telemetry/history') }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                        >
+                            <i data-lucide="database" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Riwayat Telemetri</span>
+                        </a>
+                    @endif
                 </div>
             </div>
         </section>
@@ -1061,10 +1092,17 @@
                         <span class="w-2 h-2 rounded-full bg-slate-400"></span>
                         {{ $offlineKitsCount }} offline
                     </span>
-                    <a href="{{ url('/trainer-kits') }}" class="font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 transition-colors">
-                        <span>Kelola armada kit</span>
-                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                    </a>
+                    @if(! $isSiswa)
+                        <a href="{{ url('/trainer-kits') }}" class="font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 transition-colors">
+                            <span>Kelola armada kit</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                    @else
+                        <a href="{{ url('/iot-monitoring') }}" class="font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 transition-colors">
+                            <span>Buka Monitoring IoT</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                    @endif
                 </div>
             </div>
 
