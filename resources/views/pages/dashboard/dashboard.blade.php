@@ -417,7 +417,62 @@
             </div>
 
             <div class="relative w-full rounded-xl overflow-hidden border border-slate-200">
-                <div id="macro-distribution-map" class="h-96 w-full z-0"></div>
+                <div id="macro-distribution-map" class="h-[460px] md:h-[520px] w-full z-0"></div>
+
+                @if(count($mapPins) > 0)
+                    {{-- Floating Interactive GIS Controls (Top Right) --}}
+                    <div class="absolute top-3 right-3 z-10 flex flex-col gap-1 bg-white/95 backdrop-blur-xs p-1.5 rounded-xl border border-slate-200/90 shadow-md">
+                        <button
+                            type="button"
+                            id="btn-map-zoom-in"
+                            title="Perbesar Peta (Zoom In)"
+                            aria-label="Perbesar peta"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30"
+                        >
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                        <button
+                            type="button"
+                            id="btn-map-zoom-out"
+                            title="Perkecil Peta (Zoom Out)"
+                            aria-label="Perkecil peta"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30"
+                        >
+                            <i data-lucide="minus" class="w-4 h-4"></i>
+                        </button>
+                        <div class="my-0.5 border-t border-slate-200"></div>
+                        <button
+                            type="button"
+                            id="btn-map-fit-bounds"
+                            title="Pusatkan ke Semua Sekolah Mitra"
+                            aria-label="Pusatkan ke semua sekolah mitra"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30"
+                        >
+                            <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                        </button>
+                        <button
+                            type="button"
+                            id="btn-map-reset-indonesia"
+                            title="Pandangan Nasional (Seluruh Indonesia)"
+                            aria-label="Lihat seluruh Indonesia"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30"
+                        >
+                            <i data-lucide="compass" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    {{-- Interactive Floating Info Badge (Bottom Right) --}}
+                    <div class="absolute bottom-3 right-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 backdrop-blur-xs text-white text-[11px] font-medium shadow-md pointer-events-none">
+                        <span class="inline-flex items-center gap-1.5">
+                            <i data-lucide="mouse-pointer" class="w-3.5 h-3.5 text-emerald-400"></i>
+                            <span class="hidden sm:inline">Scroll roda mouse atau tombol +/- untuk zoom</span>
+                            <span class="sm:hidden">Pinch / geser untuk zoom</span>
+                        </span>
+                        <span class="text-slate-500">|</span>
+                        <span id="map-zoom-level-badge" class="font-mono text-emerald-300 font-semibold">Zoom 6x</span>
+                    </div>
+                @endif
+
                 @if(count($mapPins) === 0)
                     <div class="absolute inset-0 bg-slate-50/80 backdrop-blur-2xs flex flex-col items-center justify-center p-6 text-center z-10">
                         <i data-lucide="map-pin-off" class="w-8 h-8 text-slate-400 mb-2"></i>
@@ -512,13 +567,26 @@
                                     </div>
                                 </td>
                                 <td class="py-3.5 px-4 text-right">
-                                    <a
-                                        href="{{ $schoolItem['workspace_url'] }}"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0c3c26] hover:bg-[#0a3120] text-white text-xs font-semibold shadow-2xs transition-colors"
-                                    >
-                                        <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
-                                        <span>Buka Hub Sekolah</span>
-                                    </a>
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        @if($schoolItem['has_coordinates'])
+                                            <button
+                                                type="button"
+                                                onclick="window.focusSchoolOnDashboardMap && window.focusSchoolOnDashboardMap({{ $schoolItem['id'] }})"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200 transition-colors"
+                                                title="Fokuskan ke Peta"
+                                            >
+                                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                                <span class="hidden sm:inline">Peta</span>
+                                            </button>
+                                        @endif
+                                        <a
+                                            href="{{ $schoolItem['workspace_url'] }}"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0c3c26] hover:bg-[#0a3120] text-white text-xs font-semibold shadow-2xs transition-colors"
+                                        >
+                                            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                                            <span>Buka Hub Sekolah</span>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -1413,16 +1481,28 @@ document.addEventListener('DOMContentLoaded', function () {
     const pins = @json($mapPins);
     if (!pins || pins.length === 0) return;
 
+    // Inisialisasi peta Leaflet dengan interaktivitas zoom & navigasi penuh
     const map = L.map('macro-distribution-map', {
-        scrollWheelZoom: false,
+        zoomControl: false, // Gunakan tombol kontrol melayang Bitani GIS yang serasi
+        scrollWheelZoom: true,
+        smoothWheelZoom: true,
+        doubleClickZoom: true,
+        touchZoom: true,
+        dragging: true,
+        boxZoom: true,
+        keyboard: true,
     }).setView([-2.548926, 118.0148634], 5);
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    const bounds = [];
+    // Indikator skala metrik
+    L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+    const markersGroup = L.featureGroup().addTo(map);
+    const markerRegistry = {};
 
     pins.forEach(pin => {
         if (pin.latitude === null || pin.longitude === null) return;
@@ -1438,13 +1518,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const customIcon = L.divIcon({
             className: 'custom-pin-marker',
             html: `
-                <div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 9999px; border: 2.5px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: center;">
-                    <div style="width: 8px; height: 8px; border-radius: 9999px; background-color: white;"></div>
+                <div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 9999px; border: 2.5px solid white; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s ease;">
+                    <div style="width: 10px; height: 10px; border-radius: 9999px; background-color: white;"></div>
                 </div>
             `,
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
-            popupAnchor: [0, -14]
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+            popupAnchor: [0, -15]
         });
 
         const statusBadgeStyle = {
@@ -1455,7 +1535,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }[pin.license_status] || 'background: #f1f5f9; color: #475569;';
 
         const popupContent = `
-            <div style="font-family: Inter, sans-serif; min-width: 220px; padding: 4px 2px;">
+            <div style="font-family: Inter, sans-serif; min-width: 230px; padding: 4px 2px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                     <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; ${statusBadgeStyle}">
                         ${pin.license_status_label}
@@ -1470,21 +1550,92 @@ document.addEventListener('DOMContentLoaded', function () {
                 </p>
                 <div style="display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-bottom: 10px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; padding: 6px 0;">
                     <span>Siswa: <strong>${pin.students_count}</strong></span>
-                    <span>Trainer Kit: <strong>${pin.devices_count}</strong></span>
+                    <span>Trainer Kit: <strong>${pin.devices_count} Unit</strong></span>
                 </div>
-                <a href="${pin.workspace_url}" style="display: block; text-align: center; background: #0c3c26; color: white; text-decoration: none; font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 8px;">
+                <a href="${pin.workspace_url}" style="display: block; text-align: center; background: #0c3c26; color: white; text-decoration: none; font-size: 11px; font-weight: 600; padding: 7px 12px; border-radius: 8px; transition: background 0.15s ease;">
                     Buka School Workspace Hub &rarr;
                 </a>
             </div>
         `;
 
-        const marker = L.marker([pin.latitude, pin.longitude], { icon: customIcon }).addTo(map);
+        const marker = L.marker([pin.latitude, pin.longitude], { icon: customIcon });
         marker.bindPopup(popupContent);
-        bounds.push([pin.latitude, pin.longitude]);
+        marker.on('click', () => {
+            map.flyTo([pin.latitude, pin.longitude], Math.max(map.getZoom(), 11), { duration: 0.8 });
+        });
+        marker.addTo(markersGroup);
+        markerRegistry[pin.id] = { marker, pin };
     });
 
-    if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    // Invalidate size untuk stabilitas kalkulasi viewport peta
+    setTimeout(() => {
+        map.invalidateSize();
+        if (markersGroup.getLayers().length > 0) {
+            map.fitBounds(markersGroup.getBounds().pad(0.18), { maxZoom: 12 });
+        }
+    }, 250);
+
+    // Dynamic zoom badge updater
+    const updateZoomBadge = () => {
+        const badge = document.getElementById('map-zoom-level-badge');
+        if (badge) {
+            badge.textContent = 'Zoom ' + map.getZoom() + 'x';
+        }
+    };
+    map.on('zoomend', updateZoomBadge);
+    updateZoomBadge();
+
+    // Event listeners tombol navigasi GIS
+    const btnZoomIn = document.getElementById('btn-map-zoom-in');
+    if (btnZoomIn) {
+        btnZoomIn.addEventListener('click', () => {
+            map.zoomIn();
+        });
+    }
+
+    const btnZoomOut = document.getElementById('btn-map-zoom-out');
+    if (btnZoomOut) {
+        btnZoomOut.addEventListener('click', () => {
+            map.zoomOut();
+        });
+    }
+
+    const btnFitBounds = document.getElementById('btn-map-fit-bounds');
+    if (btnFitBounds) {
+        btnFitBounds.addEventListener('click', () => {
+            if (markersGroup.getLayers().length > 0) {
+                map.flyToBounds(markersGroup.getBounds().pad(0.18), { maxZoom: 12, duration: 1 });
+            }
+        });
+    }
+
+    const btnResetIndonesia = document.getElementById('btn-map-reset-indonesia');
+    if (btnResetIndonesia) {
+        btnResetIndonesia.addEventListener('click', () => {
+            map.flyTo([-2.548926, 118.0148634], 5, { duration: 1 });
+        });
+    }
+
+    // Fungsi global fokus peta dari direktori tabel
+    window.focusSchoolOnDashboardMap = function(schoolId) {
+        const item = markerRegistry[schoolId];
+        if (!item) return;
+
+        const mapContainer = document.getElementById('macro-distribution-map');
+        if (mapContainer) {
+            mapContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        setTimeout(() => {
+            map.flyTo([item.pin.latitude, item.pin.longitude], 13, { duration: 1 });
+            setTimeout(() => {
+                item.marker.openPopup();
+            }, 900);
+        }, 300);
+    };
+
+    if (typeof window.lucide !== 'undefined' && window.lucide.createIcons) {
+        window.lucide.createIcons();
     }
 });
 </script>
