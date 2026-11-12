@@ -200,6 +200,7 @@ Route::middleware(['auth'])->prefix('api/regions')->name('api.regions.')->group(
     Route::get('/provinces', [RegionMasterController::class, 'provinces'])->name('provinces');
     Route::get('/regencies', [RegionMasterController::class, 'regencies'])->name('regencies');
     Route::get('/districts', [RegionMasterController::class, 'districts'])->name('districts');
+    Route::get('/reverse-geocode', [RegionMasterController::class, 'reverseGeocode'])->name('reverse_geocode');
 });
 
 // LEGACY-01: Retired SaaS module — routes disabled, historic data preserved.
