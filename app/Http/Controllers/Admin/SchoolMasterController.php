@@ -3,12 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivitySchedule;
 use App\Models\AuditLog;
+use App\Models\Classroom;
+use App\Models\Device;
 use App\Models\District;
 use App\Models\Province;
 use App\Models\Regency;
 use App\Models\School;
 use App\Models\SchoolSetting;
+use App\Models\StudentReport;
+use App\Models\User;
+use App\Services\Hardware\DeviceAvailabilityResolver;
+use App\Services\License\SchoolLicenseResolver;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -190,21 +198,107 @@ class SchoolMasterController extends Controller
     }
 
     /**
-     * Display detailed information of a specific school.
+     * Display detailed information of a specific school (School Workspace Hub).
      */
-    public function show(School $school): View
-    {
+    public function show(
+        School $school,
+        SchoolLicenseResolver $licenseResolver,
+        DeviceAvailabilityResolver $availability
+    ): View {
         Gate::authorize('view', $school);
 
-        $school->load(['provinceRelation', 'regencyRelation', 'districtRelation', 'schoolSetting']);
-        $school->loadCount(['users', 'devices', 'schedules']);
+        $school->load([
+            'provinceRelation',
+            'regencyRelation',
+            'districtRelation',
+            'schoolSetting',
+            'coordinateVerifiedBy',
+            'license.terms',
+        ]);
+        $school->loadCount(['devices', 'schedules', 'classrooms']);
+
+        // License Resolution
+        $today = Carbon::today('Asia/Jakarta');
+        $license = $school->license;
+        $licenseResolution = $license ? $licenseResolver->resolve($license, $today) : null;
+        $licenseTerms = $license ? $license->terms()->orderByDesc('start_date')->get() : collect();
+
+        // Academic counts
+        $studentsCount = User::where('school_id', $school->id)->where('role', 'siswa')->count();
+        $teachersCount = User::where('school_id', $school->id)->where('role', 'guru')->count();
+        $adminsCount = User::where('school_id', $school->id)->whereIn('role', ['admin', 'admin_sekolah'])->count();
+
+        // Classrooms & Students
+        $classrooms = Classroom::where('school_id', $school->id)
+            ->with(['homeroomTeacher', 'groups'])
+            ->withCount('profiles')
+            ->orderBy('name')
+            ->get();
+
+        $students = User::where('school_id', $school->id)
+            ->where('role', 'siswa')
+            ->with(['profile.classroom', 'profile.studentGroup'])
+            ->orderBy('name')
+            ->take(50)
+            ->get();
+
+        // Teachers & School Admins
+        $teachers = User::where('school_id', $school->id)
+            ->where('role', 'guru')
+            ->with('profile')
+            ->orderBy('name')
+            ->get();
+
+        $schoolAdmins = User::where('school_id', $school->id)
+            ->whereIn('role', ['admin', 'admin_sekolah'])
+            ->orderBy('name')
+            ->get();
+
+        // Trainer Kits with Availability
+        $devices = Device::where('school_id', $school->id)
+            ->with(['calibrationProfiles'])
+            ->orderBy('code')
+            ->get();
+        $devices = $availability->applyToCollection($devices);
+
+        // Schedules
+        $schedules = ActivitySchedule::where('school_id', $school->id)
+            ->with(['device', 'classroom', 'participants.user'])
+            ->latest('activity_date')
+            ->take(20)
+            ->get();
+
+        // Reports (LKS)
+        $reports = StudentReport::whereHas('user', fn ($u) => $u->where('school_id', $school->id))
+            ->with(['user.profile', 'module', 'device'])
+            ->latest()
+            ->take(20)
+            ->get();
+        $reportsCount = StudentReport::whereHas('user', fn ($u) => $u->where('school_id', $school->id))->count();
 
         $recentAudits = AuditLog::where('school_id', $school->id)
             ->latest()
             ->take(10)
             ->get();
 
-        return view('pages.master.schools.show', compact('school', 'recentAudits'));
+        return view('pages.master.schools.show', compact(
+            'school',
+            'license',
+            'licenseResolution',
+            'licenseTerms',
+            'studentsCount',
+            'teachersCount',
+            'adminsCount',
+            'classrooms',
+            'students',
+            'teachers',
+            'schoolAdmins',
+            'devices',
+            'schedules',
+            'reports',
+            'reportsCount',
+            'recentAudits'
+        ));
     }
 
     /**
