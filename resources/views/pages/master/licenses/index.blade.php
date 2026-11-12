@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6" x-data="{ showInitModal: false }">
+<div class="space-y-6" x-data="{ showInitModal: false, selectedSchoolId: '' }">
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -24,7 +24,7 @@
             @if($availableSchools->isNotEmpty())
                 <button
                     type="button"
-                    @click="showInitModal = true"
+                    @click="selectedSchoolId = ''; showInitModal = true"
                     class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0c3c26] text-white text-xs font-semibold shadow-xs hover:bg-[#0c3c26]/90 transition-colors"
                 >
                     <i data-lucide="plus" class="w-4 h-4"></i>
@@ -67,15 +67,15 @@
         </div>
     @endif
 
-    {{-- Metrics Cards --}}
+    {{-- Metrics Cards (5 Semantically Explicit Cards Rooted in School Registry) --}}
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-slate-500">Total Lisensi</span>
-                <i data-lucide="shield-check" class="w-4 h-4 text-slate-400"></i>
+                <span class="text-xs font-medium text-slate-500">Total Sekolah (Total Lisensi)</span>
+                <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
             </div>
-            <p class="text-2xl font-bold text-slate-900 mt-2 font-tabular">{{ $totalLicenses }}</p>
-            <p class="text-[11px] text-slate-400 mt-0.5">Sekolah terdaftar</p>
+            <p class="text-2xl font-bold text-slate-900 mt-2 font-tabular">{{ $totalSchools }}</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Total Lisensi Terbit: {{ $totalLicenses }}</p>
         </div>
 
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
@@ -84,16 +84,16 @@
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             </div>
             <p class="text-2xl font-bold text-emerald-800 mt-2 font-tabular">{{ $activeLicenses }}</p>
-            <p class="text-[11px] text-emerald-600 mt-0.5">Hak akses berlaku</p>
+            <p class="text-[11px] text-emerald-600 mt-0.5">Hak akses berlaku hari ini</p>
         </div>
 
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-amber-700">Menunggu Efektif</span>
+                <span class="text-xs font-medium text-amber-700">Menunggu / Pending</span>
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
             </div>
             <p class="text-2xl font-bold text-amber-800 mt-2 font-tabular">{{ $pendingLicenses }}</p>
-            <p class="text-[11px] text-amber-600 mt-0.5">Pending aktivasi</p>
+            <p class="text-[11px] text-amber-600 mt-0.5">Belum aktif / masa tunggu</p>
         </div>
 
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
@@ -102,16 +102,16 @@
                 <span class="w-2 h-2 rounded-full bg-rose-500"></span>
             </div>
             <p class="text-2xl font-bold text-rose-800 mt-2 font-tabular">{{ $expiredLicenses }}</p>
-            <p class="text-[11px] text-rose-600 mt-0.5">Perlu perpanjangan</p>
+            <p class="text-[11px] text-rose-600 mt-0.5">Perlu perpanjangan term</p>
         </div>
 
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs col-span-2 lg:col-span-1">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-slate-600">Tanpa Lisensi Aktif</span>
-                <i data-lucide="alert-circle" class="w-4 h-4 text-amber-500"></i>
+                <span class="text-xs font-medium text-slate-600">Belum Berlisensi</span>
+                <i data-lucide="shield-alert" class="w-4 h-4 text-slate-400"></i>
             </div>
-            <p class="text-2xl font-bold text-slate-800 mt-2 font-tabular">{{ $unentitledSchoolsCount }}</p>
-            <p class="text-[11px] text-slate-400 mt-0.5">Sekolah belum terlindungi</p>
+            <p class="text-2xl font-bold text-slate-800 mt-2 font-tabular">{{ $uninitializedSchoolsCount }}</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Belum ada registri lisensi</p>
         </div>
     </div>
 
@@ -137,8 +137,9 @@
                 >
                     <option value="">Semua Status Lisensi</option>
                     <option value="active" {{ $statusFilter === 'active' ? 'selected' : '' }}>Lisensi Aktif</option>
-                    <option value="pending" {{ $statusFilter === 'pending' ? 'selected' : '' }}>Menunggu Efektif / Pending</option>
+                    <option value="pending" {{ $statusFilter === 'pending' ? 'selected' : '' }}>Menunggu Efektif / Belum Diaktivasi</option>
                     <option value="expired" {{ $statusFilter === 'expired' ? 'selected' : '' }}>Kedaluwarsa</option>
+                    <option value="uninitialized" {{ $statusFilter === 'uninitialized' ? 'selected' : '' }}>Belum Memiliki Lisensi</option>
                 </select>
             </div>
 
@@ -168,14 +169,14 @@
         </form>
     </div>
 
-    {{-- Licenses Table --}}
+    {{-- Licenses Table (Rooted in School Directory) --}}
     <div class="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs text-slate-600">
                 <thead class="bg-slate-50/80 text-[11px] font-semibold text-slate-700 uppercase tracking-wider border-b border-slate-200">
                     <tr>
+                        <th class="py-3 px-4">Sekolah / NPSN</th>
                         <th class="py-3 px-4">Nomor Lisensi</th>
-                        <th class="py-3 px-4">Sekolah Penerima</th>
                         <th class="py-3 px-4">Status Hak Akses</th>
                         <th class="py-3 px-4">Periode Efektif</th>
                         <th class="py-3 px-4">Sisa Hari</th>
@@ -184,32 +185,56 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @forelse($licenses as $item)
+                    @forelse($schools as $school)
+                        @php
+                            $lic = $school->license;
+                        @endphp
                         <tr class="hover:bg-slate-50/60 transition-colors">
-                            <td class="py-3.5 px-4 whitespace-nowrap">
-                                <span class="font-mono font-bold text-slate-900 text-xs">{{ $item->license_number }}</span>
-                                <div class="text-[10px] text-slate-400 mt-0.5">
-                                    {{ $item->entitlement_type === 'first_year_included' ? 'Bundling Kit (1 Thn)' : ucfirst($item->entitlement_type) }}
-                                </div>
-                            </td>
-
+                            {{-- Sekolah / NPSN --}}
                             <td class="py-3.5 px-4">
-                                <div class="font-medium text-slate-900">{{ $item->school->name ?? 'Sekolah Tidak Ditemukan' }}</div>
+                                <div class="font-medium text-slate-900">{{ $school->name }}</div>
                                 <div class="text-[11px] text-slate-400 font-mono mt-0.5">
-                                    NPSN: {{ $item->school->npsn ?? '—' }}
+                                    NPSN: {{ $school->npsn ?: '—' }} &bull; {{ $school->regencyRelation->name ?? $school->city ?? 'Wilayah —' }}
                                 </div>
                             </td>
 
+                            {{-- Nomor Lisensi --}}
                             <td class="py-3.5 px-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border {{ $item->status_badge_class }}">
-                                    {{ $item->status_label }}
-                                </span>
+                                @if($lic)
+                                    <span class="font-mono font-bold text-slate-900 text-xs">{{ $lic->license_number }}</span>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">
+                                        {{ $lic->entitlement_type === 'first_year_included' ? 'Bundling Kit (1 Thn)' : ucfirst($lic->entitlement_type) }}
+                                    </div>
+                                @else
+                                    <span class="font-mono text-slate-400 text-xs">—</span>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">Belum Terbit</div>
+                                @endif
                             </td>
 
+                            {{-- Status Hak Akses --}}
                             <td class="py-3.5 px-4 whitespace-nowrap">
-                                @if($item->start_date && $item->expiration_date)
+                                @if($lic)
+                                    @if($lic->terms->isEmpty())
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border bg-amber-50 text-amber-700 border-amber-200">
+                                            Belum Diaktivasi
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border {{ $lic->status_badge_class }}">
+                                            {{ $lic->status_label }}
+                                        </span>
+                                    @endif
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border bg-slate-100 text-slate-600 border-slate-200">
+                                        Belum Memiliki Lisensi
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- Periode Efektif --}}
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                @if($lic && $lic->start_date && $lic->expiration_date)
                                     <div class="font-tabular font-medium text-slate-800">
-                                        {{ $item->start_date->translatedFormat('d M Y') }} s.d. {{ $item->expiration_date->translatedFormat('d M Y') }}
+                                        {{ $lic->start_date->translatedFormat('d M Y') }} s.d. {{ $lic->expiration_date->translatedFormat('d M Y') }}
                                     </div>
                                     <div class="text-[10px] text-slate-400">Konvensi [Mulai, Berakhir)</div>
                                 @else
@@ -217,33 +242,73 @@
                                 @endif
                             </td>
 
+                            {{-- Sisa Hari --}}
                             <td class="py-3.5 px-4 whitespace-nowrap">
-                                @if($item->computed_status === 'active')
-                                    <span class="font-tabular font-semibold text-emerald-700">
-                                        {{ $item->days_remaining }} hari
-                                    </span>
-                                @elseif($item->computed_status === 'expired')
-                                    <span class="font-tabular text-rose-600 font-medium">0 hari (Kedaluwarsa)</span>
+                                @if($lic)
+                                    @if($lic->computed_status === 'active')
+                                        <span class="font-tabular font-semibold text-emerald-700">
+                                            {{ $lic->days_remaining }} hari
+                                        </span>
+                                    @elseif($lic->computed_status === 'expired')
+                                        <span class="font-tabular text-rose-600 font-medium">0 hari (Kedaluwarsa)</span>
+                                    @else
+                                        <span class="text-slate-400">—</span>
+                                    @endif
                                 @else
                                     <span class="text-slate-400">—</span>
                                 @endif
                             </td>
 
+                            {{-- Riwayat Term --}}
                             <td class="py-3.5 px-4 whitespace-nowrap">
-                                <span class="inline-flex items-center gap-1 text-slate-700 font-tabular">
-                                    <i data-lucide="layers" class="w-3.5 h-3.5 text-slate-400"></i>
-                                    <span>Term #{{ $item->terms->count() ?: 0 }}</span>
-                                </span>
+                                @if($lic)
+                                    <span class="inline-flex items-center gap-1 text-slate-700 font-tabular">
+                                        <i data-lucide="layers" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        <span>Term #{{ $lic->terms->count() }}</span>
+                                    </span>
+                                @else
+                                    <span class="text-slate-400">—</span>
+                                @endif
                             </td>
 
+                            {{-- Aksi --}}
                             <td class="py-3.5 px-4 text-right whitespace-nowrap">
-                                <a
-                                    href="{{ route('master.licenses.show', $item) }}"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                                >
-                                    <span>Kelola</span>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
-                                </a>
+                                @if($lic)
+                                    @if($lic->terms->isEmpty())
+                                        <a
+                                            href="{{ route('master.licenses.show', $lic) }}"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+                                        >
+                                            <span>Aktivasi</span>
+                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                                        </a>
+                                    @elseif($lic->computed_status === 'expired')
+                                        <a
+                                            href="{{ route('master.licenses.show', $lic) }}"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-xs font-semibold text-rose-800 hover:bg-rose-100 transition-colors"
+                                        >
+                                            <span>Perpanjang</span>
+                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                                        </a>
+                                    @else
+                                        <a
+                                            href="{{ route('master.licenses.show', $lic) }}"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                                        >
+                                            <span>Kelola</span>
+                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                                        </a>
+                                    @endif
+                                @else
+                                    <button
+                                        type="button"
+                                        @click="selectedSchoolId = '{{ $school->id }}'; showInitModal = true"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#0c3c26]/20 bg-[#0c3c26]/5 text-xs font-semibold text-[#0c3c26] hover:bg-[#0c3c26]/10 transition-colors"
+                                    >
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                        <span>Inisialisasi</span>
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -251,9 +316,9 @@
                             <td colspan="7" class="py-12 px-4 text-center">
                                 <div class="max-w-sm mx-auto space-y-2">
                                     <i data-lucide="shield-alert" class="w-8 h-8 text-slate-300 mx-auto"></i>
-                                    <p class="text-sm font-semibold text-slate-700">Tidak Ada Data Lisensi LMS</p>
+                                    <p class="text-sm font-semibold text-slate-700">Tidak Ada Data Sekolah</p>
                                     <p class="text-xs text-slate-400">
-                                        Tidak ditemukan registri lisensi yang cocok dengan filter atau kriteria pencarian Anda.
+                                        Tidak ditemukan data sekolah yang cocok dengan filter atau kriteria pencarian Anda.
                                     </p>
                                 </div>
                             </td>
@@ -263,9 +328,9 @@
             </table>
         </div>
 
-        @if($licenses->hasPages())
+        @if($schools->hasPages())
             <div class="p-4 border-t border-slate-100">
-                {{ $licenses->links() }}
+                {{ $schools->links() }}
             </div>
         @endif
     </div>
@@ -305,6 +370,7 @@
                     <select
                         id="school_id"
                         name="school_id"
+                        x-model="selectedSchoolId"
                         required
                         class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
                     >
@@ -347,4 +413,3 @@
     </div>
 </div>
 @endsection
-

@@ -19,84 +19,153 @@ class MasterLicenseController extends Controller
 {
     /**
      * Display the global LMS license registry with search, status filtering, and metrics.
+     * Rooted in School to ensure 100% of schools appear in the registry.
      */
     public function index(Request $request): View
     {
         Gate::authorize('viewAny', SchoolLicense::class);
 
         $today = Carbon::today()->toDateString();
-        $query = SchoolLicense::with(['school', 'terms', 'latestTerm'])->latest('updated_at');
+        $query = School::with(['license.terms', 'license.latestTerm', 'provinceRelation', 'regencyRelation'])->orderBy('name');
 
         // Search by License Number, School Name, or NPSN
         if ($request->filled('search')) {
             $search = trim($request->input('search'));
             $lowerSearch = '%'.strtolower($search).'%';
             $query->where(function ($q) use ($lowerSearch) {
-                $q->whereRaw('LOWER(license_number) LIKE ?', [$lowerSearch])
-                    ->orWhereHas('school', function ($sq) use ($lowerSearch) {
-                        $sq->whereRaw('LOWER(name) LIKE ?', [$lowerSearch])
-                            ->orWhereRaw('LOWER(npsn) LIKE ?', [$lowerSearch]);
+                $q->whereRaw('LOWER(name) LIKE ?', [$lowerSearch])
+                    ->orWhereRaw('LOWER(npsn) LIKE ?', [$lowerSearch])
+                    ->orWhereHas('license', function ($lq) use ($lowerSearch) {
+                        $lq->whereRaw('LOWER(license_number) LIKE ?', [$lowerSearch]);
                     });
             });
         }
 
-        // Status Filter
+        // Status Filter: active | pending | expired | uninitialized
         $status = $request->input('status');
         if ($status === 'active') {
-            $query->whereNotNull('start_date')
-                ->whereNotNull('expiration_date')
-                ->where('start_date', '<=', $today)
-                ->where('expiration_date', '>', $today);
-        } elseif ($status === 'pending') {
-            $query->where(function ($q) use ($today) {
-                $q->whereNull('start_date')
-                    ->orWhereNull('expiration_date')
-                    ->orWhere('start_date', '>', $today);
+            $query->whereHas('license', function ($lq) use ($today) {
+                $lq->where(function ($sub) use ($today) {
+                    $sub->whereHas('terms', function ($tq) use ($today) {
+                        $tq->where('start_date', '<=', $today)
+                            ->where('expiration_date', '>', $today);
+                    })->orWhere(function ($fb) use ($today) {
+                        $fb->doesntHave('terms')
+                            ->whereNotNull('start_date')
+                            ->whereNotNull('expiration_date')
+                            ->where('start_date', '<=', $today)
+                            ->where('expiration_date', '>', $today);
+                    });
+                });
+            });
+        } elseif ($status === 'pending' || $status === 'unactivated') {
+            $query->whereHas('license', function ($lq) use ($today) {
+                $lq->where(function ($sub) use ($today) {
+                    $sub->doesntHave('terms')
+                        ->where(function ($fb) use ($today) {
+                            $fb->whereNull('start_date')
+                                ->orWhereNull('expiration_date')
+                                ->orWhere('start_date', '>', $today);
+                        });
+                })->orWhere(function ($sub) use ($today) {
+                    $sub->whereDoesntHave('terms', function ($tq) use ($today) {
+                        $tq->where('expiration_date', '<=', $today);
+                    })->whereDoesntHave('terms', function ($tq) use ($today) {
+                        $tq->where('start_date', '<=', $today)
+                            ->where('expiration_date', '>', $today);
+                    });
+                });
             });
         } elseif ($status === 'expired') {
-            $query->whereNotNull('expiration_date')
-                ->where('expiration_date', '<=', $today);
+            $query->whereHas('license', function ($lq) use ($today) {
+                $lq->where(function ($sub) use ($today) {
+                    $sub->whereHas('terms', function ($tq) use ($today) {
+                        $tq->where('expiration_date', '<=', $today);
+                    })->orWhere(function ($fb) use ($today) {
+                        $fb->whereNotNull('expiration_date')->where('expiration_date', '<=', $today);
+                    });
+                })->whereDoesntHave('terms', function ($tq) use ($today) {
+                    $tq->where('start_date', '<=', $today)
+                        ->where('expiration_date', '>', $today);
+                });
+            });
+        } elseif ($status === 'uninitialized') {
+            $query->doesntHave('license');
         }
 
         // Filter: Schools without active license
         if ($request->boolean('unentitled_only')) {
             $query->where(function ($q) use ($today) {
-                $q->whereNull('start_date')
-                    ->orWhereNull('expiration_date')
-                    ->orWhere('start_date', '>', $today)
-                    ->orWhere('expiration_date', '<=', $today);
+                $q->doesntHave('license')
+                    ->orWhereHas('license', function ($lq) use ($today) {
+                        $lq->whereDoesntHave('terms', function ($tq) use ($today) {
+                            $tq->where('start_date', '<=', $today)
+                                ->where('expiration_date', '>', $today);
+                        })->where(function ($fb) use ($today) {
+                            $fb->whereNull('start_date')
+                                ->orWhereNull('expiration_date')
+                                ->orWhere('start_date', '>', $today)
+                                ->orWhere('expiration_date', '<=', $today);
+                        });
+                    });
             });
         }
 
-        $licenses = $query->paginate(15)->withQueryString();
+        $schools = $query->paginate(15)->withQueryString();
 
-        // Global Metrics
+        // Global Metrics across schools
+        $totalSchools = School::count();
         $totalLicenses = SchoolLicense::count();
-        $activeLicenses = SchoolLicense::whereNotNull('start_date')
-            ->whereNotNull('expiration_date')
-            ->where('start_date', '<=', $today)
-            ->where('expiration_date', '>', $today)
-            ->count();
-        $pendingLicenses = SchoolLicense::where(function ($q) use ($today) {
-            $q->whereNull('start_date')
-                ->orWhereNull('expiration_date')
-                ->orWhere('start_date', '>', $today);
-        })->count();
-        $expiredLicenses = SchoolLicense::whereNotNull('expiration_date')
-            ->where('expiration_date', '<=', $today)
-            ->count();
 
-        // Active schools without an active LMS license
-        $unentitledSchoolsCount = School::where('status', 'active')
-            ->where(function ($q) use ($today) {
-                $q->whereDoesntHave('license')
-                    ->orWhereHas('license', function ($lq) use ($today) {
-                        $lq->whereNull('start_date')
+        $activeLicenses = School::whereHas('license', function ($lq) use ($today) {
+            $lq->where(function ($sub) use ($today) {
+                $sub->whereHas('terms', function ($tq) use ($today) {
+                    $tq->where('start_date', '<=', $today)
+                        ->where('expiration_date', '>', $today);
+                })->orWhere(function ($fb) use ($today) {
+                    $fb->doesntHave('terms')
+                        ->whereNotNull('start_date')
+                        ->whereNotNull('expiration_date')
+                        ->where('start_date', '<=', $today)
+                        ->where('expiration_date', '>', $today);
+                });
+            });
+        })->count();
+
+        $expiredLicenses = School::whereHas('license', function ($lq) use ($today) {
+            $lq->where(function ($sub) use ($today) {
+                $sub->whereHas('terms', function ($tq) use ($today) {
+                    $tq->where('expiration_date', '<=', $today);
+                })->orWhere(function ($fb) use ($today) {
+                    $fb->whereNotNull('expiration_date')->where('expiration_date', '<=', $today);
+                });
+            })->whereDoesntHave('terms', function ($tq) use ($today) {
+                $tq->where('start_date', '<=', $today)
+                    ->where('expiration_date', '>', $today);
+            });
+        })->count();
+
+        $uninitializedSchoolsCount = School::doesntHave('license')->count();
+
+        $pendingLicenses = School::whereHas('license', function ($lq) use ($today) {
+            $lq->where(function ($sub) use ($today) {
+                $sub->doesntHave('terms')
+                    ->where(function ($fb) use ($today) {
+                        $fb->whereNull('start_date')
                             ->orWhereNull('expiration_date')
-                            ->orWhere('start_date', '>', $today)
-                            ->orWhere('expiration_date', '<=', $today);
+                            ->orWhere('start_date', '>', $today);
                     });
-            })->count();
+            })->orWhere(function ($sub) use ($today) {
+                $sub->whereDoesntHave('terms', function ($tq) use ($today) {
+                    $tq->where('expiration_date', '<=', $today);
+                })->whereDoesntHave('terms', function ($tq) use ($today) {
+                    $tq->where('start_date', '<=', $today)
+                        ->where('expiration_date', '>', $today);
+                });
+            });
+        })->count();
+
+        $unentitledSchoolsCount = $totalSchools - $activeLicenses;
 
         // Schools available for new license initialization
         $availableSchools = School::where('status', 'active')
@@ -105,11 +174,14 @@ class MasterLicenseController extends Controller
             ->get();
 
         return view('pages.master.licenses.index', [
-            'licenses' => $licenses,
+            'schools' => $schools,
+            'licenses' => $schools, // Backward compatibility for views and tests
+            'totalSchools' => $totalSchools,
             'totalLicenses' => $totalLicenses,
             'activeLicenses' => $activeLicenses,
             'pendingLicenses' => $pendingLicenses,
             'expiredLicenses' => $expiredLicenses,
+            'uninitializedSchoolsCount' => $uninitializedSchoolsCount,
             'unentitledSchoolsCount' => $unentitledSchoolsCount,
             'availableSchools' => $availableSchools,
             'search' => $request->input('search', ''),
