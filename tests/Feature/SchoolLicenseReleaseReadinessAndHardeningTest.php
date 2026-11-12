@@ -14,9 +14,13 @@ use App\Models\SchoolLicenseTerm;
 use App\Models\User;
 use App\Services\License\SchoolLicenseResolver;
 use Carbon\Carbon;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\TrainerKitSeeder;
+use Database\Seeders\VocationalLmsSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -270,8 +274,8 @@ class SchoolLicenseReleaseReadinessAndHardeningTest extends TestCase
             'attempts' => 2, // Already tried 2 times
         ]);
 
-        // Mock Mail failure
-        Mail::shouldReceive('to->send')->andThrow(new \Exception('Connection to SMTP server timed out'));
+        // Mock Mail failure (deterministic 5xx recipient rejection)
+        Mail::shouldReceive('to->send')->andThrow(new \Exception('550 5.1.1 Recipient address rejected: User unknown'));
 
         $resolver = app(SchoolLicenseResolver::class);
         $job = new SendSchoolLicenseReminderJob($notification);
@@ -285,7 +289,7 @@ class SchoolLicenseReleaseReadinessAndHardeningTest extends TestCase
         $notification->refresh();
         $this->assertEquals(SchoolLicenseNotification::STATUS_FAILED, $notification->status);
         $this->assertEquals(3, $notification->attempts);
-        $this->assertStringContainsString('SMTP server timed out', $notification->error_message);
+        $this->assertStringContainsString('550 5.1.1 Recipient address rejected', $notification->error_message);
     }
 
     /**
@@ -488,5 +492,341 @@ class SchoolLicenseReleaseReadinessAndHardeningTest extends TestCase
             'device_id' => $device->id,
             'provenance' => 'hardware',
         ]);
+    }
+
+    /**
+     * REQUIREMENT: Authentication Hardening (SEC-AUTH-SEED-01)
+     */
+    public function test_authentication_rejects_alternate_dev_passwords_and_never_modifies_hashes(): void
+    {
+        $school = School::create([
+            'npsn' => '99880009',
+            'name' => 'SMK Pertanian Cianjur',
+            'slug' => 'smk-pertanian-cianjur',
+            'status' => 'active',
+        ]);
+
+        $originalHash = Hash::make('ActualSecret123!');
+
+        $user = User::create([
+            'name' => 'Guru Kejuruan Cianjur',
+            'email' => 'guru.cianjur@smk.id',
+            'password' => $originalHash,
+            'role' => User::ROLE_GURU,
+            'school_id' => $school->id,
+            'is_active' => true,
+        ]);
+
+        // 1. Attempt login with common dev passwords (must be rejected)
+        $devPasswords = ['password123', 'Password123!', 'password'];
+        foreach ($devPasswords as $badPass) {
+            $resp = $this->post('/login', [
+                'email' => 'guru.cianjur@smk.id',
+                'password' => $badPass,
+            ]);
+
+            $resp->assertSessionHasErrors('email');
+            $this->assertGuest();
+        }
+
+        // 2. Verify stored password hash was NEVER modified
+        $user->refresh();
+        $this->assertEquals($originalHash, $user->password, 'Password hash must remain unmodified after failed attempts');
+
+        // 3. Attempt login with actual stored secret (must succeed)
+        $successResp = $this->post('/login', [
+            'email' => 'guru.cianjur@smk.id',
+            'password' => 'ActualSecret123!',
+        ]);
+
+        $successResp->assertSessionHasNoErrors();
+        $this->assertAuthenticatedAs($user);
+    }
+
+    /**
+     * REQUIREMENT: Email Failure Recovery & Orphaned Processing Lease
+     */
+    public function test_abrupt_worker_termination_respects_five_minute_lease(): void
+    {
+        Mail::fake();
+
+        $school = School::create([
+            'npsn' => '99880010',
+            'name' => 'SMK Pertanian Tasikmalaya',
+            'slug' => 'smk-pertanian-tasikmalaya',
+            'status' => 'active',
+        ]);
+
+        $license = SchoolLicense::create([
+            'school_id' => $school->id,
+            'license_number' => 'LIC-TSK-2026-01',
+            'status' => SchoolLicense::STATUS_ACTIVE,
+            'start_date' => '2025-06-15',
+            'expiration_date' => '2026-06-15',
+        ]);
+
+        $term = SchoolLicenseTerm::create([
+            'license_id' => $license->id,
+            'term_number' => 1,
+            'term_type' => SchoolLicenseTerm::TYPE_INITIAL_INCLUDED,
+            'status' => SchoolLicenseTerm::STATUS_ACTIVE,
+            'start_date' => '2025-06-15',
+            'expiration_date' => '2026-06-15',
+        ]);
+
+        // Notification claimed 2 minutes ago by Worker A (lease active until 5 minutes)
+        $notification = SchoolLicenseNotification::create([
+            'license_id' => $license->id,
+            'term_id' => $term->id,
+            'school_id' => $school->id,
+            'recipient_email' => 'admin@smktasik.sch.id',
+            'recipient_name' => 'Admin Tasik',
+            'status' => SchoolLicenseNotification::STATUS_PROCESSING,
+            'claimed_at' => now()->subMinutes(2),
+            'attempts' => 1,
+            'scheduled_for' => '2026-06-01',
+            'payload' => ['days_remaining' => 14],
+        ]);
+
+        $resolver = app(SchoolLicenseResolver::class);
+
+        // Worker B attempts to process within lease
+        $job = new SendSchoolLicenseReminderJob($notification);
+        $job->handle($resolver);
+
+        $notification->refresh();
+        $this->assertEquals(SchoolLicenseNotification::STATUS_PROCESSING, $notification->status);
+        $this->assertEquals(1, $notification->attempts, 'Attempts must not increment while lease is active');
+        Mail::assertNothingSent();
+    }
+
+    public function test_orphaned_processing_status_recovered_after_lease_expires(): void
+    {
+        Mail::fake();
+
+        Carbon::setTestNow(Carbon::parse('2026-06-01 07:00:00', 'Asia/Jakarta'));
+
+        $school = School::create([
+            'npsn' => '99880011',
+            'name' => 'SMK Pertanian Ciamis',
+            'slug' => 'smk-pertanian-ciamis',
+            'status' => 'active',
+        ]);
+
+        $license = SchoolLicense::create([
+            'school_id' => $school->id,
+            'license_number' => 'LIC-CMS-2026-01',
+            'status' => SchoolLicense::STATUS_ACTIVE,
+            'start_date' => '2025-06-15',
+            'expiration_date' => '2026-06-15',
+        ]);
+
+        $term = SchoolLicenseTerm::create([
+            'license_id' => $license->id,
+            'term_number' => 1,
+            'term_type' => SchoolLicenseTerm::TYPE_INITIAL_INCLUDED,
+            'status' => SchoolLicenseTerm::STATUS_ACTIVE,
+            'start_date' => '2025-06-15',
+            'expiration_date' => '2026-06-15',
+        ]);
+
+        // Worker died abruptly 10 minutes ago (lease expired > 5 min, attempts = 1)
+        $notification = SchoolLicenseNotification::create([
+            'license_id' => $license->id,
+            'term_id' => $term->id,
+            'school_id' => $school->id,
+            'recipient_email' => 'admin@smkciamis.sch.id',
+            'recipient_name' => 'Admin Ciamis',
+            'status' => SchoolLicenseNotification::STATUS_PROCESSING,
+            'claimed_at' => now()->subMinutes(10),
+            'attempts' => 1,
+            'scheduled_for' => '2026-06-01',
+            'payload' => ['days_remaining' => 14],
+        ]);
+
+        $resolver = app(SchoolLicenseResolver::class);
+
+        // Next worker picks up job: recovers orphaned processing lease
+        $job = new SendSchoolLicenseReminderJob($notification);
+        $job->handle($resolver);
+
+        $notification->refresh();
+        $this->assertEquals(SchoolLicenseNotification::STATUS_SENT, $notification->status);
+        $this->assertEquals(2, $notification->attempts, 'Attempts incremented to 2 upon orphaned recovery');
+        $this->assertNotNull($notification->sent_at);
+        Mail::assertSent(SchoolLicenseExpirationReminderMail::class, 1);
+    }
+
+    public function test_uncertain_smtp_delivery_outcome_recorded_as_unknown_and_not_re_sent(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-01 07:00:00', 'Asia/Jakarta'));
+
+        $school = School::create([
+            'npsn' => '99880012',
+            'name' => 'SMK Pertanian Banjar',
+            'slug' => 'smk-pertanian-banjar',
+            'status' => 'active',
+        ]);
+
+        $license = SchoolLicense::create([
+            'school_id' => $school->id,
+            'license_number' => 'LIC-BJR-2026-01',
+            'status' => SchoolLicense::STATUS_ACTIVE,
+            'start_date' => '2025-06-15',
+            'expiration_date' => '2026-06-15',
+        ]);
+
+        $term = SchoolLicenseTerm::create([
+            'license_id' => $license->id,
+            'term_number' => 1,
+            'term_type' => SchoolLicenseTerm::TYPE_INITIAL_INCLUDED,
+            'status' => SchoolLicenseTerm::STATUS_ACTIVE,
+            'start_date' => '2025-06-15',
+            'expiration_date' => '2026-06-15',
+        ]);
+
+        // Attempt 2 already tried, attempt 3 throws timeout
+        $notification = SchoolLicenseNotification::create([
+            'license_id' => $license->id,
+            'term_id' => $term->id,
+            'school_id' => $school->id,
+            'recipient_email' => 'admin@smkbanjar.sch.id',
+            'recipient_name' => 'Admin Banjar',
+            'status' => SchoolLicenseNotification::STATUS_QUEUED,
+            'attempts' => 2,
+            'scheduled_for' => '2026-06-01',
+            'payload' => ['days_remaining' => 14],
+        ]);
+
+        Mail::shouldReceive('to->send')->andThrow(new \Exception('Connection closed unexpectedly during transport'));
+
+        $resolver = app(SchoolLicenseResolver::class);
+        $job = new SendSchoolLicenseReminderJob($notification);
+
+        try {
+            $job->handle($resolver);
+        } catch (\Throwable $e) {
+            // Handled
+        }
+
+        $notification->refresh();
+        $this->assertEquals(SchoolLicenseNotification::STATUS_UNKNOWN, $notification->status);
+        $this->assertEquals(3, $notification->attempts);
+        $this->assertTrue($notification->isUnknown());
+
+        // Subsequent worker execution will NOT retry an unknown delivery result
+        $job2 = new SendSchoolLicenseReminderJob($notification);
+        $job2->handle($resolver);
+
+        $notification->refresh();
+        $this->assertEquals(3, $notification->attempts, 'Attempts must not increment on unknown delivery state');
+    }
+
+    public function test_dispatcher_recovers_orphaned_processing_notifications_under_max_attempts(): void
+    {
+        Queue::fake();
+
+        config(['license.reminders_enabled' => true]);
+        Carbon::setTestNow(Carbon::parse('2026-06-01 07:00:00', 'Asia/Jakarta'));
+
+        $school = School::create([
+            'npsn' => '99880013',
+            'name' => 'SMK Pertanian Sukabumi',
+            'slug' => 'smk-pertanian-sukabumi',
+            'status' => 'active',
+        ]);
+
+        $admin = User::create([
+            'name' => 'Admin Sukabumi',
+            'email' => 'admin@smksukabumi.sch.id',
+            'password' => Hash::make('Secret123!'),
+            'role' => User::ROLE_ADMIN_SEKOLAH,
+            'school_id' => $school->id,
+            'is_active' => true,
+        ]);
+
+        $license = SchoolLicense::create([
+            'school_id' => $school->id,
+            'license_number' => 'LIC-SKB-2026-01',
+            'status' => SchoolLicense::STATUS_ACTIVE,
+            'start_date' => '2025-06-15',
+            'expiration_date' => '2026-06-15',
+        ]);
+
+        $term = SchoolLicenseTerm::create([
+            'license_id' => $license->id,
+            'term_number' => 1,
+            'term_type' => SchoolLicenseTerm::TYPE_INITIAL_INCLUDED,
+            'status' => SchoolLicenseTerm::STATUS_ACTIVE,
+            'start_date' => '2025-06-15',
+            'expiration_date' => '2026-06-15',
+        ]);
+
+        // Orphaned processing notification (worker died 15 minutes ago, attempt 1)
+        $notification = SchoolLicenseNotification::create([
+            'license_id' => $license->id,
+            'term_id' => $term->id,
+            'school_id' => $school->id,
+            'recipient_email' => $admin->email,
+            'recipient_name' => $admin->name,
+            'status' => SchoolLicenseNotification::STATUS_PROCESSING,
+            'claimed_at' => now()->subMinutes(15),
+            'attempts' => 1,
+            'scheduled_for' => '2026-06-01',
+            'payload' => ['days_remaining' => 14],
+        ]);
+
+        $action = app(DispatchSchoolLicenseRemindersAction::class);
+        $summary = $action->execute(14, false);
+
+        $this->assertEquals(1, $summary['queued']);
+        $notification->refresh();
+        $this->assertEquals(SchoolLicenseNotification::STATUS_QUEUED, $notification->status);
+        $this->assertNull($notification->claimed_at);
+
+        Queue::assertPushed(SendSchoolLicenseReminderJob::class, 1);
+    }
+
+    public function test_production_safe_seeding_prohibits_demo_fixtures_in_production_and_staging(): void
+    {
+        // 1. Direct invocation of VocationalLmsSeeder in production throws RuntimeException
+        $this->app['env'] = 'production';
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('VocationalLmsSeeder');
+
+        $seeder = new VocationalLmsSeeder;
+        $seeder->run();
+    }
+
+    public function test_trainer_kit_seeder_prohibits_demo_fixtures_in_production_and_staging(): void
+    {
+        $this->app['env'] = 'production';
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('TrainerKitSeeder');
+
+        $seeder = new TrainerKitSeeder;
+        $seeder->run();
+    }
+
+    public function test_database_seeder_skips_demo_fixtures_in_production(): void
+    {
+        $this->app['env'] = 'production';
+
+        // Run DatabaseSeeder with --force in production
+        $this->artisan('db:seed', ['--force' => true])
+            ->expectsOutputToContain('Environment produksi/staging terdeteksi')
+            ->assertExitCode(0);
+
+        // Verify NO demo users were seeded
+        $this->assertDatabaseMissing('users', ['email' => 'admin@smk.id']);
+        $this->assertDatabaseMissing('users', ['email' => 'guru@smk.id']);
+        $this->assertDatabaseMissing('users', ['email' => 'siswa@smk.id']);
+        $this->assertDatabaseMissing('devices', ['code' => 'TK-01']);
+
+        // Verify reference master data WAS seeded
+        $this->assertDatabaseHas('subscription_plans', ['code' => 'plan-siswa-starter']);
+        $this->assertDatabaseHas('module_practicums', ['meeting_number' => 1]);
     }
 }

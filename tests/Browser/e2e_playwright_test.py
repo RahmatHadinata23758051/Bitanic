@@ -226,9 +226,14 @@ def run_tests():
             # 4.2 Visit Directory - Verify School 1 Student & No Dropdown
             resp = page.goto(f"{BASE_URL}/users-data")
             assert resp.status == 200, f"Expected 200 for users-data, got {resp.status}"
-            assert "Bagus Pratama" in page.content(), "Expected School 1 student Bagus Pratama in directory"
             school_select = page.locator("select[name='school_id']")
             assert school_select.count() == 0, "School selector dropdown MUST NOT appear in directory for admin"
+
+            # Verify School 1 student is accessible in directory (direct page 1 or via search if paginated)
+            if "Bagus Pratama" not in page.content():
+                resp_search_own = page.goto(f"{BASE_URL}/users-data?q=Bagus")
+                assert resp_search_own.status == 200
+            assert "Bagus Pratama" in page.content(), "Expected School 1 student Bagus Pratama in directory"
             print("  ✓ Directory loaded for own school (Bagus Pratama present, no school dropdown)")
 
             # 4.3 Attempt Foreign School Query (?school_id=2)
