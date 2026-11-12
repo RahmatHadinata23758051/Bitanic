@@ -16,6 +16,7 @@ backlog.md
 docs/*
 !docs/architecture/
 !docs/runbooks/
+!docs/screenshots/
 
 # ==============================================================================
 # Baseline Assets & Database Dumps (Sensitive / Archive Assets)
