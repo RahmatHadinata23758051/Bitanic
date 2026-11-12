@@ -150,9 +150,11 @@ Expected output:
 Bitanic uses database or Redis queues for asynchronous email delivery (`SendSchoolLicenseReminderJob`) and Gemini crop recommendations (`GenerateCropRecommendationJob`).
 
 ### 5.1 Worker Concurrency & Safety Principles
-- **Atomic Mutex Claiming**: `SendSchoolLicenseReminderJob` locks notification rows with `lockForUpdate()`, sets status to `processing`, records `claimed_at`, and increments `attempts`. Concurrent worker nodes cannot process the same notification twice.
+- **Atomic Mutex Claiming & 5-Minute Lease**: `SendSchoolLicenseReminderJob` locks notification rows with `lockForUpdate()`, sets status to `processing`, records `claimed_at`, and increments `attempts`. Active leases (`claimed_at > now()->subMinutes(5)`) are respected by concurrent workers and scheduler sweeps.
+- **Orphaned Job Recovery**: If a worker daemon terminates abruptly, leaving a notification in `processing` status beyond 5 minutes, `DispatchSchoolLicenseRemindersAction` and `SendSchoolLicenseReminderJob` automatically reclaim the job if `attempts < 3`. If max attempts (3) are reached, the orphaned notification transitions to `status = unknown`, preventing infinite loops.
+- **Indeterminate SMTP Delivery Protection (`status = unknown`)**: When network timeouts, broken pipes, or connection resets occur during email transmission, the exact delivery outcome is indeterminate. To strictly prevent duplicate email spam to school administrators, notifications reaching max attempts under uncertain transport conditions transition to `status = unknown` rather than blind retries.
 - **Stale Job Protection**: If a job is delayed in queue and `days_remaining < 13`, it is automatically skipped (`status = skipped`) to avoid sending obsolete expiration information.
-- **Retry Policy**: Maximum 3 attempts (`--tries=3`). Failed SMTP deliveries record durable error messages in `school_license_notifications.error_message`.
+- **Retry Policy**: Maximum 3 attempts (`--tries=3`). Deterministic 5xx SMTP rejections record durable error messages in `school_license_notifications.error_message` with `status = failed`.
 
 ### 5.2 Systemd / Supervisor Configuration
 Create `/etc/supervisor/conf.d/bitanic-worker.conf`:
@@ -209,4 +211,29 @@ Execute this verification script prior to routing user traffic:
    - Step A: Validate email templates and recipients with `php artisan bitanic:check-license-reminders --dry-run`.
    - Step B: Update `.env` to `LICENSE_REMINDERS_ENABLED=true` and restart queue workers (`php artisan queue:restart`).
    - Step C: Once all schools possess valid first-year licenses or active terms, enable enforcement: `LICENSE_ENFORCEMENT_ENABLED=true`.
+
+---
+
+## 7. Production Seeding & Authentication Security Protocol (`SEC-AUTH-SEED-01`)
+
+### 7.1 Strict Credential Authentication
+- **Zero Alternate Password Matching**: `AuthController::login()` strictly uses standard Laravel `Auth::attempt()`. All developer fallback passwords (`password123`, `Password123!`, `password`) and silent hash updates are eradicated.
+- **Credential Immutability**: Successful logins never modify or re-hash stored user credentials without user initiation.
+- **Uncompromised Security Gates**: Rate limiting (5 attempts/min per IP + email), initial password change requirements (`must_change_password`), and tenant status verification remain fail-closed.
+
+### 7.2 Production Seeder Isolation
+Bitanic strictly distinguishes authoritative institutional reference data from ephemeral development fixtures:
+
+| Seeder Class | Type | Allowed Environments | Production Behavior |
+| :--- | :--- | :--- | :--- |
+| `IndonesianRegionsSeeder` | Reference Master | All (`production`, `staging`, `local`, `testing`) | Authoritative Kemendagri hierarchy sync |
+| `SubscriptionPlanSeeder` | Reference Master | All (`production`, `staging`, `local`, `testing`) | Authoritative subscription tier catalog |
+| `ModulePracticumSeeder` | Reference Master | All (`production`, `staging`, `local`, `testing`) | Official 12 ATPH Kurikulum Merdeka modules |
+| `VocationalLmsSeeder` | Demo Fixture | `local`, `testing`, `browser_e2e` ONLY | **PROHIBITED**: Throws `\RuntimeException` in prod/staging |
+| `TrainerKitSeeder` | Demo Fixture | `local`, `testing`, `browser_e2e` ONLY | **PROHIBITED**: Throws `\RuntimeException` in prod/staging |
+| `DatabaseSeeder` | Orchestrator | All (`production`, `staging`, `local`, `testing`) | Executes reference seeders, detects production, warns and exits before demo fixtures |
+
+> [!CAUTION]
+> Demo accounts (`admin@smk.id`, `guru@smk.id`, `siswa@smk.id`), simulated devices (`TK-01`), and test telemetry must NEVER be seeded in staging or production. Operational databases must never be truncated or wiped.
+
 

@@ -975,10 +975,41 @@ Implemented and verified the complete Final Integration & Release Readiness deli
    - **Vite Production Build**: 98.43 kB CSS, 1,875.93 kB JS built in 21.72s.
    - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
 
+### 2.7.7 — Final Security Release Gate: Authentication Hardening, Production-Safe Seeding, and Email Recovery (`SEC-AUTH-SEED-01` & `RELEASE-READINESS-01`) (2026-11-12)
+
+Implemented and verified the complete Final Security Release Gate:
+
+1. **Authentication Hardening (`SEC-AUTH-SEED-01`)**:
+   - `AuthController::login()`: Eradicated all developer fallback password matching (`password123`, `Password123!`, `password`) and silent password hash updating logic. Authentication now exclusively evaluates stored bcrypt hashes via standard Laravel `Auth::attempt()`.
+   - Verified that successful authentications never modify stored hashes.
+   - Preserved rate limiting (5 attempts/min per IP + email), initial password change redirection (`must_change_password`), and role/tenant verification.
+   - Verified with negative authentication regression tests in `SchoolLicenseReleaseReadinessAndHardeningTest`.
+
+2. **Production-Safe Seeder Isolation (`SEC-AUTH-SEED-01`)**:
+   - `VocationalLmsSeeder` & `TrainerKitSeeder`: Added hard runtime guard throwing `\RuntimeException` if invoked directly in `production` or `staging`.
+   - `DatabaseSeeder`: Restructured execution order so authoritative reference master seeders (`IndonesianRegionsSeeder`, `SubscriptionPlanSeeder`, `ModulePracticumSeeder`) execute safely in all environments, while demo accounts, fake devices (`TK-01`), and test fixtures are cleanly skipped in production/staging without modifying operational databases.
+   - Verified by tests running `db:seed --force` in simulated production.
+
+3. **Email Failure Recovery & Concurrency Hardening (`RELEASE-READINESS-01`)**:
+   - `SchoolLicenseNotification`: Added `STATUS_UNKNOWN = 'unknown'` and `isUnknown()` helper.
+   - `SendSchoolLicenseReminderJob`: Added 5-minute worker lease protection (`claimed_at > now()->subMinutes(5)`) preventing race conditions, and automatic reclamation of orphaned processing jobs (`claimed_at <= now()->subMinutes(5)`) when `attempts < 3`.
+   - Indeterminate SMTP Delivery: Indeterminate network failures (socket timeout, broken pipe, connection reset) at max attempts (3x) transition status to `STATUS_UNKNOWN` rather than blind retries, strictly preventing duplicate email spam to school administrators.
+   - `DispatchSchoolLicenseRemindersAction`: Automatically detects and reclaims orphaned processing notifications whose worker terminated abruptly, and transitions exhausted orphaned jobs to `STATUS_UNKNOWN`.
+
+4. **Quality Gates & Acceptance Verification**:
+   - **SQLite In-Memory Full Suite**: 584 passed, 0 failures, 5 skipped (3,320 assertions) in 55.43s.
+   - **PostgreSQL 17.6 Full Suite (`bitanic_test`)**: 585 passed, 0 failures, 4 skipped (3,332 assertions) in 137.68s.
+   - **Real Browser E2E Interaction Test Suite**: All 26 scenarios passed completely (100% PASS) on Playwright Headless Chromium against isolated port 8008 server.
+   - **Laravel Pint**: 100% clean code formatting (`./vendor/bin/pint --test`).
+   - **Vite Production Build**: 98.43 kB CSS, 1,875.93 kB JS built in 20.36s.
+   - **Baseline Assets**: `upi-edge/` and `dump_upiedge.sql` verified 100% clean and unmodified.
+
 ### 2.8 — Newly Recorded Follow-up Tasks
 
 | New ID | Task / status | Evidence | Remaining work and guardrails |
 | :--- | :--- | :--- | :--- |
+| SEC-AUTH-SEED-01 | Strict Authentication & Production-Safe Seeding — DONE | Removed all dev password fallback matching and silent hash updates from `AuthController::login()`. Protected `DatabaseSeeder`, `VocationalLmsSeeder`, and `TrainerKitSeeder` against execution in production/staging environments. Verified by 8 new security regression tests (81 assertions) across SQLite and PostgreSQL. | Complete with 0 regressions. |
+| RELEASE-READINESS-01 | Staging/Production Release Readiness & Email Recovery — DONE | Configured scheduler to `Asia/Jakarta` at 07:00 WIB, implemented 5-minute worker lease claiming, orphaned job recovery, indeterminate SMTP `STATUS_UNKNOWN` protection, comprehensive deployment runbook at `docs/runbooks/PRODUCTION_DEPLOYMENT_RUNBOOK.md`. Full dual-driver and E2E verification (585 tests, 26 E2E scenarios). | Complete with 0 regressions. |
 | MAINT-01 | Group controllers into domain namespaces — DONE | Reorganized all 14 controllers into domain namespaces (`Academic\\`, `IoT\\`, `Agronomy\\`, `Admin\\`); preserved backward-compatible deprecated root wrappers; updated routes and imports; verified with `ControllerDomainNamespaceTest` (8 tests, 126 assertions). Commits `6c7c8bd`–`927b23e`, `fe0ded8`, `6c49eef`. | Complete with 0 regressions. |
 | MEDIA-SEC-01 | Planting media tenant isolation, RBAC hardening, and functional views — DONE | Audited `/media` resource against PRD and Architecture; added additive migration for school ownership (`2026_01_01_000023_add_school_id_to_media_table`); secured routes with `auth` and `role:guru,superuser`; implemented fail-closed tenant resolution, school-scoped device and telemetry joins, cross-school IDOR protection; created missing functional views (`pages.media.index`, `pages.media.create`, `pages.media.edit`); updated role-aware sidebar navigation; verified with 11 tests (72 assertions) in `PlantingMediaSecurityAndCrudTest` and route matrix. | Complete with 0 regressions. |
 | LEGACY-01 | Subscription/Midtrans dependency, route, and data-retention audit — DONE | Completed full dependency audit across routes, controllers, actions, services, models, migrations, and seeders. Disabled public subscription routes (`/subscription`, `/subscription/checkout`), removed sidebar link, preserved active entitlement bridge `SubscriptionService` for AI quota, and maintained all historic financial records intact with zero deletions or truncations. Verified with `LegacySubscriptionIsolationTest` (2 tests, 8 assertions). | Full suite: 222 passed, 4 skipped, 0 failures, 0 regressions. |
