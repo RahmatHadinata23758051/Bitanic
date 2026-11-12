@@ -20,6 +20,8 @@ class SchoolLicenseNotification extends Model
 
     public const STATUS_SKIPPED = 'skipped';
 
+    public const STATUS_UNKNOWN = 'unknown';
+
     public const TYPE_REMINDER_H14 = 'reminder_h14';
 
     public const CHANNEL_MAIL = 'mail';
@@ -87,5 +89,10 @@ class SchoolLicenseNotification extends Model
     public function isFailed(): bool
     {
         return $this->status === self::STATUS_FAILED;
+    }
+
+    public function isUnknown(): bool
+    {
+        return $this->status === self::STATUS_UNKNOWN;
     }
 }

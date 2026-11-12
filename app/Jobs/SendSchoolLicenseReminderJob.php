@@ -51,11 +51,12 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
                 return null;
             }
 
-            // Already sent, skipped, or currently claimed by an active worker (< 5 min timeout)
-            if ($notification->isSent() || $notification->isSkipped()) {
+            // Already sent, skipped, or unknown delivery result (do not blindly re-attempt)
+            if ($notification->isSent() || $notification->isSkipped() || $notification->isUnknown()) {
                 return null;
             }
 
+            // If currently claimed by an active worker (< 5 min timeout lease), do not touch
             if ($notification->isProcessing() && $notification->claimed_at && $notification->claimed_at->gt(now()->subMinutes(5))) {
                 return null;
             }
@@ -70,10 +71,15 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
                 return null;
             }
 
+            $isOrphanRecovery = $notification->isProcessing() && $notification->claimed_at && $notification->claimed_at->lte(now()->subMinutes(5));
+
             $notification->update([
                 'status' => SchoolLicenseNotification::STATUS_PROCESSING,
                 'claimed_at' => now(),
                 'attempts' => $notification->attempts + 1,
+                'error_message' => $isOrphanRecovery
+                    ? 'Memulihkan pemrosesan dari worker yang terputus (lease expired).'
+                    : $notification->error_message,
             ]);
 
             return $notification;
@@ -175,15 +181,27 @@ class SendSchoolLicenseReminderJob implements ShouldQueue
                 'reason' => 'Sistem otomatisasi pengingat lisensi Bitanic H-14',
             ]);
         } catch (Throwable $e) {
+            $isUncertainTransport = str_contains(strtolower($e->getMessage()), 'timeout')
+                || str_contains(strtolower($e->getMessage()), 'timed out')
+                || str_contains(strtolower($e->getMessage()), 'connection reset')
+                || str_contains(strtolower($e->getMessage()), 'broken pipe')
+                || str_contains(strtolower($e->getMessage()), 'transport');
+
             Log::error('SendSchoolLicenseReminderJob failed', [
                 'notification_id' => $this->notification->id,
                 'recipient' => $this->notification->recipient_email,
                 'attempt' => $this->notification->attempts,
+                'uncertain_delivery' => $isUncertainTransport,
                 'error' => $e->getMessage(),
             ]);
 
+            // If max attempts reached and delivery outcome is uncertain, mark as STATUS_UNKNOWN to prevent duplicate sends
+            $newStatus = ($this->notification->attempts >= 3 && $isUncertainTransport)
+                ? SchoolLicenseNotification::STATUS_UNKNOWN
+                : SchoolLicenseNotification::STATUS_FAILED;
+
             $this->notification->update([
-                'status' => SchoolLicenseNotification::STATUS_FAILED,
+                'status' => $newStatus,
                 'error_message' => substr($e->getMessage(), 0, 1000),
             ]);
 

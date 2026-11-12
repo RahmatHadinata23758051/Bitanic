@@ -157,14 +157,58 @@ class DispatchSchoolLicenseRemindersAction
                         ->lockForUpdate()
                         ->first();
 
-                    if ($existing && ($existing->isSent() || $existing->isQueued() || $existing->isProcessing() || $existing->isSkipped())) {
+                    if ($existing && ($existing->isSent() || $existing->isQueued() || $existing->isSkipped() || $existing->isUnknown())) {
                         $summary['skipped_existing']++;
                         $summary['details'][] = [
                             'license_number' => $license->license_number,
                             'school' => $school->name,
                             'recipient' => $admin->email,
                             'status' => 'skipped',
-                            'reason' => "Pengingat sudah pernah dibuat atau terkirim (ID: {$existing->id}, Status: {$existing->status}).",
+                            'reason' => "Pengingat sudah pernah diproses (ID: {$existing->id}, Status: {$existing->status}).",
+                        ];
+
+                        return;
+                    }
+
+                    if ($existing && $existing->isProcessing()) {
+                        // If worker lease is active (< 5 min), active worker owns it
+                        if ($existing->claimed_at && $existing->claimed_at->gt(now()->subMinutes(5))) {
+                            $summary['skipped_existing']++;
+                            $summary['details'][] = [
+                                'license_number' => $license->license_number,
+                                'school' => $school->name,
+                                'recipient' => $admin->email,
+                                'status' => 'skipped',
+                                'reason' => "Pengingat sedang diproses oleh worker aktif (ID: {$existing->id}).",
+                            ];
+
+                            return;
+                        }
+
+                        // Orphaned processing: lease expired (> 5 min)
+                        if ($existing->attempts >= 3) {
+                            $existing->update([
+                                'status' => SchoolLicenseNotification::STATUS_UNKNOWN,
+                                'error_message' => 'Sesi worker terputus dan telah mencapai batas maksimal percobaan (3x).',
+                            ]);
+                            $summary['skipped_existing']++;
+
+                            return;
+                        }
+
+                        // Recover orphaned processing: re-dispatch to queue
+                        $existing->update([
+                            'status' => SchoolLicenseNotification::STATUS_QUEUED,
+                            'claimed_at' => null,
+                        ]);
+                        SendSchoolLicenseReminderJob::dispatch($existing);
+                        $summary['queued']++;
+                        $summary['details'][] = [
+                            'license_number' => $license->license_number,
+                            'school' => $school->name,
+                            'recipient' => $admin->email,
+                            'status' => 'recovered_orphaned',
+                            'notification_id' => $existing->id,
                         ];
 
                         return;
