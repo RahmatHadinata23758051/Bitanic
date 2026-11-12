@@ -22,6 +22,10 @@ class School extends Model
         'province_code',
         'regency_code',
         'district_code',
+        'latitude',
+        'longitude',
+        'coordinate_source',
+        'coordinate_verified_at',
         'phone',
         'status',
         'settings',
@@ -30,8 +34,18 @@ class School extends Model
     protected function casts(): array
     {
         return [
+            'latitude' => 'float',
+            'longitude' => 'float',
+            'coordinate_verified_at' => 'datetime',
             'settings' => 'array',
         ];
+    }
+
+    public function hasVerifiedCoordinates(): bool
+    {
+        return $this->latitude !== null
+            && $this->longitude !== null
+            && $this->coordinate_verified_at !== null;
     }
 
     public function provinceRelation(): BelongsTo

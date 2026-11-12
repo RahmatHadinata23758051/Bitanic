@@ -278,6 +278,39 @@
                             class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
                         >{{ old('address') }}</textarea>
                     </div>
+
+                    <div class="sm:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        <div>
+                            <label for="latitude" class="block text-xs font-semibold text-slate-700 mb-1">
+                                Garis Lintang (Latitude) <span class="text-slate-400 font-normal">(Opsional GIS)</span>
+                            </label>
+                            <input
+                                type="number"
+                                step="any"
+                                id="latitude"
+                                name="latitude"
+                                value="{{ old('latitude') }}"
+                                placeholder="-6.2088000"
+                                class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
+                            >
+                            <p class="text-[11px] text-slate-400 mt-1">Koordinat desimal lintang (contoh: -6.917464).</p>
+                        </div>
+                        <div>
+                            <label for="longitude" class="block text-xs font-semibold text-slate-700 mb-1">
+                                Garis Bujur (Longitude) <span class="text-slate-400 font-normal">(Opsional GIS)</span>
+                            </label>
+                            <input
+                                type="number"
+                                step="any"
+                                id="longitude"
+                                name="longitude"
+                                value="{{ old('longitude') }}"
+                                placeholder="106.8456000"
+                                class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
+                            >
+                            <p class="text-[11px] text-slate-400 mt-1">Koordinat desimal bujur (contoh: 107.619123).</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 

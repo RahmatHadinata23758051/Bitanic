@@ -88,6 +88,9 @@ class SchoolMasterController extends Controller
             'address' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:30'],
             'status' => ['required', 'in:active,inactive'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'coordinate_source' => ['nullable', 'string', 'max:50'],
         ], [
             'name.required' => 'Nama sekolah wajib diisi.',
             'npsn.unique' => 'NPSN sudah terdaftar pada sekolah lain.',
@@ -136,6 +139,16 @@ class SchoolMasterController extends Controller
         $province = Province::find($validated['province_code']);
         $validated['province'] = $province?->name ?? '';
         $validated['city'] = $regency->name;
+
+        if (! empty($validated['latitude']) && ! empty($validated['longitude'])) {
+            $validated['coordinate_source'] = $validated['coordinate_source'] ?? 'manual_input';
+            $validated['coordinate_verified_at'] = now();
+        } else {
+            $validated['latitude'] = null;
+            $validated['longitude'] = null;
+            $validated['coordinate_source'] = null;
+            $validated['coordinate_verified_at'] = null;
+        }
 
         $school = DB::transaction(function () use ($validated) {
             $school = School::create($validated);
@@ -226,6 +239,9 @@ class SchoolMasterController extends Controller
             'address' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:30'],
             'status' => ['required', 'in:active,inactive'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'coordinate_source' => ['nullable', 'string', 'max:50'],
         ]);
 
         // Hierarchical validation: Regency must belong to Province
@@ -257,7 +273,17 @@ class SchoolMasterController extends Controller
         $validated['province'] = $province?->name ?? '';
         $validated['city'] = $regency->name;
 
-        $oldAttributes = $school->only(['name', 'npsn', 'slug', 'province_code', 'regency_code', 'district_code', 'status', 'address', 'phone']);
+        if (! empty($validated['latitude']) && ! empty($validated['longitude'])) {
+            $validated['coordinate_source'] = $validated['coordinate_source'] ?? 'manual_input';
+            $validated['coordinate_verified_at'] = now();
+        } else {
+            $validated['latitude'] = null;
+            $validated['longitude'] = null;
+            $validated['coordinate_source'] = null;
+            $validated['coordinate_verified_at'] = null;
+        }
+
+        $oldAttributes = $school->only(['name', 'npsn', 'slug', 'province_code', 'regency_code', 'district_code', 'status', 'address', 'phone', 'latitude', 'longitude']);
 
         DB::transaction(function () use ($school, $validated, $oldAttributes) {
             $school->update($validated);

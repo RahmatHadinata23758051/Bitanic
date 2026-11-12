@@ -179,6 +179,24 @@
                     </dd>
                 </div>
 
+                <div class="sm:col-span-2 border-b border-slate-100 pb-3">
+                    <dt class="text-slate-500 mb-0.5">Koordinat Geografis (Peta GIS)</dt>
+                    <dd class="font-medium text-slate-900 flex items-center gap-3">
+                        @if($school->hasVerifiedCoordinates())
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span class="font-mono font-bold">{{ number_format($school->latitude, 6) }}, {{ number_format($school->longitude, 6) }}</span>
+                            </span>
+                            <span class="text-xs text-slate-400">Sumber: {{ $school->coordinate_source ?? 'manual_input' }}</span>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 text-xs">
+                                <i data-lucide="map-pin-off" class="w-3.5 h-3.5 text-slate-400"></i>
+                                <span>Lokasi belum dipetakan</span>
+                            </span>
+                        @endif
+                    </dd>
+                </div>
+
                 <div class="sm:col-span-2">
                     <dt class="text-slate-500 mb-0.5">Nama Laboratorium Smart Greenhouse</dt>
                     <dd class="font-medium text-slate-900">
