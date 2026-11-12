@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -50,25 +49,6 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
         $loggedIn = Auth::attempt($credentials, $request->boolean('remember'));
-
-        // Local development convenience: allow common dev password variants for seed users
-        if (! $loggedIn && app()->environment('local')) {
-            $candidateUser = User::where('email', $request->input('email'))->first();
-            if ($candidateUser) {
-                $devPasswords = ['password123', 'Password123!', 'password'];
-                if (in_array($request->input('password'), $devPasswords, true)) {
-                    foreach ($devPasswords as $devPass) {
-                        if (Hash::check($devPass, $candidateUser->password)) {
-                            $candidateUser->password = Hash::make($request->input('password'));
-                            $candidateUser->save();
-                            Auth::login($candidateUser, $request->boolean('remember'));
-                            $loggedIn = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
 
         if (! $loggedIn) {
             RateLimiter::hit($throttleKey, 60);
