@@ -220,4 +220,67 @@ class SchoolWorkspaceHubTest extends TestCase
         $response->assertSee('Belum ada agenda jadwal praktikum');
         $response->assertSee('Belum ada laporan LKS terkumpul');
     }
+
+    public function test_superuser_can_provision_school_admin_account_from_hub(): void
+    {
+        $response = $this->actingAs($this->superuser)
+            ->post(route('master.schools.admins.store', $this->school), [
+                'name' => 'Ahmad Fathoni, M.Kom',
+                'email' => 'ahmad.admin@smk-hub.sch.id',
+                'password' => 'BitanicSecret2026!',
+            ]);
+
+        $response->assertRedirect(route('master.schools.show', ['school' => $this->school, 'tab' => 'teachers']));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'Ahmad Fathoni, M.Kom',
+            'email' => 'ahmad.admin@smk-hub.sch.id',
+            'role' => 'admin_sekolah',
+            'school_id' => $this->school->id,
+            'must_change_password' => true,
+        ]);
+
+        $adminUser = User::where('email', 'ahmad.admin@smk-hub.sch.id')->first();
+        $this->assertNotNull($adminUser);
+        $this->assertDatabaseHas('user_profiles', [
+            'user_id' => $adminUser->id,
+            'type' => 'guru',
+            'specialization' => 'Administrator Institusi',
+        ]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'school_id' => $this->school->id,
+            'action' => 'school_admin.provisioned',
+            'target_id' => (string) $adminUser->id,
+        ]);
+    }
+
+    public function test_school_admin_provisioning_enforces_unique_email_and_auth_gates(): void
+    {
+        // Non-superuser cannot provision
+        $teacher = User::factory()->create([
+            'role' => 'guru',
+            'school_id' => $this->school->id,
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('master.schools.admins.store', $this->school), [
+                'name' => 'Hacker Admin',
+                'email' => 'hacker@school.id',
+                'password' => 'secret12345',
+            ])
+            ->assertForbidden();
+
+        // Duplicate email rejected
+        User::factory()->create(['email' => 'existing.user@school.id']);
+
+        $this->actingAs($this->superuser)
+            ->post(route('master.schools.admins.store', $this->school), [
+                'name' => 'Duplicate Admin',
+                'email' => 'existing.user@school.id',
+                'password' => 'secret12345',
+            ])
+            ->assertSessionHasErrors(['email']);
+    }
 }

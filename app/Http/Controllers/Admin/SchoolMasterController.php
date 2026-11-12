@@ -14,6 +14,7 @@ use App\Models\School;
 use App\Models\SchoolSetting;
 use App\Models\StudentReport;
 use App\Models\User;
+use App\Models\UserProfile;
 use App\Services\Hardware\DeviceAvailabilityResolver;
 use App\Services\License\SchoolLicenseResolver;
 use Carbon\Carbon;
@@ -299,6 +300,55 @@ class SchoolMasterController extends Controller
             'reportsCount',
             'recentAudits'
         ));
+    }
+
+    /**
+     * Provision or assign a School Admin for a specific school.
+     */
+    public function storeAdmin(Request $request, School $school): RedirectResponse
+    {
+        Gate::authorize('update', $school);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8'],
+        ]);
+
+        $admin = DB::transaction(function () use ($validated, $school) {
+            $admin = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => bcrypt($validated['password']),
+                'role' => 'admin_sekolah',
+                'school_id' => $school->id,
+                'is_active' => true,
+                'must_change_password' => true,
+            ]);
+
+            UserProfile::create([
+                'user_id' => $admin->id,
+                'type' => 'guru',
+                'specialization' => 'Administrator Institusi',
+            ]);
+
+            AuditLog::create([
+                'school_id' => $school->id,
+                'user_id' => Auth::id(),
+                'actor_name' => Auth::user()?->name ?? 'Superuser',
+                'actor_role' => Auth::user()?->role ?? 'superuser',
+                'action' => 'school_admin.provisioned',
+                'target_type' => 'user',
+                'target_id' => (string) $admin->id,
+                'details' => "Akun Admin Sekolah dibuat: {$admin->name} ({$admin->email}) untuk sekolah {$school->name}",
+                'ip_address' => request()->ip(),
+            ]);
+
+            return $admin;
+        });
+
+        return redirect()->route('master.schools.show', ['school' => $school, 'tab' => 'teachers'])
+            ->with('success', "Akun Admin Sekolah '{$admin->name}' ({$admin->email}) berhasil dibuat.");
     }
 
     /**

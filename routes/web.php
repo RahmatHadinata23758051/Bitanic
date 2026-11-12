@@ -163,6 +163,7 @@ Route::middleware(['auth', 'role:superuser'])->prefix('master')->name('master.')
     Route::match(['PATCH', 'POST'], '/schools/{school}/toggle-status', [SchoolMasterController::class, 'toggleStatus'])->name('schools.toggle-status');
     Route::post('/schools/{school}/verify-coordinates', [SchoolMasterController::class, 'verifyCoordinates'])->name('schools.verify-coordinates');
     Route::post('/schools/{school}/unverify-coordinates', [SchoolMasterController::class, 'unverifyCoordinates'])->name('schools.unverify-coordinates');
+    Route::post('/schools/{school}/admins', [SchoolMasterController::class, 'storeAdmin'])->name('schools.admins.store');
     Route::delete('/schools/{school}', [SchoolMasterController::class, 'destroy'])->name('schools.destroy');
 
     // Master Trainer Kit Inventory & Activation (DEVICE-04-01 & DEVICE-04-02)

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div x-data="{ activeTab: '{{ request('tab', 'profile') }}' }" class="max-w-7xl mx-auto space-y-6">
+<div x-data="{ activeTab: '{{ request('tab', 'profile') }}', showCreateAdminModal: false }" class="max-w-7xl mx-auto space-y-6">
 
     <!-- Breadcrumb & Hub Header -->
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -706,10 +706,16 @@
                     </h3>
                     <p class="text-xs text-slate-500 mt-0.5">Penanggung jawab teknis sekolah untuk mengelola data guru, siswa, dan rombel.</p>
                 </div>
-                <a href="{{ url('/users-data') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0c3c26] text-white text-xs font-semibold hover:bg-[#0a3120] transition-colors shadow-2xs">
-                    <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-                    <span>Kelola Pengguna di Direktori</span>
-                </a>
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="showCreateAdminModal = true" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors shadow-2xs">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span>Tambah Admin Sekolah</span>
+                    </button>
+                    <a href="{{ url('/users-data') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors">
+                        <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                        <span>Direktori Pengguna</span>
+                    </a>
+                </div>
             </div>
 
             @if($schoolAdmins->isNotEmpty())
@@ -740,14 +746,20 @@
                     </table>
                 </div>
             @else
-                <div class="p-5 rounded-xl border border-amber-200 bg-amber-50/60 flex items-start gap-3">
-                    <i data-lucide="alert-circle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
-                    <div class="space-y-1 text-xs">
-                        <p class="font-bold text-amber-900">Belum Ada Akun Admin Sekolah Terdaftar</p>
-                        <p class="text-amber-800">
-                            Sekolah ini belum memiliki akun pengelola institusi (<code class="font-mono">admin_sekolah</code>). Superuser dapat membuat akun Admin Sekolah melalui menu Direktori Pengguna dengan mengaitkannya ke sekolah ini.
-                        </p>
+                <div class="p-5 rounded-xl border border-amber-200 bg-amber-50/60 flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <i data-lucide="alert-circle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+                        <div class="space-y-1 text-xs">
+                            <p class="font-bold text-amber-900">Belum Ada Akun Admin Sekolah Terdaftar</p>
+                            <p class="text-amber-800">
+                                Sekolah ini belum memiliki akun pengelola institusi (<code class="font-mono">admin_sekolah</code>). Superuser dapat langsung membuat akun Admin Sekolah di bawah ini.
+                            </p>
+                        </div>
                     </div>
+                    <button type="button" @click="showCreateAdminModal = true" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition-colors">
+                        <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                        <span>Buat Akun Admin</span>
+                    </button>
                 </div>
             @endif
         </div>
@@ -985,6 +997,83 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Provision Admin Sekolah (TASK 3.3) -->
+    <div x-show="showCreateAdminModal" 
+         x-cloak 
+         class="fixed inset-0 z-50 overflow-y-auto"
+         aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div x-show="showCreateAdminModal" 
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 @click="showCreateAdminModal = false"
+                 class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" aria-hidden="true"></div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div x-show="showCreateAdminModal"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-200">
+                
+                <form action="{{ route('master.schools.admins.store', $school) }}" method="POST">
+                    @csrf
+                    <div class="p-6">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900">Buat Akun Admin Sekolah</h3>
+                                    <p class="text-xs text-slate-500 mt-0.5">Institusi: <strong class="text-slate-800">{{ $school->name }}</strong></p>
+                                </div>
+                            </div>
+                            <button type="button" @click="showCreateAdminModal = false" class="text-slate-400 hover:text-slate-600">
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap Admin <span class="text-rose-500">*</span></label>
+                                <input type="text" name="name" required placeholder="Contoh: Budi Santoso, S.Kom" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Email Akun (Login) <span class="text-rose-500">*</span></label>
+                                <input type="email" name="email" required placeholder="admin@sekolah.sch.id" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-hidden">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Kata Sandi Awal <span class="text-rose-500">*</span></label>
+                                <input type="password" name="password" required minlength="8" placeholder="Minimal 8 karakter" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-hidden">
+                                <p class="text-[11px] text-slate-400 mt-1">Admin wajib mengganti kata sandi ini pada saat login perdana.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                        <button type="button" @click="showCreateAdminModal = false" class="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-white transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white shadow-xs transition-colors">
+                            Simpan Akun Admin
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
