@@ -646,6 +646,54 @@ class DashboardTest extends TestCase
         $monitoring->assertDontSee('TK-FILTER-B');
     }
 
+    public function test_superuser_macro_dashboard_renders_aggregate_metrics_map_and_school_hub_links(): void
+    {
+        $school = School::create([
+            'npsn' => '20209999',
+            'name' => 'SMK Pertanian Nusantara Test',
+            'slug' => 'smk-pertanian-nusantara-test',
+            'city' => 'Bandung',
+            'province' => 'Jawa Barat',
+            'latitude' => -6.9175,
+            'longitude' => 107.6191,
+            'coordinate_verified_at' => now(),
+            'status' => 'active',
+        ]);
+
+        $superuser = User::factory()->create(['role' => 'superuser']);
+
+        $student = User::factory()->create([
+            'name' => 'Ahmad Praktikan',
+            'role' => 'siswa',
+            'school_id' => $school->id,
+        ]);
+        UserProfile::create([
+            'user_id' => $student->id,
+            'type' => 'siswa',
+            'identifier_number' => '0012345678',
+        ]);
+
+        Device::create([
+            'school_id' => $school->id,
+            'code' => 'TK-MACRO-01',
+            'name' => 'Bitanic Kit Macro 01',
+            'connection_type' => 'modbus_rs485',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($superuser)->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Pusat Kendali Eksekutif &amp; Infrastruktur Nasional', false);
+        $response->assertSee('Sebaran Geografis &amp; Status Lisensi Sekolah Mitra', false);
+        $response->assertSee('SMK Pertanian Nusantara Test');
+        $response->assertSee('NPSN: 20209999');
+        $response->assertSee('Buka Hub Sekolah');
+        $response->assertSee(route('master.schools.show', $school->id));
+        $response->assertSee('Ahmad Praktikan');
+        $response->assertSee('0012345678');
+    }
+
     public function test_guest_does_not_see_private_network_address_or_school_attendance(): void
     {
         $school = School::create([

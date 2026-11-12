@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitanic Architecture Explorer — Peta Interaktif & Penyelarasan Visi</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            leaf: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              300: '#86efac',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+              950: '#052e16',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Alpine.js CDN -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Mermaid.js for crisp diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#090d16',
+        primaryColor: '#166534',
+        primaryTextColor: '#f0fdf4',
+        primaryBorderColor: '#22c55e',
+        lineColor: '#4ade80',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#0f172a'
+      }
+    });
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .active-flow {
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+      border-color: #22c55e !important;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans selection:bg-leaf-600 selection:text-white" x-data="architectureExplorer()">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50 px-4 lg:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-leaf-600/20 border border-leaf-500/30 flex items-center justify-center text-leaf-400 font-bold shadow-lg shadow-leaf-950/50">
+          <i data-lucide="sprout" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+              BITANIC <span class="text-xs px-2 py-0.5 rounded-full bg-leaf-900/60 text-leaf-300 border border-leaf-700/50 font-mono">v1.2 Baseline</span>
+            </h1>
+          </div>
+          <p class="text-xs text-slate-400">Interactive System Architecture Explorer & Vision Alignment Workspace</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+        <button @click="activeTab = 'canvas'" :class="activeTab === 'canvas' ? 'bg-leaf-700/40 text-leaf-300 border-leaf-600/50 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-transparent transition flex items-center gap-1.5">
+          <i data-lucide="network" class="w-4 h-4"></i> Peta Arsitektur
+        </button>
+        <button @click="activeTab = 'simulator'" :class="activeTab === 'simulator' ? 'bg-leaf-700/40 text-leaf-300 border-leaf-600/50 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-transparent transition flex items-center gap-1.5">
+          <i data-lucide="play-circle" class="w-4 h-4"></i> Simulator Alur Data
+        </button>
+        <button @click="activeTab = 'inventory'" :class="activeTab === 'inventory' ? 'bg-leaf-700/40 text-leaf-300 border-leaf-600/50 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-transparent transition flex items-center gap-1.5">
+          <i data-lucide="database" class="w-4 h-4"></i> Database & Komponen
+        </button>
+        <button @click="activeTab = 'vision'" :class="activeTab === 'vision' ? 'bg-emerald-600/40 text-emerald-300 border-emerald-500/50 shadow-sm' : 'text-slate-400 hover:text-slate-200'" class="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-transparent transition flex items-center gap-1.5">
+          <i data-lucide="message-square-plus" class="w-4 h-4"></i> Penyelarasan Gagasan PO
+        </button>
+      </nav>
+
+      <div class="flex items-center space-x-2 text-xs">
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          HEAD: 99cb9ef
+        </span>
+        <button @click="openInspector(null)" class="text-slate-400 hover:text-white px-2 py-1" title="Panduan">
+          <i data-lucide="help-circle" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Area -->
+  <main class="flex-1 overflow-y-auto p-4 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+
+    <!-- =============================================================== -->
+    <!-- TAB 1: PETA ARSITEKTUR INTERAKTIF -->
+    <!-- =============================================================== -->
+    <div x-show="activeTab === 'canvas'" class="space-y-6">
+      
+      <!-- Top banner for explanation -->
+      <div class="glass-card rounded-2xl p-5 border-l-4 border-l-leaf-500 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-semibold text-white flex items-center gap-2">
+            <i data-lucide="layers" class="w-5 h-5 text-leaf-400"></i> Peta Lapisan Sistem (3-Tier Layered Architecture)
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Klik pada blok manapun untuk menginspeksi file controller, single-action, tabel database, batas keamanan, serta mengevaluasi apakah sudah sesuai gagasan Anda.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">6 Lapisan Logis</span>
+          <span class="px-2.5 py-1 rounded-lg bg-leaf-950 text-leaf-300 border border-leaf-800">PostgreSQL 17 Multi-Tenancy</span>
+        </div>
+      </div>
+
+      <!-- Architecture Layers Grid -->
+      <div class="grid grid-cols-1 gap-6">
+
+        <!-- LAYER 1: CLIENT & AKTOR -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-800/80 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30"><i data-lucide="users" class="w-4 h-4"></i></span>
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Layer 1: Klien, Pengguna & Perangkat Fisik</span>
+            </div>
+            <span class="text-xs text-slate-500 font-mono">Direct Actors</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- Siswa Card -->
+            <div @click="selectComponent('user-siswa')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-800/50 cursor-pointer transition group">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-white group-hover:text-blue-400">Siswa (Role: siswa)</span>
+                <i data-lucide="graduation-cap" class="w-4 h-4 text-slate-500 group-hover:text-blue-400"></i>
+              </div>
+              <p class="text-xs text-slate-400 leading-relaxed">Pengisian LKS digital, pemantauan sensor kit meja, snapshot telemetri otomatis, rapor kompetensi.</p>
+              <div class="mt-3 flex gap-1">
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">/modules</span>
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">/reports</span>
+              </div>
+            </div>
+
+            <!-- Guru Card -->
+            <div @click="selectComponent('user-guru')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800/50 cursor-pointer transition group">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-white group-hover:text-emerald-400">Guru (Role: guru)</span>
+                <i data-lucide="award" class="w-4 h-4 text-slate-500 group-hover:text-emerald-400"></i>
+              </div>
+              <p class="text-xs text-slate-400 leading-relaxed">Penjadwalan lab anti-tabrakan, penilaian LKS rubrik 4-skala, review snapshot telemetri, ekspor nilai.</p>
+              <div class="mt-3 flex gap-1">
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">/schedules</span>
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">/assessment</span>
+              </div>
+            </div>
+
+            <!-- Superuser Card -->
+            <div @click="selectComponent('user-admin')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-800/50 cursor-pointer transition group">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-white group-hover:text-purple-400">Superuser / Administrator</span>
+                <i data-lucide="shield-check" class="w-4 h-4 text-slate-500 group-hover:text-purple-400"></i>
+              </div>
+              <p class="text-xs text-slate-400 leading-relaxed">Pengelolaan multi-sekolah, peta persebaran wilayah GIS, registry lisensi LMS, rotasi API key fleet kit.</p>
+              <div class="mt-3 flex gap-1">
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">/master/regions</span>
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">/master/licenses</span>
+              </div>
+            </div>
+
+            <!-- IoT Kit Device Card -->
+            <div @click="selectComponent('iot-device')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-800/50 cursor-pointer transition group">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-white group-hover:text-amber-400">Trainer Kit (ESP32 Gateway)</span>
+                <i data-lucide="cpu" class="w-4 h-4 text-slate-500 group-hover:text-amber-400"></i>
+              </div>
+              <p class="text-xs text-slate-400 leading-relaxed">Sensor 7-in-1 NPK pH EC Suhu Lengas Modbus RS-485 + 4 Relai Aktuator (Pompa, Valve, Fan, Light).</p>
+              <div class="mt-3 flex gap-1">
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">POST /api/v1/telemetry</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- LAYER 2: INGRESS, KEAMANAN & TENANCY -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-800/80 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="p-1.5 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30"><i data-lucide="lock" class="w-4 h-4"></i></span>
+              <span class="text-xs font-bold uppercase tracking-wider text-red-400">Layer 2: Pintu Masuk, Keamanan & Fail-Closed Tenancy</span>
+            </div>
+            <span class="text-xs text-slate-500 font-mono">Security Gate</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <div @click="selectComponent('sec-tenancy')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-red-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-semibold text-white">Fail-Closed School Tenancy</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 font-mono">Anti-IDOR</span>
+              </div>
+              <p class="text-xs text-slate-400">Semua query di-scope ke <code class="text-slate-300">school_id</code>. Request tanpa relasi sekolah ditolak 403. Tidak ada kebocoran antar sekolah.</p>
+            </div>
+
+            <div @click="selectComponent('sec-auth')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-red-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-semibold text-white">Strict Auth & Password Policy</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">Hardened</span>
+              </div>
+              <p class="text-xs text-slate-400">Kewajiban ganti password login perdana (<code class="text-slate-300">must_change_password</code>). Zero backdoor password, proteksi brute-force.</p>
+            </div>
+
+            <div @click="selectComponent('sec-device-key')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-red-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-semibold text-white">Device API Key (SHA-256)</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">Hardware Auth</span>
+              </div>
+              <p class="text-xs text-slate-400">Autentikasi hardware melalui header <code class="text-slate-300">X-Device-Key</code>, pencocokan hash SHA-256, rotasi atomik dan pelacakan <code class="text-slate-300">last_used_at</code>.</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- LAYER 3: DOMAIN ACTIONS & LOGIKA BISNIS -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-800/80 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="p-1.5 rounded-lg bg-leaf-500/20 text-leaf-400 border border-leaf-500/30"><i data-lucide="cpu" class="w-4 h-4"></i></span>
+              <span class="text-xs font-bold uppercase tracking-wider text-leaf-400">Layer 3: Single-Responsibility Actions & Domain Services</span>
+            </div>
+            <span class="text-xs text-slate-500 font-mono">Clean Architecture</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <div @click="selectComponent('act-ingest')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-leaf-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center justify-between">
+                <span>IngestTelemetryAction</span>
+                <span class="text-[10px] text-leaf-400 font-mono">IoT Core</span>
+              </div>
+              <p class="text-xs text-slate-400">Memvalidasi payload sensor, tagging provenance <code class="text-emerald-400">hardware</code>, clamping data, update <code class="text-slate-300">last_seen_at</code>, dan evaluasi anomali.</p>
+            </div>
+
+            <div @click="selectComponent('act-license')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-leaf-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center justify-between">
+                <span>SchoolLicenseResolver</span>
+                <span class="text-[10px] text-leaf-400 font-mono">Entitlement</span>
+              </div>
+              <p class="text-xs text-slate-400">Menghitung status hak akses berdasarkan interval term. Menangani edge-case gap renewal, partisi matematis disjoint terverifikasi.</p>
+            </div>
+
+            <div @click="selectComponent('act-schedule')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-leaf-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center justify-between">
+                <span>CreateScheduleAction</span>
+                <span class="text-[10px] text-leaf-400 font-mono">Academic</span>
+              </div>
+              <p class="text-xs text-slate-400">Penjadwalan lab praktikum dilindungi pessimistic lock PostgreSQL (<code class="text-slate-300">FOR UPDATE</code>), menolak bentrok waktu kit meja secara deterministik.</p>
+            </div>
+
+            <div @click="selectComponent('act-lks')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-leaf-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center justify-between">
+                <span>SubmitStudentReportAction</span>
+                <span class="text-[10px] text-leaf-400 font-mono">LKS Digital</span>
+              </div>
+              <p class="text-xs text-slate-400">Menyimpan jawaban LKS ke riwayat append-only (<code class="text-slate-300">student_report_attempts</code>) dan membekukan snapshot telemetri sensor saat submit.</p>
+            </div>
+
+            <div @click="selectComponent('act-grade')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-leaf-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center justify-between">
+                <span>GradeStudentReportAction</span>
+                <span class="text-[10px] text-leaf-400 font-mono">Penilaian</span>
+              </div>
+              <p class="text-xs text-slate-400">Penilaian rapor berbasis rubrik 4-skala Kurikulum Merdeka. Catatan revisi dan perubahan nilai tersimpan di <code class="text-slate-300">report_grade_histories</code>.</p>
+            </div>
+
+            <div @click="selectComponent('act-gis')" class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-leaf-500/50 hover:bg-slate-800/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center justify-between">
+                <span>SchoolDistributionService</span>
+                <span class="text-[10px] text-leaf-400 font-mono">GIS Wilayah</span>
+              </div>
+              <p class="text-xs text-slate-400">Drilldown 4-tingkat (Provinsi ➔ Kab/Kota ➔ Kecamatan ➔ Sekolah). Memisahkan koordinat tersimpan vs terverifikasi sebelum tampil di peta.</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- LAYER 4: DATABASE & PERSISTENSI POSTGRESQL -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-800/80 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"><i data-lucide="database" class="w-4 h-4"></i></span>
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-400">Layer 4: Penyimpanan Data PostgreSQL 17</span>
+            </div>
+            <span class="text-xs text-slate-500 font-mono">Relational + JSONB</span>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            
+            <div @click="selectComponent('tbl-telemetry')" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white font-mono">telemetry_readings</div>
+              <div class="text-[10px] text-slate-400 mt-1">Composite Index: (device_id, recorded_at DESC)</div>
+            </div>
+
+            <div @click="selectComponent('tbl-reports')" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white font-mono">student_reports</div>
+              <div class="text-[10px] text-slate-400 mt-1">Append-only attempts & grade revision history</div>
+            </div>
+
+            <div @click="selectComponent('tbl-licenses')" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white font-mono">school_license_terms</div>
+              <div class="text-[10px] text-slate-400 mt-1">Interval [start_date, expiration_date)</div>
+            </div>
+
+            <div @click="selectComponent('tbl-devices')" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white font-mono">devices & keys</div>
+              <div class="text-[10px] text-slate-400 mt-1">Fleet kit, JSONB relay state, SHA-256 hash</div>
+            </div>
+
+            <div @click="selectComponent('tbl-audit')" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition">
+              <div class="text-xs font-semibold text-white font-mono">audit_logs</div>
+              <div class="text-[10px] text-slate-400 mt-1">SQL Trigger: Tolak UPDATE/DELETE langsung</div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =============================================================== -->
+    <!-- TAB 2: SIMULATOR ALUR DATA INTERAKTIF -->
+    <!-- =============================================================== -->
+    <div x-show="activeTab === 'simulator'" class="space-y-6">
+      
+      <div class="glass-card rounded-2xl p-5 border-l-4 border-l-emerald-500 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-semibold text-white flex items-center gap-2">
+            <i data-lucide="play-circle" class="w-5 h-5 text-emerald-400"></i> Simulator Alur Data Langkah-demi-Langkah
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Pilih skenario operasional di bawah untuk melihat bagaimana data berpindah dari antarmuka, menembus lapisan keamanan, diproses oleh domain action, dan disimpan ke PostgreSQL.
+          </p>
+        </div>
+      </div>
+
+      <!-- Flow Selector -->
+      <div class="flex flex-wrap gap-2">
+        <button @click="setFlow(1)" :class="currentFlowId === 1 ? 'bg-leaf-700 text-white font-medium shadow-lg' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'" class="px-4 py-2 rounded-xl text-xs border border-slate-800 transition flex items-center gap-2">
+          <span>1. Ingest Sensor IoT 7-in-1</span>
+        </button>
+        <button @click="setFlow(2)" :class="currentFlowId === 2 ? 'bg-leaf-700 text-white font-medium shadow-lg' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'" class="px-4 py-2 rounded-xl text-xs border border-slate-800 transition flex items-center gap-2">
+          <span>2. Siswa Submit LKS Digital</span>
+        </button>
+        <button @click="setFlow(3)" :class="currentFlowId === 3 ? 'bg-leaf-700 text-white font-medium shadow-lg' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'" class="px-4 py-2 rounded-xl text-xs border border-slate-800 transition flex items-center gap-2">
+          <span>3. Guru Menilai LKS (Rubrik)</span>
+        </button>
+        <button @click="setFlow(4)" :class="currentFlowId === 4 ? 'bg-leaf-700 text-white font-medium shadow-lg' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'" class="px-4 py-2 rounded-xl text-xs border border-slate-800 transition flex items-center gap-2">
+          <span>4. Peta GIS & Verifikasi Koordinat</span>
+        </button>
+        <button @click="setFlow(5)" :class="currentFlowId === 5 ? 'bg-leaf-700 text-white font-medium shadow-lg' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'" class="px-4 py-2 rounded-xl text-xs border border-slate-800 transition flex items-center gap-2">
+          <span>5. Pengingat Lisensi Otomatis H-14</span>
+        </button>
+      </div>
+
+      <!-- Flow Execution Card -->
+      <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div>
+            <h3 class="text-base font-bold text-white" x-text="activeFlowData.title"></h3>
+            <p class="text-xs text-slate-400 mt-0.5" x-text="activeFlowData.desc"></p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button @click="prevStep()" :disabled="currentStepIndex === 0" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 disabled:opacity-40 text-xs flex items-center gap-1">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i> Mundur
+            </button>
+            <span class="text-xs text-slate-400 font-mono px-2" x-text="`Langkah ${currentStepIndex + 1} dari ${activeFlowData.steps.length}`"></span>
+            <button @click="nextStep()" :disabled="currentStepIndex === activeFlowData.steps.length - 1" class="px-3 py-1.5 rounded-lg bg-leaf-600 hover:bg-leaf-500 text-white disabled:opacity-40 text-xs flex items-center gap-1">
+              Maju <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step Visual Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <template x-for="(st, idx) in activeFlowData.steps" :key="idx">
+            <div @click="currentStepIndex = idx" :class="currentStepIndex === idx ? 'border-leaf-500 bg-leaf-950/40 ring-1 ring-leaf-500' : 'border-slate-800 bg-slate-900/50 opacity-60 hover:opacity-100'" class="p-3.5 rounded-xl border cursor-pointer transition flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="w-5 h-5 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-[10px] font-mono" x-text="idx + 1"></span>
+                  <span class="text-[10px] font-mono uppercase text-slate-400" x-text="st.layer"></span>
+                </div>
+                <div class="text-xs font-semibold text-white" x-text="st.title"></div>
+              </div>
+              <div class="mt-3 text-[11px] text-slate-400" x-text="st.component"></div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Step Detailed Explanation & Code Sample -->
+        <div class="p-5 rounded-xl bg-slate-900 border border-slate-800 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-leaf-950 text-leaf-400 border border-leaf-800">Detail Eksekusi</span>
+            <h4 class="text-sm font-bold text-white mt-2" x-text="activeFlowData.steps[currentStepIndex].title"></h4>
+            <p class="text-xs text-slate-300 mt-2 leading-relaxed" x-text="activeFlowData.steps[currentStepIndex].description"></p>
+            
+            <div class="mt-4 p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <span class="text-[10px] text-slate-400 block mb-1 font-mono uppercase">Keamanan / Integritas yang Berlaku:</span>
+              <p class="text-xs text-emerald-400 flex items-center gap-1.5" x-text="activeFlowData.steps[currentStepIndex].guard"></p>
+            </div>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs overflow-x-auto">
+            <div class="flex items-center justify-between text-slate-500 pb-2 mb-2 border-b border-slate-800">
+              <span x-text="activeFlowData.steps[currentStepIndex].codeLabel || 'Contoh Payload / Logika'"></span>
+              <span>JSON / PHP</span>
+            </div>
+            <pre class="text-slate-300" x-text="activeFlowData.steps[currentStepIndex].snippet"></pre>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =============================================================== -->
+    <!-- TAB 3: KATALOG KOMPONEN & DATABASE -->
+    <!-- =============================================================== -->
+    <div x-show="activeTab === 'inventory'" class="space-y-6">
+      
+      <div class="glass-card rounded-2xl p-5 border-l-4 border-l-indigo-500">
+        <h2 class="text-base font-semibold text-white flex items-center gap-2">
+          <i data-lucide="database" class="w-5 h-5 text-indigo-400"></i> Inventaris Skema Database & Komponen Inti
+        </h2>
+        <p class="text-sm text-slate-400 mt-1">
+          Struktur data relasional PostgreSQL 17 dengan composite index dan perlindungan multi-tenant.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Tabel Relasi -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-4">
+          <h3 class="text-sm font-bold text-white border-b border-slate-800 pb-2 flex items-center gap-2">
+            <i data-lucide="table" class="w-4 h-4 text-indigo-400"></i> Struktur Tabel Kunci (PostgreSQL 17)
+          </h3>
+          
+          <div class="space-y-3 text-xs">
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="flex items-center justify-between font-mono font-bold text-emerald-400">
+                <span>telemetry_readings</span>
+                <span class="text-[10px] text-slate-400">Time-Series</span>
+              </div>
+              <p class="text-slate-400 mt-1">Menampung parameter 7-in-1: N, P, K, pH, EC, Suhu, Lengas, dan threshold_flags (JSONB).</p>
+              <div class="mt-2 text-[10px] text-slate-500 font-mono">Index: (device_id, recorded_at DESC)</div>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="flex items-center justify-between font-mono font-bold text-blue-400">
+                <span>student_reports & attempts</span>
+                <span class="text-[10px] text-slate-400">Append-Only</span>
+              </div>
+              <p class="text-slate-400 mt-1">Menyimpan riwayat pengumpulan tugas siswa tanpa menimpa data lama. Dilengkapi snapshot telemetri sensor saat submit.</p>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="flex items-center justify-between font-mono font-bold text-amber-400">
+                <span>devices & device_api_keys</span>
+                <span class="text-[10px] text-slate-400">IoT Fleet</span>
+              </div>
+              <p class="text-slate-400 mt-1">Menyimpan status trainer kit meja (`BITANIC-TK-01`..`06`), status relai (JSONB), offset kalibrasi, dan SHA-256 API key.</p>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="flex items-center justify-between font-mono font-bold text-purple-400">
+                <span>school_licenses & terms</span>
+                <span class="text-[10px] text-slate-400">Entitlements</span>
+              </div>
+              <p class="text-slate-400 mt-1">Struktur lisensi berbasis interval tanggal. Menjamin partisi disjoint antara aktif, pending, dan kedaluwarsa.</p>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="flex items-center justify-between font-mono font-bold text-red-400">
+                <span>audit_logs</span>
+                <span class="text-[10px] text-slate-400">Security Trigger</span>
+              </div>
+              <p class="text-slate-400 mt-1">Dilindungi trigger native SQL di PostgreSQL: menolak eksekusi query UPDATE dan DELETE langsung.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Matriks Hak Akses & Namespace Controller -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-4">
+          <h3 class="text-sm font-bold text-white border-b border-slate-800 pb-2 flex items-center gap-2">
+            <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i> Domain Namespaces & Matriks RBAC
+          </h3>
+          
+          <div class="space-y-3 text-xs">
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="font-mono text-leaf-400 font-bold">App\Http\Controllers\Admin\*</div>
+              <p class="text-slate-400 mt-1">Master Wilayah, Master Lisensi, Master Sekolah, Manajemen Trainer Kit, Settings & Audit Trail. (Role: superuser).</p>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="font-mono text-blue-400 font-bold">App\Http\Controllers\Academic\*</div>
+              <p class="text-slate-400 mt-1">12 Modul Praktikum Kurikulum Merdeka, Penjadwalan Lab, Penilaian Rapor 4-Skala, Direktori Siswa. (Role: guru, siswa).</p>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="font-mono text-amber-400 font-bold">App\Http\Controllers\IoT\*</div>
+              <p class="text-slate-400 mt-1">Monitoring IoT Stasiun Meja, Kontrol Simulasi Relai, Kalibrasi Sensor Offset, Raw Hex Logs. (Role: guru, superuser).</p>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <div class="font-mono text-purple-400 font-bold">App\Http\Controllers\Agronomy\*</div>
+              <p class="text-slate-400 mt-1">Analitik Tren Historis Parameter Tanah & Rekomendasi Gemini AI Asinkron.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =============================================================== -->
+    <!-- TAB 4: RUANG PENYELARASAN GAGASAN PO -->
+    <!-- =============================================================== -->
+    <div x-show="activeTab === 'vision'" class="space-y-6">
+      
+      <div class="glass-card rounded-2xl p-6 border-l-4 border-l-emerald-500 space-y-2">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="message-square-plus" class="w-6 h-6 text-emerald-400"></i> Ruang Penyelarasan Visi Product Owner (PO)
+        </h2>
+        <p class="text-sm text-slate-300">
+          Anda menyampaikan bahwa skema saat ini <em>belum sepenuhnya sesuai apa yang Anda gagaskan</em>. Form interaktif ini dirancang agar Anda dapat meninjau titik-titik krusial yang sudah dibangun dan menentukan bagian mana yang perlu diubah atau disesuaikan.
+        </p>
+      </div>
+
+      <!-- Vision Questions / PO Review Checklist -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Pertanyaan 1: Kontrol Hardware & Safety -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-4 h-4"></i> 1. Kontrol Relay & Downlink Hardware
+            </h3>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Hardware Safety</span>
+          </div>
+          <p class="text-xs text-slate-300">
+            <strong>Kondisi Saat Ini:</strong> Kontrol 4 relai (pompa/lampu) di web saat ini berstatus <em>simulasi transparan</em> karena belum ada konfirmasi balik (*positive ACK*) dari firmware ESP32 di lab untuk mencegah bahaya listrik/banjir.
+          </p>
+          <div class="space-y-2 pt-1">
+            <label class="text-xs text-slate-400 block font-medium">Apa gagasan Anda untuk fitur ini?</label>
+            <textarea x-model="poNotes.relay" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-leaf-500 focus:outline-none" placeholder="Contoh: Saya ingin relai langsung terhubung ke MQTT broker dengan durasi otomatis mati 15 menit..."></textarea>
+          </div>
+        </div>
+
+        <!-- Pertanyaan 2: Model Lisensi Sekolah -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+              <i data-lucide="credit-card" class="w-4 h-4"></i> 2. Model Lisensi LMS
+            </h3>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Business Logic</span>
+          </div>
+          <p class="text-xs text-slate-300">
+            <strong>Kondisi Saat Ini:</strong> Lisensi saat ini diikat per sekolah dengan rentang tanggal kontrak (aktif, pending, kedaluwarsa). Ketika kedaluwarsa, akses fitur praktikum terkunci.
+          </p>
+          <div class="space-y-2 pt-1">
+            <label class="text-xs text-slate-400 block font-medium">Apa gagasan Anda untuk lisensi?</label>
+            <textarea x-model="poNotes.license" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-leaf-500 focus:outline-none" placeholder="Contoh: Lisensi seharusnya dibatasi kuota jumlah siswa (misal max 100 siswa per sekolah) atau ada paket starter/pro..."></textarea>
+          </div>
+        </div>
+
+        <!-- Pertanyaan 3: Lingkup Topologi Lab (Offline vs Cloud) -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+              <i data-lucide="wifi" class="w-4 h-4"></i> 3. Topologi Lab: Cloud vs Offline Lab
+            </h3>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Deployment</span>
+          </div>
+          <p class="text-xs text-slate-300">
+            <strong>Kondisi Saat Ini:</strong> Bitanic diasumsikan berjalan secara terpusat (Cloud / Server Sekolah) dengan akses internet untuk memuat tile peta Leaflet dan API Gemini.
+          </p>
+          <div class="space-y-2 pt-1">
+            <label class="text-xs text-slate-400 block font-medium">Apakah lab butuh berjalan 100% tanpa internet (Offline Edge)?</label>
+            <textarea x-model="poNotes.topology" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-leaf-500 focus:outline-none" placeholder="Contoh: Di SMK pedesaan internet sering mati, kami butuh server lokal mini PC di lab yang bisa sync ke cloud saat ada sinyal..."></textarea>
+          </div>
+        </div>
+
+        <!-- Pertanyaan 4: Alur Praktikum Siswa & Guru -->
+        <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-leaf-400 flex items-center gap-1.5">
+              <i data-lucide="book-open" class="w-4 h-4"></i> 4. Alur Praktikum & Rapor Siswa
+            </h3>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Vocational LMS</span>
+          </div>
+          <p class="text-xs text-slate-300">
+            <strong>Kondisi Saat Ini:</strong> Ada 12 modul praktikum digital. Siswa mengisi LKS, sistem otomatis mengambil snapshot sensor meja, guru menilai dengan rubrik 4-skala.
+          </p>
+          <div class="space-y-2 pt-1">
+            <label class="text-xs text-slate-400 block font-medium">Apa gagasan Anda untuk alur siswa/guru?</label>
+            <textarea x-model="poNotes.lms" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:border-leaf-500 focus:outline-none" placeholder="Contoh: Siswa harusnya bisa kerja kelompok 1 laporan untuk 4 orang, atau ada sertifikat digital otomatis saat modul 12 tuntas..."></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Card: Salin & Ekspor Catatan PO -->
+      <div class="glass-card rounded-2xl p-5 border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h4 class="text-sm font-bold text-white">Sudah Mengisi Catatan Gagasan Anda?</h4>
+          <p class="text-xs text-slate-400 mt-0.5">Klik tombol di samping untuk menyalin ringkasan catatan Anda, lalu kirimkan langsung di percakapan ini agar arsitektur segera kita selaraskan.</p>
+        </div>
+        <button @click="copyPoNotes()" class="px-5 py-2.5 rounded-xl bg-leaf-600 hover:bg-leaf-500 text-white font-medium text-xs flex items-center gap-2 transition shadow-lg shadow-leaf-950/50 shrink-0">
+          <i data-lucide="copy" class="w-4 h-4"></i> Salin Seluruh Catatan Penyelarasan
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Side Inspector Modal / Drawer -->
+  <div x-show="inspectorOpen" x-transition.opacity class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end" style="display: none;">
+    <div @click.away="inspectorOpen = false" class="w-full max-w-lg bg-slate-900 border-l border-slate-800 h-full p-6 overflow-y-auto space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-leaf-950 text-leaf-400 border border-leaf-800" x-text="inspectorData.category"></span>
+          <h3 class="text-base font-bold text-white mt-1" x-text="inspectorData.name"></h3>
+        </div>
+        <button @click="inspectorOpen = false" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <span class="text-slate-400 block font-semibold mb-1">Deskripsi & Peran Arsitektur:</span>
+          <p class="text-slate-300 leading-relaxed" x-text="inspectorData.description"></p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+          <span class="text-[10px] text-slate-400 uppercase font-mono block mb-1">File Terkait di Codebase:</span>
+          <code class="text-leaf-400 font-mono block break-all" x-text="inspectorData.files"></code>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+          <span class="text-[10px] text-slate-400 uppercase font-mono block mb-1">Tabel Database Terlibat:</span>
+          <code class="text-indigo-400 font-mono block" x-text="inspectorData.tables"></code>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+          <span class="text-[10px] text-slate-400 uppercase font-mono block mb-1">Keamanan & Integritas:</span>
+          <p class="text-emerald-400" x-text="inspectorData.security"></p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-leaf-950/40 border border-leaf-800/60">
+          <span class="text-[10px] text-leaf-300 font-bold uppercase block mb-1">💡 Pertanyaan Penyelarasan untuk PO:</span>
+          <p class="text-leaf-200" x-text="inspectorData.poQuestion"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script Alpine Logics & Data -->
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('architectureExplorer', () => ({
+        activeTab: 'canvas',
+        currentFlowId: 1,
+        currentStepIndex: 0,
+        inspectorOpen: false,
+        inspectorData: {},
+        poNotes: {
+          relay: '',
+          license: '',
+          topology: '',
+          lms: ''
+        },
+
+        componentsDb: {
+          'user-siswa': {
+            name: 'Role Siswa (ATPH 4.0)',
+            category: 'User Persona',
+            description: 'Siswa SMK Jurusan Agribisnis Tanaman Pangan & Hortikultura. Berfokus pada pengerjaan LKS modul digital, melihat telemetri kit meja kelompoknya, dan menerima umpan balik guru.',
+            files: 'app/Http/Controllers/Academic/ModulePracticumController.php, resources/views/pages/modules/*',
+            tables: 'users, user_profiles, student_reports, student_report_attempts',
+            security: 'Scoping strict school_id, tidak bisa mengedit nilai, tidak bisa mengakses setting sekolah atau data siswa sekolah lain.',
+            poQuestion: 'Apakah siswa perlu login menggunakan NISN mandiri atau akun kelompok praktikum (1 akun per meja)?'
+          },
+          'user-guru': {
+            name: 'Role Guru / Instruktur Lab',
+            category: 'User Persona',
+            description: 'Guru pengampu mata pelajaran ATPH. Bertanggung jawab mengatur jadwal meja praktik lab, memvalidasi kehadiran, serta menilai laporan praktikum menggunakan rubrik 4-skala.',
+            files: 'app/Http/Controllers/Academic/CompetencyAssessmentController.php, ActivityScheduleController.php',
+            tables: 'activity_schedules, schedule_participants, student_reports, report_grade_histories',
+            security: 'Scoped ke sekolah asal. Memiliki wewenang pembukaan revisi laporan yang terkunci.',
+            poQuestion: 'Apakah guru perlu memiliki hak mengubah offset kalibrasi sensor atau hanya superuser?'
+          },
+          'user-admin': {
+            name: 'Superuser / Administrator Sistem',
+            category: 'User Persona',
+            description: 'Pengelola pusat sistem Bitanic lintas sekolah. Berwenang mengelola registrasi sekolah, persebaran wilayah GIS, aktivasi lisensi LMS, dan audit log.',
+            files: 'app/Http/Controllers/Admin/MasterRegionController.php, MasterLicenseController.php, MasterSchoolController.php',
+            tables: 'schools, school_licenses, school_license_terms, audit_logs',
+            security: 'Akses global lintas tenant, namun seluruh aktivitas tercatat di audit_logs yang dilindungi append-only DB trigger.',
+            poQuestion: 'Apakah superuser hanya satu orang dari tim Bitanic pusat, atau setiap dinas pendidikan punya superuser sendiri?'
+          },
+          'iot-device': {
+            name: 'Trainer Kit ESP32 Gateway (BITANIC-TK)',
+            category: 'Hardware Edge',
+            description: 'Perangkat stasiun meja praktikum berisi sensor tanah 7-in-1 Modbus RS-485 (N, P, K, pH, EC, Suhu, Lengas) serta 4 kanal relai aktuator.',
+            files: 'app/Actions/IngestTelemetryAction.php, app/Http/Middleware/AuthenticateDeviceApiKey.php',
+            tables: 'devices, device_api_keys, telemetry_readings, raw_data_logs',
+            security: 'Autentikasi X-Device-Key dengan SHA-256 hash. Relai saat ini dibatasi status simulasi demi keselamatan fisik.',
+            poQuestion: 'Protokol komunikasi apa yang paling Anda inginkan: HTTP POST langsung, MQTT via broker internal, atau LoRaWAN untuk lahan luas?'
+          },
+          'sec-tenancy': {
+            name: 'Fail-Closed Multi-Tenancy Architecture',
+            category: 'Security Subsystem',
+            description: 'Arsitektur isolasi multi-sekolah tanpa celah IDOR. Setiap pemanggilan model wajib menyertakan filter school_id yang valid.',
+            files: 'app/Models/School.php, Tenancy Scopes & Policy Gates',
+            tables: 'Seluruh tabel operasional (schools, devices, users, reports, schedules)',
+            security: 'Jika school_id tidak ditemukan, request langsung digagalkan (abort 403 / 404).',
+            poQuestion: 'Apakah Bitanic akan dipakai satu sekolah tunggal (On-Premises) atau SaaS multi-sekolah untuk seluruh SMK di Indonesia?'
+          },
+          'act-ingest': {
+            name: 'IngestTelemetryAction',
+            category: 'Domain Action',
+            description: 'Memproses data sensor masuk dari ESP32, memeriksa ambang batas agronomi (clamping), menandai provenance sebagai "hardware", dan mencatat waktu detak jantung (last_seen_at).',
+            files: 'app/Actions/IngestTelemetryAction.php, app/Services/DeviceAvailabilityResolver.php',
+            tables: 'telemetry_readings, devices',
+            security: 'Hanya request terotentikasi yang memperbarui last_seen_at. Data uji simulasi tidak dapat memalsukan status online.',
+            poQuestion: 'Berapa detik interval pengiriman sensor yang ideal menurut Anda (misal tiap 5 detik, 30 detik, atau 5 menit)?'
+          },
+          'act-license': {
+            name: 'SchoolLicenseResolver',
+            category: 'Domain Service',
+            description: 'Menilai keabsahan hak akses lisensi sekolah berdasarkan interval tanggal kontrak secara presisi tanpa timezone error.',
+            files: 'app/Services/SchoolLicenseResolver.php, app/Models/SchoolLicense.php',
+            tables: 'school_licenses, school_license_terms',
+            security: 'Menangani celah gap renewal secara ketat: sekolah dengan lisensi kedaluwarsa otomatis dikunci walau ada jadwal perpanjangan di masa depan.',
+            poQuestion: 'Apakah Anda ingin lisensi berlaku tahunan flat, atau ada masa uji coba (trial 14 hari) otomatis?'
+          }
+        },
+
+        flows: [
+          {
+            id: 1,
+            title: '1. Ingest Data Sensor IoT 7-in-1 (ESP32 ➔ Cloud)',
+            desc: 'Alur bagaimana perangkat meja lab mengirim data NPK, pH, EC, dan suhu ke server Bitanic.',
+            steps: [
+              {
+                layer: 'Edge Hardware',
+                title: 'ESP32 Baca Sensor via Modbus RS-485',
+                component: 'Trainer Kit Meja (BITANIC-TK-01)',
+                description: 'Mikrokontroler ESP32 membaca 7 register heksadesimal sensor tanah (Nitrogen, Fosfor, Kalium, pH, EC, Suhu, Lengas) melalui modul MAX485.',
+                guard: 'CRC16 Modbus checksum validasi paket serial.',
+                snippet: 'Modbus Frame: 01 03 00 00 00 07 04 08\nPayload Parsed: pH=6.8, EC=1.2, N=45, P=28, K=120'
+              },
+              {
+                layer: 'API Ingress',
+                title: 'Kirim HTTP POST ke /api/v1/telemetry',
+                component: 'IoT API Route & Rate Limiter',
+                description: 'ESP32 mengirim JSON payload melalui WiFi dengan menyertakan header otentikasi X-Device-Key.',
+                guard: 'Throttle 60 request per menit per IP.',
+                snippet: 'POST /api/v1/telemetry HTTP/1.1\nHost: bitanic.id\nX-Device-Key: btk_live_9f83a2...\nContent-Type: application/json'
+              },
+              {
+                layer: 'Security Layer',
+                title: 'Validasi SHA-256 API Key',
+                component: 'AuthenticateDeviceApiKey Middleware',
+                description: 'Server mencocokkan SHA-256 hash dari kunci dengan database device_api_keys.',
+                guard: 'Fail-closed jika API key dicabut atau tidak terdaftar.',
+                snippet: '$hash = hash("sha256", $request->header("X-Device-Key"));\n$apiKey = DeviceApiKey::where("key_hash", $hash)->firstOrFail();'
+              },
+              {
+                layer: 'Domain Action',
+                title: 'Eksekusi IngestTelemetryAction',
+                component: 'IngestTelemetryAction & AnomalyEvaluator',
+                description: 'Sistem menandai provenance="hardware", mengecek ambang batas bahaya agronomi, dan memperbarui detak jantung perangkat.',
+                guard: 'Hanya otentikasi valid yang memperbarui last_seen_at.',
+                snippet: '$device->update(["last_seen_at" => now()]);\nTelemetryReading::create([..., "provenance" => "hardware"]);'
+              },
+              {
+                layer: 'Persistence',
+                title: 'Simpan ke PostgreSQL & Notifikasi Anomali',
+                component: 'telemetry_readings Table',
+                description: 'Data tersimpan ke tabel dengan indeks komposit (device_id, recorded_at DESC) untuk query analitik berkecepatan tinggi.',
+                guard: 'Composite Index menjamin pembacaan grafik 0.05ms.',
+                snippet: 'INSERT INTO telemetry_readings (device_id, nitrogen, ph, ec, recorded_at)\nVALUES (1, 45.0, 6.8, 1.2, NOW());'
+              }
+            ]
+          },
+          {
+            id: 2,
+            title: '2. Siswa Mengisi & Submit LKS Praktikum Digital',
+            desc: 'Alur pengerjaan LKS Kurikulum Merdeka oleh siswa hingga auto-snapshot sensor.',
+            steps: [
+              {
+                layer: 'Presentation',
+                title: 'Siswa Akses Modul & Meja Praktik',
+                component: 'pages.modules.show Blade View',
+                description: 'Siswa membuka instruksi praktikum, teori, dan panduan pengkabelan sensor pada Modul Kurikulum Merdeka.',
+                guard: 'Terkunci jika sekolah tidak memiliki lisensi aktif.',
+                snippet: 'GET /modules/3\nClass: XII ATPH 1 | Meja: BITANIC-TK-01'
+              },
+              {
+                layer: 'Presentation',
+                title: 'Isi Jawaban LKS & Amati Live Sensor',
+                component: 'Alpine.js LKS Form Component',
+                description: 'Siswa mengisi formulir observasi tanaman, menghitung rasio pupuk, dan mencatat nilai sensor real-time yang tampil di layar.',
+                guard: 'Validasi form jawaban tidak boleh kosong.',
+                snippet: 'answers: {\n  "kondisi_lengas": "Kering",\n  "tindakan_irigasi": "Nyalakan Pompa 10 Menit"\n}'
+              },
+              {
+                layer: 'Domain Action',
+                title: 'Eksekusi SubmitStudentReportAction',
+                component: 'SubmitStudentReportAction',
+                description: 'Sistem mengambil data sensor terkini dari meja siswa pada detik pengumpulan (Auto-Snapshot) sebagai bukti otentik praktikum.',
+                guard: 'Siswa tidak bisa memalsukan angka sensor.',
+                snippet: '$snapshot = $device->telemetryReadings()->latest("recorded_at")->first();\n$attempt->telemetry_snapshot = $snapshot;'
+              },
+              {
+                layer: 'Persistence',
+                title: 'Simpan ke student_report_attempts',
+                component: 'Append-Only Attempt History',
+                description: 'Percobaan penyerahan tersimpan rapi tanpa menimpa data percobaan sebelumnya untuk audit integritas akademik.',
+                guard: 'Status berubah menjadi "submitted" menunggu review guru.',
+                snippet: '$report->status = "submitted";\n$report->save();'
+              }
+            ]
+          },
+          {
+            id: 3,
+            title: '3. Guru Menilai LKS Menggunakan Rubrik 4-Skala',
+            desc: 'Alur evaluasi laporan siswa oleh guru berdasarkan capaian pembelajaran vokasi.',
+            steps: [
+              {
+                layer: 'Presentation',
+                title: 'Guru Buka Antarmuka Penilaian',
+                component: 'pages.reports.index Blade View',
+                description: 'Guru membandingkan jawaban siswa dengan grafik bukti telemetri sensor saat pengerjaan.',
+                guard: 'Hanya guru sekolah terkait yang dapat mengakses.',
+                snippet: 'GET /reports/104/grade'
+              },
+              {
+                layer: 'Domain Action',
+                title: 'Input Skor Rubrik & Catatan Pembinaan',
+                component: 'GradeStudentReportAction',
+                description: 'Guru memilih skala 1 s.d. 4 pada dimensi persiapan, pelaksanaan kalibrasi, analisa agronomi, dan K3.',
+                guard: 'Skor rubrik dibatasi 1.0 s.d. 4.0.',
+                snippet: 'scores: { "persiapan": 4, "kalibrasi": 3, "analisa": 4 }\nfinal_grade: 88.5'
+              },
+              {
+                layer: 'Persistence',
+                title: 'Kunci Laporan & Catat Histori Penilaian',
+                component: 'report_grade_histories Table',
+                description: 'Status laporan berubah menjadi "graded". Setiap revisi nilai di masa depan wajib menyertakan alasan perubahan resmi.',
+                guard: 'Append-only grade trail anti-manipulasi nilai.',
+                snippet: 'ReportGradeHistory::create([..., "graded_by" => $guruId]);'
+              }
+            ]
+          }
+        ],
+
+        get activeFlowData() {
+          return this.flows.find(f => f.id === this.currentFlowId) || this.flows[0];
+        },
+
+        setFlow(id) {
+          this.currentFlowId = id;
+          this.currentStepIndex = 0;
+        },
+
+        nextStep() {
+          if (this.currentStepIndex < this.activeFlowData.steps.length - 1) {
+            this.currentStepIndex++;
+          }
+        },
+
+        prevStep() {
+          if (this.currentStepIndex > 0) {
+            this.currentStepIndex--;
+          }
+        },
+
+        selectComponent(key) {
+          const comp = this.componentsDb[key];
+          if (comp) {
+            this.inspectorData = comp;
+            this.inspectorOpen = true;
+          } else {
+            this.inspectorData = {
+              name: 'Arsitektur Bitanic v1.2',
+              category: 'Overview',
+              description: 'Sistem dirancang dengan arsitektur 3-tier termodularisasi: Presentation (Blade/Alpine), Business Actions/Services, dan Persistence (PostgreSQL 17).',
+              files: 'Seluruh struktur app/Actions, app/Services, app/Models',
+              tables: '25 tabel migrasi aktif',
+              security: 'Multi-tenancy fail-closed, SHA-256 API keys, append-only triggers.',
+              poQuestion: 'Silakan telusuri komponen spesifik di canvas untuk melihat detailnya.'
+            };
+            this.inspectorOpen = true;
+          }
+          this.$nextTick(() => lucide.createIcons());
+        },
+
+        openInspector(key) {
+          this.selectComponent(key);
+        },
+
+        copyPoNotes() {
+          let text = "CATATAN PENYELARASAN GAGASAN PRODUCT OWNER (PO) - BITANIC ARCHITECTURE:\n\n";
+          text += "1. Kontrol Relay & Downlink Hardware:\n" + (this.poNotes.relay || "(Belum diisi)") + "\n\n";
+          text += "2. Model Lisensi LMS:\n" + (this.poNotes.license || "(Belum diisi)") + "\n\n";
+          text += "3. Topologi Lab (Offline vs Cloud):\n" + (this.poNotes.topology || "(Belum diisi)") + "\n\n";
+          text += "4. Alur Praktikum Siswa & Rapor Guru:\n" + (this.poNotes.lms || "(Belum diisi)") + "\n\n";
+          text += "---\nKirimkan teks ini ke chat agar arsitektur segera disesuaikan!";
+
+          navigator.clipboard.writeText(text).then(() => {
+            alert("✅ Catatan berhasil disalin ke clipboard! Silakan paste (Ctrl+V) di chat obrolan.");
+          }).catch(err => {
+            alert("Gagal menyalin otomatis. Silakan salin manual dari kotak teks.");
+          });
+        }
+
+      }));
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+
+</body>
+</html>
+

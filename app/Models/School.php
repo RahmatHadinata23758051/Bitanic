@@ -79,6 +79,11 @@ class School extends Model
         return $this->hasMany(Device::class);
     }
 
+    public function classrooms(): HasMany
+    {
+        return $this->hasMany(Classroom::class);
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(ActivitySchedule::class);

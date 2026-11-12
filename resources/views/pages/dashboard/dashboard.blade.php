@@ -38,7 +38,9 @@
     <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0">
             <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
-            <p class="text-sm text-slate-500 mt-1">Ringkasan aktivitas akademik dan kondisi laboratorium.</p>
+            <p class="text-sm text-slate-500 mt-1">
+                {{ $isSuperuser && ! $selectedSchoolId ? 'Pusat kendali eksekutif, sebaran geografis sekolah mitra, lisensi institusional, dan armada IoT nasional.' : 'Ringkasan aktivitas akademik dan kondisi laboratorium.' }}
+            </p>
         </div>
 
         @if($isSuperuser && $schools->isNotEmpty())
@@ -51,7 +53,7 @@
                         onchange="this.form.submit()"
                         class="w-full sm:max-w-64 px-3 py-1.5 pr-8 rounded-lg bg-white border border-slate-200 text-sm text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
-                        <option value="">Semua sekolah</option>
+                        <option value="">Semua sekolah (Tampilan Makro)</option>
                         @foreach($schools as $school)
                             <option value="{{ $school->id }}" @selected($selectedSchoolId == $school->id)>{{ $school->name }}</option>
                         @endforeach
@@ -196,6 +198,441 @@
                     <a href="{{ url('/modules') }}" class="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors">
                         Jelajahi Modul Publik
                     </a>
+                </div>
+            </div>
+        </section>
+
+    @elseif($isSuperuser && ! $selectedSchoolId)
+        {{-- SUPERUSER MACRO PLATFORM OVERVIEW (HQ / NATIONAL LEVEL) --}}
+        
+        {{-- 1. WELCOME BANNER CARD WITH CONTOUR ARTWORK --}}
+        <section class="relative overflow-hidden rounded-2xl bg-white border border-slate-200/90 p-5 sm:p-6 shadow-2xs" aria-labelledby="welcome-heading">
+            <div class="absolute right-0 top-0 bottom-0 w-1/2 pointer-events-none opacity-40 hidden sm:block" aria-hidden="true">
+                <svg class="w-full h-full text-slate-300" viewBox="0 0 500 200" fill="none" preserveAspectRatio="none">
+                    <path d="M50,20 C150,70 300,10 500,50" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3"/>
+                    <path d="M0,60 C120,110 320,40 500,90" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M0,100 C140,150 330,70 500,130" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3"/>
+                    <path d="M0,140 C160,190 350,110 500,170" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M0,180 C180,220 380,140 500,200" stroke="currentColor" stroke-width="1.2"/>
+                </svg>
+            </div>
+
+            <div class="relative z-10 space-y-4">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+                        Superuser Platform HQ
+                    </span>
+                    <span class="text-xs text-slate-500 font-medium">Bitanic Precision Agritech v2.0</span>
+                </div>
+
+                <div class="space-y-1">
+                    <h2 id="welcome-heading" class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                        Pusat Kendali Eksekutif &amp; Infrastruktur Nasional
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+                        Monitoring makro sebaran sekolah mitra pertanian presisi, integrasi lisensi LMS institusional, dan ketersediaan armada IoT Trainer Kit di seluruh Indonesia.
+                    </p>
+                </div>
+
+                <div class="pt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <a
+                        href="{{ route('master.schools.index') }}"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                    >
+                        <i data-lucide="building-2" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>Direktori Sekolah</span>
+                    </a>
+                    <a
+                        href="{{ route('master.licenses.index') }}"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                    >
+                        <i data-lucide="key" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>Lisensi LMS</span>
+                    </a>
+                    <a
+                        href="{{ url('/trainer-kits') }}"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                    >
+                        <i data-lucide="cpu" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>Fleet Trainer Kit</span>
+                    </a>
+                    <a
+                        href="{{ url('/raw-logs') }}"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors font-medium"
+                    >
+                        <i data-lucide="terminal" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>Debugger RS485</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        {{-- 2. MACRO 4-KPI CARDS GRID --}}
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-labelledby="kpi-heading">
+            <h2 id="kpi-heading" class="sr-only">Metrik Platform Makro</h2>
+
+            {{-- 1. Sekolah Mitra --}}
+            <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-slate-500">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Sekolah Mitra</span>
+                        <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                            <i data-lucide="building-2" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="font-tabular text-3xl font-bold tracking-tight text-slate-900">{{ $macroMetrics['total_schools'] }}</span>
+                        <span class="text-xs text-slate-500 ml-1">Institusi SMK</span>
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span>{{ count($mapPins) }} terverifikasi GIS</span>
+                    <a href="{{ route('master.schools.index') }}" class="font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1">
+                        <span>Direktori</span>
+                        <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </div>
+
+            {{-- 2. Status Lisensi LMS --}}
+            <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-slate-500">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Lisensi LMS</span>
+                        <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-tabular text-3xl font-bold tracking-tight text-emerald-700">{{ $macroMetrics['active_licenses'] }}</span>
+                        <span class="text-xs font-medium text-slate-500">Aktif dari {{ $macroMetrics['total_schools'] }}</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-medium">
+                        @if($macroMetrics['pending_licenses'] > 0)
+                            <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                {{ $macroMetrics['pending_licenses'] }} Menunggu
+                            </span>
+                        @endif
+                        @if($macroMetrics['expired_licenses'] > 0)
+                            <span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                                {{ $macroMetrics['expired_licenses'] }} Kedaluwarsa
+                            </span>
+                        @endif
+                        @if($macroMetrics['uninitialized_licenses'] > 0)
+                            <span class="px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
+                                {{ $macroMetrics['uninitialized_licenses'] }} Belum Aktif
+                            </span>
+                        @endif
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span>Hak Akses Lab</span>
+                    <a href="{{ route('master.licenses.index') }}" class="font-semibold text-indigo-700 hover:text-indigo-800 inline-flex items-center gap-1">
+                        <span>Kelola Lisensi</span>
+                        <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </div>
+
+            {{-- 3. Total Siswa Bitanic --}}
+            <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-slate-500">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Total Siswa Terdaftar</span>
+                        <span class="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center">
+                            <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="font-tabular text-3xl font-bold tracking-tight text-slate-900">{{ $macroMetrics['total_students'] }}</span>
+                        <span class="text-xs text-slate-500 ml-1">Siswa Praktikan</span>
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span>{{ $macroMetrics['total_teachers'] }} Guru Pembimbing</span>
+                    <span class="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>Terdata</span>
+                    </span>
+                </div>
+            </div>
+
+            {{-- 4. Global Fleet Kit --}}
+            <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-slate-500">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Global Fleet Kit</span>
+                        <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                            <i data-lucide="cpu" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="font-tabular text-3xl font-bold tracking-tight text-slate-900">{{ $macroMetrics['total_devices'] }}</span>
+                        <span class="text-xs text-slate-500 ml-1">Unit Perangkat</span>
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span>Beredar di Laboratorium</span>
+                    <a href="{{ url('/trainer-kits') }}" class="font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1">
+                        <span>Fleet Manager</span>
+                        <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        {{-- 3. INTERACTIVE LEAFLET GIS MAP SECTION --}}
+        <section class="rounded-2xl bg-white border border-slate-200/90 p-5 space-y-4 shadow-2xs" aria-labelledby="map-heading">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h3 id="map-heading" class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="map-pin" class="w-4.5 h-4.5 text-emerald-600"></i>
+                        <span>Sebaran Geografis &amp; Status Lisensi Sekolah Mitra</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Pemetaan sebaran institusi pendidikan mitra dengan indikator status lisensi dan akses satu klik ke School Workspace Hub.
+                    </p>
+                </div>
+
+                {{-- Map Legend --}}
+                <div class="flex flex-wrap items-center gap-2 text-[11px] font-medium">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                        <span>Aktif</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                        <span>Menunggu</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
+                        <span>Kedaluwarsa</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 text-slate-600 border border-slate-200">
+                        <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                        <span>Belum Aktif</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="relative w-full rounded-xl overflow-hidden border border-slate-200">
+                <div id="macro-distribution-map" class="h-96 w-full z-0"></div>
+                @if(count($mapPins) === 0)
+                    <div class="absolute inset-0 bg-slate-50/80 backdrop-blur-2xs flex flex-col items-center justify-center p-6 text-center z-10">
+                        <i data-lucide="map-pin-off" class="w-8 h-8 text-slate-400 mb-2"></i>
+                        <p class="text-sm font-semibold text-slate-700">Belum Ada Titik Koordinat Sekolah Terverifikasi</p>
+                        <p class="text-xs text-slate-500 max-w-sm mt-1">Lakukan verifikasi koordinat lintang dan bujur sekolah pada menu Direktori Sekolah agar pin muncul pada peta.</p>
+                        <a href="{{ route('master.schools.index') }}" class="mt-3 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold transition-colors">
+                            Buka Direktori Sekolah
+                        </a>
+                    </div>
+                @endif
+            </div>
+        </section>
+
+        {{-- 4. DIREKTORI SEKOLAH MITRA & WORKSPACE HUB ACCESS --}}
+        <section class="rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-2xs" aria-labelledby="school-directory-heading">
+            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h3 id="school-directory-heading" class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="building-2" class="w-4.5 h-4.5 text-emerald-600"></i>
+                        <span>Direktori Sekolah Mitra &amp; School Workspace Hub</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Pilih sekolah mitra untuk membuka Workspace Hub lengkap (profil, kelas, siswa, guru, jadwal, LKS, dan Trainer Kit).
+                    </p>
+                </div>
+                <a
+                    href="{{ route('master.schools.index') }}"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors self-start sm:self-auto"
+                >
+                    <span>Kelola Semua Sekolah</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </a>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-[11px]">
+                        <tr>
+                            <th scope="col" class="py-3 px-4">Nama Sekolah &amp; NPSN</th>
+                            <th scope="col" class="py-3 px-4">Wilayah</th>
+                            <th scope="col" class="py-3 px-4">Status Lisensi</th>
+                            <th scope="col" class="py-3 px-4">Data Akademik</th>
+                            <th scope="col" class="py-3 px-4">Trainer Kit</th>
+                            <th scope="col" class="py-3 px-4 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($schoolCards as $schoolItem)
+                            <tr class="hover:bg-slate-50/60 transition-colors">
+                                <td class="py-3.5 px-4">
+                                    <div class="font-semibold text-slate-900 text-sm">{{ $schoolItem['name'] }}</div>
+                                    <div class="text-[11px] text-slate-400 font-mono mt-0.5">NPSN: {{ $schoolItem['npsn'] }}</div>
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <div class="text-slate-800 font-medium">{{ $schoolItem['city'] }}</div>
+                                    <div class="text-[11px] text-slate-400">{{ $schoolItem['province'] }}</div>
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    @php
+                                        $badgeColor = match($schoolItem['license_status']) {
+                                            'active' => 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                                            'pending' => 'bg-amber-50 text-amber-800 border-amber-200',
+                                            'expired' => 'bg-rose-50 text-rose-800 border-rose-200',
+                                            default => 'bg-slate-50 text-slate-600 border-slate-200',
+                                        };
+                                    @endphp
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border {{ $badgeColor }}">
+                                        {{ $schoolItem['license_status_label'] }}
+                                    </span>
+                                    @if($schoolItem['days_remaining'] !== null && $schoolItem['license_status'] === 'active')
+                                        <div class="text-[10px] text-slate-400 mt-0.5">Sisa {{ $schoolItem['days_remaining'] }} hari</div>
+                                    @endif
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <div class="flex items-center gap-2 text-slate-700">
+                                        <span class="font-medium">{{ $schoolItem['classrooms_count'] }} Kelas</span>
+                                        <span class="text-slate-300">•</span>
+                                        <span class="font-medium">{{ $schoolItem['students_count'] }} Siswa</span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400">{{ $schoolItem['teachers_count'] }} Guru Pembimbing</div>
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <div class="inline-flex items-center gap-1.5 font-semibold text-slate-800">
+                                        <i data-lucide="cpu" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        <span class="font-tabular">{{ $schoolItem['devices_count'] }}</span>
+                                        <span class="text-slate-400 font-normal">Unit</span>
+                                    </div>
+                                </td>
+                                <td class="py-3.5 px-4 text-right">
+                                    <a
+                                        href="{{ $schoolItem['workspace_url'] }}"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0c3c26] hover:bg-[#0a3120] text-white text-xs font-semibold shadow-2xs transition-colors"
+                                    >
+                                        <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                                        <span>Buka Hub Sekolah</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="py-8 px-4 text-center text-slate-500">
+                                    <i data-lucide="building" class="w-6 h-6 mx-auto mb-2 text-slate-300"></i>
+                                    <p class="font-medium">Belum ada sekolah mitra terdaftar.</p>
+                                    <a href="{{ route('master.schools.create') }}" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800">
+                                        <span>Daftarkan Sekolah Baru</span>
+                                        <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        {{-- 5. RECENT STUDENTS & PLATFORM SUMMARY --}}
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-5" aria-labelledby="activity-heading">
+            <h2 id="activity-heading" class="sr-only">Aktivitas Pendaftaran Siswa &amp; Infrastruktur</h2>
+
+            {{-- Recent Students (col-span-7) --}}
+            <div class="lg:col-span-7 rounded-2xl bg-white border border-slate-200/90 p-5 space-y-4 shadow-2xs flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="user-plus" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Siswa Praktikan Terdaftar Terbaru</span>
+                        </h3>
+                        <span class="text-[11px] text-slate-400">Lintas Sekolah</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">Pendaftaran siswa praktikan terakhir di platform Bitanic.</p>
+                </div>
+
+                <div class="divide-y divide-slate-100">
+                    @forelse($recentStudents as $student)
+                        <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center shrink-0 text-xs">
+                                    {{ strtoupper(substr($student->name, 0, 2)) }}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="font-semibold text-slate-900 truncate">{{ $student->name }}</p>
+                                    <p class="text-[11px] text-slate-400 truncate">
+                                        {{ $student->school?->name ?? 'Tanpa Sekolah' }}
+                                        @if($student->profile?->identifier_number)
+                                            · NISN: {{ $student->profile->identifier_number }}
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-slate-400 shrink-0">
+                                {{ $student->created_at?->diffForHumans() }}
+                            </span>
+                        </div>
+                    @empty
+                        <div class="py-6 text-center text-xs text-slate-400">
+                            Belum ada data siswa terdaftar.
+                        </div>
+                    @endforelse
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 text-right">
+                    <span class="text-xs text-slate-500">Total terdata: <strong class="font-tabular text-slate-800">{{ $macroMetrics['total_students'] }}</strong> siswa</span>
+                </div>
+            </div>
+
+            {{-- Platform Diagnostics & Quick Links (col-span-5) --}}
+            <div class="lg:col-span-5 rounded-2xl bg-white border border-slate-200/90 p-5 space-y-4 shadow-2xs flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="server" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Operasional Hardware &amp; Gateway RS485</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Infrastruktur komunikasi sensor dan pengawasan stasiun.</p>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                        <div class="space-y-0.5">
+                            <span class="font-semibold text-slate-800">Protokol Sensor Modbus</span>
+                            <p class="text-[11px] text-slate-500">7-in-1 Soil Multi-Parameter RS485</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            Standar RTU
+                        </span>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                        <div class="space-y-0.5">
+                            <span class="font-semibold text-slate-800">Pemeriksaan Raw Frame</span>
+                            <p class="text-[11px] text-slate-500">Log heksadesimal CRC16 &amp; status buffer</p>
+                        </div>
+                        <a href="{{ url('/raw-logs') }}" class="font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 text-[11px]">
+                            <span>Buka Terminal</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                        </a>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                        <div class="space-y-0.5">
+                            <span class="font-semibold text-slate-800">Audit Trail &amp; Keamanan</span>
+                            <p class="text-[11px] text-slate-500">Log aktivitas otorisasi &amp; modifikasi data</p>
+                        </div>
+                        <a href="{{ url('/settings') }}" class="font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 text-[11px]">
+                            <span>Pengaturan</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span>Status Jaringan: Normal</span>
+                    <span class="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Gateway Siap</span>
+                    </span>
                 </div>
             </div>
         </section>
@@ -923,3 +1360,89 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const mapElement = document.getElementById('macro-distribution-map');
+    if (!mapElement || typeof window.L === 'undefined') return;
+
+    const pins = @json($mapPins);
+    if (!pins || pins.length === 0) return;
+
+    const map = L.map('macro-distribution-map', {
+        scrollWheelZoom: false,
+    }).setView([-2.548926, 118.0148634], 5);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const bounds = [];
+
+    pins.forEach(pin => {
+        if (pin.latitude === null || pin.longitude === null) return;
+
+        const colorMap = {
+            'active': '#16a34a',
+            'pending': '#eab308',
+            'expired': '#dc2626',
+            'uninitialized': '#64748b'
+        };
+        const color = colorMap[pin.license_status] || '#64748b';
+
+        const customIcon = L.divIcon({
+            className: 'custom-pin-marker',
+            html: `
+                <div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 9999px; border: 2.5px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 8px; height: 8px; border-radius: 9999px; background-color: white;"></div>
+                </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+            popupAnchor: [0, -14]
+        });
+
+        const statusBadgeStyle = {
+            'active': 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;',
+            'pending': 'background: #fef9c3; color: #854d0e; border: 1px solid #fef08a;',
+            'expired': 'background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;',
+            'uninitialized': 'background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;'
+        }[pin.license_status] || 'background: #f1f5f9; color: #475569;';
+
+        const popupContent = `
+            <div style="font-family: Inter, sans-serif; min-width: 220px; padding: 4px 2px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; ${statusBadgeStyle}">
+                        ${pin.license_status_label}
+                    </span>
+                    <span style="font-size: 11px; color: #64748b; font-family: monospace;">NPSN: ${pin.npsn}</span>
+                </div>
+                <h4 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+                    ${pin.name}
+                </h4>
+                <p style="margin: 0 0 10px 0; font-size: 11px; color: #64748b;">
+                    ${pin.city}, ${pin.province}
+                </p>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-bottom: 10px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; padding: 6px 0;">
+                    <span>Siswa: <strong>${pin.students_count}</strong></span>
+                    <span>Trainer Kit: <strong>${pin.devices_count}</strong></span>
+                </div>
+                <a href="${pin.workspace_url}" style="display: block; text-align: center; background: #0c3c26; color: white; text-decoration: none; font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 8px;">
+                    Buka School Workspace Hub &rarr;
+                </a>
+            </div>
+        `;
+
+        const marker = L.marker([pin.latitude, pin.longitude], { icon: customIcon }).addTo(map);
+        marker.bindPopup(popupContent);
+        bounds.push([pin.latitude, pin.longitude]);
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    }
+});
+</script>
+@endpush
