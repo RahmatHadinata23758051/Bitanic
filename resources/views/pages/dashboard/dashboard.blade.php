@@ -468,8 +468,13 @@
                         @forelse($schoolCards as $schoolItem)
                             <tr class="hover:bg-slate-50/60 transition-colors">
                                 <td class="py-3.5 px-4">
-                                    <div class="font-semibold text-slate-900 text-sm">{{ $schoolItem['name'] }}</div>
-                                    <div class="text-[11px] text-slate-400 font-mono mt-0.5">NPSN: {{ $schoolItem['npsn'] }}</div>
+                                    <a href="{{ $schoolItem['workspace_url'] }}" class="group block" title="Buka Workspace Hub {{ $schoolItem['name'] }}">
+                                        <div class="font-semibold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors flex items-center gap-1.5">
+                                            <span>{{ $schoolItem['name'] }}</span>
+                                            <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all"></i>
+                                        </div>
+                                        <div class="text-[11px] text-slate-400 font-mono mt-0.5">NPSN: {{ $schoolItem['npsn'] }}</div>
+                                    </a>
                                 </td>
                                 <td class="py-3.5 px-4">
                                     <div class="text-slate-800 font-medium">{{ $schoolItem['city'] }}</div>

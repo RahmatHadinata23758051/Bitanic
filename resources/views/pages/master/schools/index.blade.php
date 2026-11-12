@@ -128,18 +128,21 @@
                     @forelse($schools as $school)
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="py-3.5 px-4">
-                                <div class="font-bold text-slate-900">
-                                    {{ $school->name }}
-                                </div>
-                                <div class="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                                    <span class="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
-                                        {{ $school->slug }}
-                                    </span>
-                                    <span>&bull;</span>
-                                    <span class="truncate max-w-[200px]" title="{{ $school->address }}">
-                                        {{ $school->address ?? 'Alamat belum diisi' }}
-                                    </span>
-                                </div>
+                                <a href="{{ route('master.schools.show', $school) }}" class="group block" title="Buka Workspace Hub {{ $school->name }}">
+                                    <div class="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors flex items-center gap-1.5">
+                                        <span>{{ $school->name }}</span>
+                                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all"></i>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                                        <span class="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
+                                            {{ $school->slug }}
+                                        </span>
+                                        <span>&bull;</span>
+                                        <span class="truncate max-w-[200px]" title="{{ $school->address }}">
+                                            {{ $school->address ?? 'Alamat belum diisi' }}
+                                        </span>
+                                    </div>
+                                </a>
                             </td>
 
                             <td class="py-3.5 px-4 font-mono font-medium font-tabular">
@@ -192,14 +195,6 @@
 
                             <td class="py-3.5 px-4 text-right">
                                 <div class="flex items-center justify-end gap-1.5">
-                                    <a
-                                        href="{{ route('master.schools.show', $school) }}"
-                                        class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-                                        title="Detail Sekolah"
-                                    >
-                                        <i data-lucide="eye" class="w-4 h-4"></i>
-                                    </a>
-
                                     <a
                                         href="{{ route('master.schools.edit', $school) }}"
                                         class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
