@@ -7,6 +7,7 @@ use App\Models\District;
 use App\Models\Province;
 use App\Models\Regency;
 use App\Models\RegionDatasetMetadata;
+use App\Services\Geo\SchoolDistributionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,76 +16,100 @@ use Illuminate\View\View;
 
 class RegionMasterController extends Controller
 {
+    public function __construct(
+        protected SchoolDistributionService $distributionService
+    ) {}
+
     /**
-     * Display a searchable, paginated list of Indonesian administrative regions.
+     * Display either the School Distribution Dashboard (default) or the administrative reference dataset.
      */
     public function index(Request $request): View
     {
-        $level = $request->query('level', 'provinces');
-        $search = trim((string) $request->query('search', ''));
-        $selectedProvince = $request->query('province_code');
-        $selectedRegency = $request->query('regency_code');
-
         $metadata = RegionDatasetMetadata::where('status', 'active')->latest()->first();
-        $provinces = Province::orderBy('name')->get();
 
-        if ($level === 'regencies') {
-            $query = Regency::with('province');
+        // If explicitly requested administrative reference view or level filter
+        if ($request->query('view') === 'reference' || $request->has('level')) {
+            $level = $request->query('level', 'provinces');
+            $search = trim((string) $request->query('search', ''));
+            $selectedProvince = $request->query('province_code');
+            $selectedRegency = $request->query('regency_code');
+            $provinces = Province::orderBy('name')->get();
 
-            if (! empty($selectedProvince)) {
-                $query->where('province_code', $selectedProvince);
+            if ($level === 'regencies') {
+                $query = Regency::with('province');
+
+                if (! empty($selectedProvince)) {
+                    $query->where('province_code', $selectedProvince);
+                }
+
+                if (! empty($search)) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%");
+                    });
+                }
+
+                $items = $query->orderBy('name')->paginate(20)->withQueryString();
+            } elseif ($level === 'districts') {
+                $query = District::with('regency.province');
+
+                if (! empty($selectedRegency)) {
+                    $query->where('regency_code', $selectedRegency);
+                } elseif (! empty($selectedProvince)) {
+                    $query->whereHas('regency', function ($q) use ($selectedProvince) {
+                        $q->where('province_code', $selectedProvince);
+                    });
+                }
+
+                if (! empty($search)) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%");
+                    });
+                }
+
+                $items = $query->orderBy('name')->paginate(20)->withQueryString();
+            } else {
+                $level = 'provinces';
+                $query = Province::withCount(['regencies', 'schools']);
+
+                if (! empty($search)) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%");
+                    });
+                }
+
+                $items = $query->orderBy('name')->paginate(20)->withQueryString();
             }
 
-            if (! empty($search)) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                });
-            }
-
-            $items = $query->orderBy('name')->paginate(20)->withQueryString();
-        } elseif ($level === 'districts') {
-            $query = District::with('regency.province');
-
-            if (! empty($selectedRegency)) {
-                $query->where('regency_code', $selectedRegency);
-            } elseif (! empty($selectedProvince)) {
-                $query->whereHas('regency', function ($q) use ($selectedProvince) {
-                    $q->where('province_code', $selectedProvince);
-                });
-            }
-
-            if (! empty($search)) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                });
-            }
-
-            $items = $query->orderBy('name')->paginate(20)->withQueryString();
-        } else {
-            $level = 'provinces';
-            $query = Province::withCount(['regencies', 'schools']);
-
-            if (! empty($search)) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                });
-            }
-
-            $items = $query->orderBy('name')->paginate(20)->withQueryString();
+            return view('pages.master.regions.reference', compact(
+                'items',
+                'level',
+                'search',
+                'selectedProvince',
+                'selectedRegency',
+                'provinces',
+                'metadata'
+            ));
         }
 
-        return view('pages.master.regions.index', compact(
-            'items',
-            'level',
-            'search',
-            'selectedProvince',
-            'selectedRegency',
-            'provinces',
-            'metadata'
-        ));
+        // Primary: Persebaran Sekolah Mitra BITANIC Dashboard
+        $statusFilter = (string) $request->query('status', 'all');
+        $search = $request->query('search');
+        $selectedProvince = $request->query('province_code');
+        $selectedRegency = $request->query('regency_code');
+        $selectedDistrict = $request->query('district_code');
+
+        $distribution = $this->distributionService->getDistributionData(
+            statusFilter: $statusFilter,
+            search: $search,
+            selectedProvinceCode: $selectedProvince,
+            selectedRegencyCode: $selectedRegency,
+            selectedDistrictCode: $selectedDistrict
+        );
+
+        return view('pages.master.regions.index', compact('distribution', 'metadata'));
     }
 
     /**

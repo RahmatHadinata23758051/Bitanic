@@ -1,261 +1,637 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6" x-data="schoolDistributionApp(@js($distribution['map_markers']))">
     <!-- Breadcrumb & Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <div class="flex items-center gap-2 text-xs text-slate-500 font-medium mb-1">
                 <span>Data Master</span>
                 <span>/</span>
-                <span class="text-slate-800 font-semibold">Wilayah Indonesia</span>
+                <span class="text-slate-800 font-semibold">Wilayah & Persebaran Mitra</span>
             </div>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                Master Wilayah Indonesia
+                Persebaran Sekolah Mitra BITANIC
             </h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
-                Basis data referensi resmi wilayah administratif nasional (Provinsi, Kabupaten/Kota, Kecamatan).
+                Sebaran institusi pengguna dan pelanggan LMS berdasarkan provinsi, kabupaten/kota, dan kecamatan.
             </p>
         </div>
 
-        <!-- Sync Button -->
+        <!-- Navigation Link to National Reference -->
         <div class="flex items-center gap-2 shrink-0">
-            <form action="{{ route('master.regions.sync') }}" method="POST" onsubmit="return confirm('Sinkronisasi ulang referensi wilayah dari berkas master resmi?');">
-                @csrf
-                <button
-                    type="submit"
-                    class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-xs transition-colors"
-                >
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
-                    <span>Sinkronisasi Referensi</span>
-                </button>
-            </form>
+            <a
+                href="{{ route('master.regions.index', ['view' => 'reference']) }}"
+                class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-xs transition-colors"
+                title="Buka basis data referensi resmi Kemendagri"
+            >
+                <i data-lucide="database" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span>Master Wilayah Indonesia (38 Provinsi Kemendagri, mis. JAWA BARAT)</span>
+            </a>
         </div>
     </div>
 
-    <!-- Feedback Alerts -->
-    @if(session('success'))
-        <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0"></i>
-                <span class="font-medium">{{ session('success') }}</span>
+    <!-- Navigation Tabs Between Primary & Reference -->
+    <div class="flex items-center gap-2 border-b border-slate-200">
+        <a
+            href="{{ route('master.regions.index') }}"
+            class="px-4 py-2.5 text-xs font-semibold border-b-2 border-[#0c3c26] text-[#0c3c26] transition-colors flex items-center gap-2"
+        >
+            <i data-lucide="map-pinned" class="w-4 h-4"></i>
+            <span>Persebaran Sekolah Mitra</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 font-tabular">
+                {{ $distribution['summary']['total_partner_schools'] }}
+            </span>
+        </a>
+        <a
+            href="{{ route('master.regions.index', ['view' => 'reference']) }}"
+            class="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-2"
+        >
+            <i data-lucide="database" class="w-4 h-4"></i>
+            <span>Referensi Administratif Nasional</span>
+            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 font-tabular">
+                {{ $metadata->total_provinces ?? 38 }} Provinsi
+            </span>
+        </a>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total Sekolah Mitra -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-slate-500">Total Sekolah Mitra</span>
+                <span class="w-8 h-8 rounded-xl bg-emerald-50 text-[#0c3c26] flex items-center justify-center">
+                    <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                </span>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <span class="text-2xl sm:text-3xl font-bold text-slate-900 font-tabular">{{ $distribution['summary']['total_partner_schools'] }}</span>
+                <span class="text-xs text-slate-500 font-medium">Institusi Berlangganan</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
+                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span>Memiliki hak akses entitas term</span>
+            </p>
+        </div>
+
+        <!-- Provinsi Terjangkau -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-slate-500">Provinsi Terjangkau</span>
+                <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                    <i data-lucide="map" class="w-4 h-4"></i>
+                </span>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <span class="text-2xl sm:text-3xl font-bold text-slate-900 font-tabular">{{ $distribution['summary']['covered_provinces_count'] }}</span>
+                <span class="text-xs text-slate-500 font-medium">dari 38 Provinsi</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
+                <i data-lucide="compass" class="w-3.5 h-3.5 text-blue-600"></i>
+                <span>Sebaran geografis aktif</span>
+            </p>
+        </div>
+
+        <!-- Kab / Kota Terjangkau -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-slate-500">Kabupaten / Kota</span>
+                <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                    <i data-lucide="building" class="w-4 h-4"></i>
+                </span>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <span class="text-2xl sm:text-3xl font-bold text-slate-900 font-tabular">{{ $distribution['summary']['covered_regencies_count'] }}</span>
+                <span class="text-xs text-slate-500 font-medium">Daerah Tercover</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-600"></i>
+                <span>Tingkat II administrasi</span>
+            </p>
+        </div>
+
+        <!-- Sekolah Lisensi Aktif -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-slate-500">Lisensi Aktif Hari Ini</span>
+                <span class="w-8 h-8 rounded-xl bg-leaf-100 text-[#0c3c26] flex items-center justify-center">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                </span>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <span class="text-2xl sm:text-3xl font-bold text-emerald-700 font-tabular">{{ $distribution['summary']['active_license_count'] }}</span>
+                <span class="text-xs text-slate-500 font-medium">dari {{ $distribution['summary']['total_partner_schools'] }} Mitra</span>
+            </div>
+            <div class="flex items-center gap-3 text-[11px] text-slate-400 mt-2">
+                <span class="text-amber-600 font-medium font-tabular">{{ $distribution['summary']['pending_license_count'] }} Menunggu</span>
+                <span>&bull;</span>
+                <span class="text-rose-600 font-medium font-tabular">{{ $distribution['summary']['expired_license_count'] }} Kedaluwarsa</span>
             </div>
         </div>
-    @endif
+    </div>
 
-    @if(session('error'))
-        <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600 shrink-0"></i>
-                <span class="font-medium">{{ session('error') }}</span>
-            </div>
-        </div>
-    @endif
-
-    <!-- Dataset Provenance Metadata Card -->
-    <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-start gap-3">
-                <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#0c3c26] shrink-0 mt-0.5">
-                    <i data-lucide="database" class="w-4.5 h-4.5"></i>
-                </div>
+    <!-- Notification If Unmapped Schools Exist -->
+    @if($distribution['summary']['unmapped_schools_count'] > 0)
+        <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+                <i data-lucide="map-pin-off" class="w-4 h-4 text-amber-600 shrink-0"></i>
                 <div>
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-sm font-semibold text-slate-900">
-                            {{ $metadata->source_name ?? 'Kepmendagri No 050-145 Tahun 2022 / BPS Indonesia' }}
-                        </h2>
-                        <span class="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            v{{ $metadata->dataset_version ?? '2024.1' }}
-                        </span>
+                    <span class="font-semibold">{{ $distribution['summary']['unmapped_schools_count'] }} sekolah mitra</span>
+                    <span>belum memiliki koordinat geografis terverifikasi. Sekolah tetap terdata dalam direktori wilayah tetapi dikecualikan dari titik peta agar tidak menghasilkan data semu.</span>
+                </div>
+            </div>
+            <a
+                href="{{ route('master.schools.index') }}"
+                class="shrink-0 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold text-[11px] transition-colors inline-flex items-center gap-1.5"
+            >
+                <span>Lengkapi Koordinat</span>
+                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+            </a>
+        </div>
+    @endif
+
+    <!-- Toolbar Filters -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <!-- Status Filter Tabs -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+            <a
+                href="{{ route('master.regions.index', array_merge(request()->query(), ['status' => 'all'])) }}"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors
+                    {{ ($distribution['filters']['status'] ?? 'all') === 'all' ? 'bg-[#0c3c26] text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
+            >
+                Semua Mitra ({{ $distribution['summary']['total_partner_schools'] }})
+            </a>
+            <a
+                href="{{ route('master.regions.index', array_merge(request()->query(), ['status' => 'active'])) }}"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5
+                    {{ ($distribution['filters']['status'] ?? '') === 'active' ? 'bg-emerald-700 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100' }}"
+            >
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>Lisensi Aktif ({{ $distribution['summary']['active_license_count'] }})</span>
+            </a>
+            <a
+                href="{{ route('master.regions.index', array_merge(request()->query(), ['status' => 'pending'])) }}"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5
+                    {{ ($distribution['filters']['status'] ?? '') === 'pending' ? 'bg-amber-700 text-white shadow-xs' : 'bg-amber-50 text-amber-800 hover:bg-amber-100' }}"
+            >
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span>Menunggu Efektif ({{ $distribution['summary']['pending_license_count'] }})</span>
+            </a>
+            <a
+                href="{{ route('master.regions.index', array_merge(request()->query(), ['status' => 'expired'])) }}"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5
+                    {{ ($distribution['filters']['status'] ?? '') === 'expired' ? 'bg-rose-700 text-white shadow-xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100' }}"
+            >
+                <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                <span>Kedaluwarsa ({{ $distribution['summary']['expired_license_count'] }})</span>
+            </a>
+        </div>
+
+        <!-- Search Bar -->
+        <form method="GET" action="{{ route('master.regions.index') }}" class="flex items-center gap-2">
+            <input type="hidden" name="status" value="{{ $distribution['filters']['status'] }}">
+            <div class="relative w-full md:w-64">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ $distribution['filters']['search'] }}"
+                    placeholder="Cari sekolah atau wilayah..."
+                    class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
+                >
+            </div>
+            @if(!empty($distribution['filters']['search']))
+                <a
+                    href="{{ route('master.regions.index', ['status' => $distribution['filters']['status']]) }}"
+                    class="px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                >
+                    Reset
+                </a>
+            @endif
+        </form>
+    </div>
+
+    <!-- MAIN VISUALIZATION: INTERACTIVE INDONESIA MAP -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600"></i>
+                    <span>Peta Interaktif Sebaran Sekolah Mitra</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Menampilkan <span class="font-semibold text-slate-800 font-tabular">{{ $distribution['summary']['mapped_schools_count'] }}</span> sekolah berkoordinat valid dari {{ $distribution['summary']['filtered_partner_schools'] }} mitra terpilih.
+                </p>
+            </div>
+
+            <!-- Legend and Center Map Button -->
+            <div class="flex items-center gap-3 text-xs">
+                <div class="hidden sm:flex items-center gap-3 text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1 rounded-xl">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Aktif</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Menunggu</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-600"></span> Kedaluwarsa</span>
+                </div>
+                <button
+                    type="button"
+                    @click="resetMapZoom()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                    title="Pusatkan kembali peta ke seluruh Indonesia"
+                >
+                    <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                    <span>Pusatkan Indonesia</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div class="relative w-full h-[460px] bg-slate-100" id="school-distribution-map" x-ref="mapContainer">
+            <!-- Non-map fallback while loading / if offline -->
+            <div x-show="!mapLoaded" class="absolute inset-0 flex items-center justify-center bg-slate-50 text-slate-400">
+                <div class="flex flex-col items-center">
+                    <i data-lucide="loader-2" class="w-8 h-8 animate-spin text-emerald-600 mb-2"></i>
+                    <p class="text-xs font-medium text-slate-600">Memuat peta sebaran sekolah mitra...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Footer Attribution & Info -->
+        <div class="p-3 bg-slate-50/80 border-t border-slate-100 text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                Data Koordinat: Terverifikasi institusi &bull; Peta: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" class="underline text-slate-600">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" class="underline text-slate-600">CARTO</a>
+            </div>
+            <div class="text-slate-400">
+                Klik pin sekolah untuk melihat rincian lisensi dan navigasi stasiun.
+            </div>
+        </div>
+    </div>
+
+    <!-- GEOGRAPHIC EXPLORER & SCHOOL DIRECTORY -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Hierarchical Region Explorer (Left 4 cols) -->
+        <div class="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+            <div class="p-4 border-b border-slate-100 bg-slate-50/60">
+                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="folder-tree" class="w-4 h-4 text-emerald-600"></i>
+                    <span>Eksplorasi Hirarki Wilayah</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Hanya menampilkan provinsi dan kota yang memiliki sekolah mitra terdaftar.
+                </p>
+            </div>
+
+            <!-- Hierarchy Accordion -->
+            <div class="divide-y divide-slate-100 text-xs max-h-[560px] overflow-y-auto">
+                @forelse($distribution['hierarchy'] as $provIndex => $prov)
+                    <div x-data="{ openProv: {{ $provIndex === 0 ? 'true' : 'false' }} }" class="bg-white">
+                        <!-- Province Header -->
+                        <button
+                            type="button"
+                            @click="openProv = !openProv"
+                            class="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-slate-50/90 transition-colors"
+                        >
+                            <div class="flex items-center gap-2.5">
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90 text-[#0c3c26]': openProv }"></i>
+                                <span class="font-bold text-slate-900">{{ $prov['name'] }}</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 font-tabular border border-emerald-200/70">
+                                {{ $prov['schools_count'] }} Sekolah
+                            </span>
+                        </button>
+
+                        <!-- Regencies List within Province -->
+                        <div x-show="openProv" x-collapse class="bg-slate-50/50 border-t border-slate-100 pl-6 pr-3 py-2 space-y-2">
+                            @foreach($prov['regencies'] as $regIndex => $reg)
+                                <div x-data="{ openReg: {{ $regIndex === 0 ? 'true' : 'false' }} }" class="bg-white rounded-xl border border-slate-200/70 overflow-hidden">
+                                    <!-- Regency Header -->
+                                    <button
+                                        type="button"
+                                        @click="openReg = !openReg"
+                                        class="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90 text-emerald-700': openReg }"></i>
+                                            <span class="font-semibold text-slate-800 text-[11px]">{{ $reg['name'] }}</span>
+                                        </div>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 font-tabular">
+                                            {{ $reg['schools_count'] }} Sekolah
+                                        </span>
+                                    </button>
+
+                                    <!-- Districts and Schools List -->
+                                    <div x-show="openReg" x-collapse class="border-t border-slate-100 p-2.5 space-y-2 bg-slate-50/40">
+                                        @foreach($reg['districts'] as $dist)
+                                            <div class="border-l-2 border-emerald-600 pl-2.5 py-0.5">
+                                                <div class="flex items-center justify-between mb-1">
+                                                    <span class="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                                                        KEC. {{ $dist['name'] }}
+                                                    </span>
+                                                    <span class="text-[10px] font-medium text-slate-400 font-tabular">
+                                                        {{ $dist['schools_count'] }} sekolah
+                                                    </span>
+                                                </div>
+                                                <ul class="space-y-1">
+                                                    @foreach($dist['schools'] as $schoolItem)
+                                                        <li class="flex items-center justify-between text-xs py-1 px-1.5 rounded hover:bg-white transition-colors group">
+                                                            <div class="flex items-center gap-1.5 truncate">
+                                                                <span class="w-1.5 h-1.5 rounded-full {{ $schoolItem['license_status'] === 'active' ? 'bg-emerald-500' : ($schoolItem['license_status'] === 'pending' ? 'bg-amber-500' : 'bg-rose-500') }}"></span>
+                                                                <span class="font-medium text-slate-800 truncate" title="{{ $schoolItem['name'] }}">
+                                                                    {{ $schoolItem['name'] }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="flex items-center gap-1 shrink-0">
+                                                                @if($schoolItem['has_coordinates'])
+                                                                    <button
+                                                                        type="button"
+                                                                        @click="focusSchoolOnMap({{ $schoolItem['id'] }})"
+                                                                        class="p-1 rounded text-slate-400 hover:text-emerald-700 hover:bg-emerald-50"
+                                                                        title="Fokuskan pada Peta"
+                                                                    >
+                                                                        <i data-lucide="crosshair" class="w-3 h-3"></i>
+                                                                    </button>
+                                                                @endif
+                                                                <a
+                                                                    href="{{ route('master.schools.show', $schoolItem['id']) }}"
+                                                                    class="p-1 rounded text-slate-400 hover:text-[#0c3c26] hover:bg-slate-100"
+                                                                    title="Buka Detail Sekolah"
+                                                                >
+                                                                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                                                                </a>
+                                                            </div>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
+                @empty
+                    <div class="p-6 text-center text-slate-400">
+                        <i data-lucide="inbox" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+                        <p class="text-xs font-medium text-slate-600">Tidak ada wilayah mitra yang cocok.</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+        <!-- School Directory Table (Right 7 cols) -->
+        <div class="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+            <div class="p-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="building-2" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Direktori Sekolah Mitra Terdaftar</span>
+                    </h3>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Checksum SHA-256: <code class="font-mono text-[11px] text-slate-600 bg-slate-100 px-1 py-0.5 rounded">{{ substr($metadata->checksum ?? 'verified-local-reference', 0, 16) }}...</code>
-                        @if($metadata?->imported_at)
-                            &bull; Terakhir disinkronisasi: <span class="font-tabular">{{ $metadata->imported_at->setTimezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</span>
-                        @endif
+                        Menampilkan {{ count($distribution['schools_list']) }} sekolah mitra terfilter.
                     </p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-4 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-5">
-                <div class="text-center">
-                    <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Provinsi</p>
-                    <p class="text-base font-bold text-slate-900 font-tabular">{{ $metadata->total_provinces ?? $provinces->count() }}</p>
-                </div>
-                <div class="w-px h-7 bg-slate-100"></div>
-                <div class="text-center">
-                    <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Kab / Kota</p>
-                    <p class="text-base font-bold text-slate-900 font-tabular">{{ $metadata->total_regencies ?? 514 }}</p>
-                </div>
-                <div class="w-px h-7 bg-slate-100"></div>
-                <div class="text-center">
-                    <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Kecamatan</p>
-                    <p class="text-base font-bold text-slate-900 font-tabular">{{ $metadata->total_districts ?? 826 }}</p>
-                </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                            <th class="py-3 px-4">Sekolah / NPSN</th>
+                            <th class="py-3 px-4">Wilayah Administratif</th>
+                            <th class="py-3 px-4">Status Lisensi</th>
+                            <th class="py-3 px-4">Trainer Kit</th>
+                            <th class="py-3 px-4 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">
+                        @forelse($distribution['schools_list'] as $s)
+                            <tr class="hover:bg-slate-50/80 transition-colors" id="school-row-{{ $s['id'] }}">
+                                <td class="py-3 px-4">
+                                    <div class="font-bold text-slate-900">{{ $s['name'] }}</div>
+                                    <div class="text-[11px] text-slate-500 font-mono font-tabular mt-0.5">
+                                        NPSN: {{ $s['npsn'] ?? '—' }} &bull; No: {{ $s['license_number'] }}
+                                    </div>
+                                    @if($s['has_coordinates'])
+                                        <div class="text-[10px] text-emerald-700 font-mono font-tabular mt-0.5 flex items-center gap-1">
+                                            <i data-lucide="map-pin" class="w-2.5 h-2.5"></i>
+                                            <span>{{ number_format($s['latitude'], 4) }}, {{ number_format($s['longitude'], 4) }}</span>
+                                        </div>
+                                    @else
+                                        <span class="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] bg-slate-100 text-slate-500 border border-slate-200">
+                                            Lokasi belum dipetakan
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <td class="py-3 px-4">
+                                    <div class="text-slate-800 font-semibold">{{ $s['regency_name'] }}</div>
+                                    <div class="text-[11px] text-slate-500">{{ $s['province_name'] }} &bull; Kec. {{ $s['district_name'] }}</div>
+                                </td>
+
+                                <td class="py-3 px-4">
+                                    @if($s['license_status'] === 'active')
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            <span>Aktif</span>
+                                        </span>
+                                        <div class="text-[10px] text-slate-400 font-tabular mt-0.5">Sisa {{ $s['days_remaining'] }} hari</div>
+                                    @elseif($s['license_status'] === 'pending')
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            <span>Menunggu</span>
+                                        </span>
+                                        <div class="text-[10px] text-slate-400 font-tabular mt-0.5">Mulai {{ $s['start_date'] }}</div>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                            <span>Kedaluwarsa</span>
+                                        </span>
+                                        <div class="text-[10px] text-slate-400 font-tabular mt-0.5">Habis {{ $s['expiration_date'] }}</div>
+                                    @endif
+                                </td>
+
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono font-tabular font-medium text-[11px]">
+                                        {{ $s['trainer_kits_count'] }} Unit
+                                    </span>
+                                </td>
+
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        @if($s['has_coordinates'])
+                                            <button
+                                                type="button"
+                                                @click="focusSchoolOnMap({{ $s['id'] }})"
+                                                class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors inline-flex items-center gap-1"
+                                                title="Fokuskan ke Peta"
+                                            >
+                                                <i data-lucide="map-pin" class="w-3 h-3 text-emerald-600"></i>
+                                                <span class="hidden sm:inline">Peta</span>
+                                            </button>
+                                        @endif
+                                        <a
+                                            href="{{ route('master.schools.show', $s['id']) }}"
+                                            class="px-2.5 py-1.5 rounded-xl bg-[#0c3c26] hover:bg-[#082819] text-white font-semibold text-xs transition-colors inline-flex items-center gap-1"
+                                        >
+                                            <span>Detail</span>
+                                            <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-slate-400">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <i data-lucide="school" class="w-8 h-8 text-slate-300 mb-2"></i>
+                                        <p class="text-sm font-medium text-slate-700">Tidak ada sekolah mitra yang cocok</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">Ubah filter status lisensi atau kata kunci pencarian.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
-
-    <!-- Administrative Levels Navigation Tabs -->
-    <div class="flex items-center gap-2 border-b border-slate-200">
-        <a
-            href="{{ route('master.regions.index', ['level' => 'provinces']) }}"
-            class="px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2
-                {{ $level === 'provinces' ? 'border-[#0c3c26] text-[#0c3c26]' : 'border-transparent text-slate-500 hover:text-slate-800' }}"
-        >
-            <i data-lucide="map" class="w-4 h-4"></i>
-            <span>Tingkat I — Provinsi</span>
-        </a>
-        <a
-            href="{{ route('master.regions.index', ['level' => 'regencies', 'province_code' => $selectedProvince]) }}"
-            class="px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2
-                {{ $level === 'regencies' ? 'border-[#0c3c26] text-[#0c3c26]' : 'border-transparent text-slate-500 hover:text-slate-800' }}"
-        >
-            <i data-lucide="building" class="w-4 h-4"></i>
-            <span>Tingkat II — Kabupaten / Kota</span>
-        </a>
-        <a
-            href="{{ route('master.regions.index', ['level' => 'districts', 'province_code' => $selectedProvince, 'regency_code' => $selectedRegency]) }}"
-            class="px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2
-                {{ $level === 'districts' ? 'border-[#0c3c26] text-[#0c3c26]' : 'border-transparent text-slate-500 hover:text-slate-800' }}"
-        >
-            <i data-lucide="navigation" class="w-4 h-4"></i>
-            <span>Tingkat III — Kecamatan</span>
-        </a>
-    </div>
-
-    <!-- Filter and Search Toolbar -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs">
-        <form method="GET" action="{{ route('master.regions.index') }}" class="flex flex-col sm:flex-row gap-3">
-            <input type="hidden" name="level" value="{{ $level }}">
-
-            @if($level !== 'provinces')
-                <div class="sm:w-64">
-                    <select
-                        name="province_code"
-                        class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
-                        onchange="this.form.submit()"
-                    >
-                        <option value="">Semua Provinsi</option>
-                        @foreach($provinces as $prov)
-                            <option value="{{ $prov->code }}" {{ $selectedProvince === $prov->code ? 'selected' : '' }}>
-                                {{ $prov->code }} - {{ $prov->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            @endif
-
-            <div class="relative flex-1">
-                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                <input
-                    type="text"
-                    name="search"
-                    value="{{ $search }}"
-                    placeholder="Cari kode wilayah atau nama..."
-                    class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0c3c26]"
-                >
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button
-                    type="submit"
-                    class="px-4 py-2 text-xs font-semibold rounded-xl bg-[#0c3c26] text-white hover:bg-[#092d1c] transition-colors"
-                >
-                    Filter
-                </button>
-                @if(!empty($search) || !empty($selectedProvince) || !empty($selectedRegency))
-                    <a
-                        href="{{ route('master.regions.index', ['level' => $level]) }}"
-                        class="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-                    >
-                        Reset
-                    </a>
-                @endif
-            </div>
-        </form>
-    </div>
-
-    <!-- Data Table -->
-    <div class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                        <th class="py-3 px-4 w-36">Kode Wilayah</th>
-                        @if($level === 'districts')
-                            <th class="py-3 px-4">Provinsi</th>
-                            <th class="py-3 px-4">Kabupaten / Kota</th>
-                            <th class="py-3 px-4">Nama Kecamatan</th>
-                        @elseif($level === 'regencies')
-                            <th class="py-3 px-4">Provinsi</th>
-                            <th class="py-3 px-4">Nama Kabupaten / Kota</th>
-                        @else
-                            <th class="py-3 px-4">Nama Provinsi</th>
-                            <th class="py-3 px-4 text-center">Jumlah Kab / Kota</th>
-                            <th class="py-3 px-4 text-center">Sekolah Terdaftar</th>
-                        @endif
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-xs">
-                    @forelse($items as $item)
-                        <tr class="hover:bg-slate-50/80 transition-colors">
-                            <td class="py-3 px-4 font-mono font-medium text-slate-900 font-tabular">
-                                <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800">
-                                    {{ $item->code }}
-                                </span>
-                            </td>
-
-                            @if($level === 'districts')
-                                <td class="py-3 px-4 text-slate-600">
-                                    {{ $item->regency?->province?->name ?? '—' }}
-                                </td>
-                                <td class="py-3 px-4 text-slate-700 font-medium">
-                                    {{ $item->regency?->name ?? '—' }}
-                                </td>
-                                <td class="py-3 px-4 text-slate-900 font-semibold">
-                                    {{ $item->name }}
-                                </td>
-                            @elseif($level === 'regencies')
-                                <td class="py-3 px-4 text-slate-600">
-                                    {{ $item->province?->name ?? '—' }}
-                                </td>
-                                <td class="py-3 px-4 text-slate-900 font-semibold">
-                                    {{ $item->name }}
-                                </td>
-                            @else
-                                <td class="py-3 px-4 font-semibold text-slate-900">
-                                    {{ $item->name }}
-                                </td>
-                                <td class="py-3 px-4 text-center font-tabular text-slate-700">
-                                    {{ $item->regencies_count ?? 0 }}
-                                </td>
-                                <td class="py-3 px-4 text-center font-tabular text-slate-700">
-                                    {{ $item->schools_count ?? 0 }}
-                                </td>
-                            @endif
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ $level === 'districts' ? 4 : ($level === 'regencies' ? 3 : 4) }}" class="py-8 text-center text-slate-500">
-                                <div class="flex flex-col items-center justify-center">
-                                    <i data-lucide="map-pin-off" class="w-8 h-8 text-slate-300 mb-2"></i>
-                                    <p class="text-sm font-medium text-slate-700">Tidak ada data wilayah yang ditemukan</p>
-                                    <p class="text-xs text-slate-400 mt-0.5">Coba ubah kata kunci pencarian atau filter provinsi.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        @if($items->hasPages())
-            <div class="p-3.5 border-t border-slate-100 bg-slate-50/50">
-                {{ $items->links() }}
-            </div>
-        @endif
     </div>
 </div>
-@endsection
 
+<script>
+function schoolDistributionApp(markersData) {
+    return {
+        map: null,
+        markersGroup: null,
+        markerMap: {},
+        mapLoaded: false,
+        markers: markersData,
+
+        init() {
+            this.$nextTick(() => {
+                this.initMap();
+            });
+        },
+
+        initMap() {
+            if (typeof L === 'undefined') {
+                console.warn('Leaflet library is not loaded');
+                return;
+            }
+
+            const container = this.$refs.mapContainer;
+            if (!container) return;
+
+            // Center of Indonesia: [-2.5, 118.0], zoom: 5
+            this.map = L.map(container, {
+                zoomControl: true,
+                scrollWheelZoom: true,
+            }).setView([-2.5489, 118.0149], 5);
+
+            // Base Carto Positron or OSM Tile Layer with compliant attribution
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(this.map);
+
+            this.markersGroup = L.featureGroup().addTo(this.map);
+
+            // Populate markers
+            this.plotMarkers();
+
+            this.mapLoaded = true;
+
+            // Fit bounds if markers exist
+            if (this.markers && this.markers.length > 0) {
+                setTimeout(() => {
+                    this.map.invalidateSize();
+                    try {
+                        this.map.fitBounds(this.markersGroup.getBounds().pad(0.15));
+                    } catch (e) {
+                        // ignore single marker bounds issue
+                    }
+                }, 300);
+            }
+        },
+
+        plotMarkers() {
+            this.markersGroup.clearLayers();
+            this.markerMap = {};
+
+            this.markers.forEach(item => {
+                if (!item.lat || !item.lng) return;
+
+                const pinColor = item.status === 'active' ? '#15803d' : (item.status === 'pending' ? '#d97706' : '#e11d48');
+
+                const customIcon = L.divIcon({
+                    className: 'custom-school-marker',
+                    html: `
+                        <div style="background-color: ${pinColor}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.25); border: 2px solid #ffffff; cursor: pointer;">
+                            <svg style="width: 14px; height: 14px; color: #ffffff;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 7.2c0 7.3-8 11.8-8 11.8z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                        </div>
+                    `,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28],
+                    popupAnchor: [0, -28]
+                });
+
+                const marker = L.marker([item.lat, item.lng], { icon: customIcon });
+
+                const popupHtml = `
+                    <div style="font-family: Inter, sans-serif; min-width: 220px; padding: 4px;">
+                        <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+                            ${item.name}
+                        </div>
+                        <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">
+                            NPSN: ${item.npsn} &bull; ${item.regency}, ${item.province}
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 11px;">
+                            <span style="font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: ${item.status === 'active' ? '#dcfce7; color: #166534;' : (item.status === 'pending' ? '#fef3c7; color: #92400e;' : '#ffe4e6; color: #9f1239;')}">
+                                ${item.status_label}
+                            </span>
+                            <span style="color: #475569; font-weight: 500;">
+                                ${item.kits_count} Unit Kit
+                            </span>
+                        </div>
+                        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
+                            Lisensi: <strong>${item.license_number}</strong>
+                        </div>
+                        <a href="${item.detail_url}" style="display: block; text-align: center; background-color: #0c3c26; color: #ffffff; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; text-decoration: none;">
+                            Buka Detail Stasiun & Sekolah &rarr;
+                        </a>
+                    </div>
+                `;
+
+                marker.bindPopup(popupHtml);
+                this.markersGroup.addLayer(marker);
+                this.markerMap[item.id] = marker;
+            });
+        },
+
+        focusSchoolOnMap(schoolId) {
+            const marker = this.markerMap[schoolId];
+            if (marker && this.map) {
+                this.map.setView(marker.getLatLng(), 14, { animate: true });
+                marker.openPopup();
+                const container = this.$refs.mapContainer;
+                if (container) {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        },
+
+        resetMapZoom() {
+            if (this.map && this.markersGroup) {
+                try {
+                    this.map.fitBounds(this.markersGroup.getBounds().pad(0.15));
+                } catch (e) {
+                    this.map.setView([-2.5489, 118.0149], 5);
+                }
+            }
+        }
+    };
+}
+</script>
+@endsection
