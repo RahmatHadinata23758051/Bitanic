@@ -189,7 +189,7 @@
                         @php
                             $lic = $school->license;
                         @endphp
-                        <tr class="hover:bg-slate-50/60 transition-colors">
+                        <tr id="school-license-row-{{ $school->id }}" class="hover:bg-slate-50/60 transition-colors">
                             {{-- Sekolah / NPSN --}}
                             <td class="py-3.5 px-4">
                                 <div class="font-medium text-slate-900">{{ $school->name }}</div>

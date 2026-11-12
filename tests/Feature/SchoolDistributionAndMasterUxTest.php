@@ -422,7 +422,11 @@ class SchoolDistributionAndMasterUxTest extends TestCase
         $response = $this->actingAs($this->superuser)->get(route('master.licenses.index'));
         $response->assertOk();
 
-        // All schools must appear in the directory (1 row per school)
+        // 1. One row per school in directory: all 7 schools + 2 setup schools must appear
+        $totalDbSchools = School::count();
+        $this->assertEquals($totalDbSchools, $response->viewData('totalSchools'));
+        $this->assertEquals($totalDbSchools, $response->viewData('schools')->total());
+
         $response->assertSee($school1->name);
         $response->assertSee($school2->name);
         $response->assertSee($school3->name);
@@ -431,21 +435,128 @@ class SchoolDistributionAndMasterUxTest extends TestCase
         $response->assertSee($school6->name);
         $response->assertSee($school7->name);
 
-        // Verify Status Filter: Active
+        // 2. Canonical KPI counts and disjoint partition check
+        $totalSchools = $response->viewData('totalSchools');
+        $totalLicenses = $response->viewData('totalLicenses');
+        $activeLicenses = $response->viewData('activeLicenses');
+        $pendingLicenses = $response->viewData('pendingLicenses');
+        $expiredLicenses = $response->viewData('expiredLicenses');
+        $uninitializedCount = $response->viewData('uninitializedSchoolsCount');
+        $unentitledCount = $response->viewData('unentitledSchoolsCount');
+
+        $this->assertEquals(2, $activeLicenses); // School 4 and School 7
+        $this->assertEquals(2, $pendingLicenses); // School 2 (unactivated) and School 3 (future)
+        $this->assertEquals(2, $expiredLicenses); // School 5 (expired past) and School 6 (renewal gap)
+        $this->assertEquals(4, $uninitializedCount); // Baseline migration school + School A + School B + School 1
+        $this->assertEquals(6, $totalLicenses); // Lic 2, 3, 4, 5, 6, 7
+
+        // Mathematical partition assertion: Active + Pending + Expired + Uninitialized == Total
+        $this->assertEquals($totalSchools, $activeLicenses + $pendingLicenses + $expiredLicenses + $uninitializedCount);
+        // Tanpa Hak Aktif assertion: Total - Active == Pending + Expired + Uninitialized
+        $this->assertEquals($totalSchools - $activeLicenses, $unentitledCount);
+        $this->assertEquals($pendingLicenses + $expiredLicenses + $uninitializedCount, $unentitledCount);
+
+        // 3. Verify Status Filter: Active
         $resActive = $this->actingAs($this->superuser)->get(route('master.licenses.index', ['status' => 'active']));
         $resActive->assertOk();
-        $resActive->assertSee($school4->name);
-        $resActive->assertSee($school7->name);
-        $resActive->assertDontSee($school5->name);
-        $resActive->assertDontSee($school6->name);
+        $this->assertEquals(2, $resActive->viewData('schools')->total());
+        $activeIds = $resActive->viewData('schools')->pluck('id')->all();
+        $this->assertContains($school4->id, $activeIds);
+        $this->assertContains($school7->id, $activeIds);
+        $this->assertNotContains($school1->id, $activeIds);
+        $this->assertNotContains($school2->id, $activeIds);
+        $this->assertNotContains($school3->id, $activeIds);
+        $this->assertNotContains($school5->id, $activeIds);
+        $this->assertNotContains($school6->id, $activeIds);
+        $resActive->assertSee('id="school-license-row-'.$school4->id.'"', false);
+        $resActive->assertSee('id="school-license-row-'.$school7->id.'"', false);
+        $resActive->assertDontSee('id="school-license-row-'.$school1->id.'"', false);
+        $resActive->assertDontSee('id="school-license-row-'.$school2->id.'"', false);
+        $resActive->assertDontSee('id="school-license-row-'.$school3->id.'"', false);
+        $resActive->assertDontSee('id="school-license-row-'.$school5->id.'"', false);
+        $resActive->assertDontSee('id="school-license-row-'.$school6->id.'"', false);
 
-        // Verify Status Filter: Expired
+        // 4. Verify Status Filter: Pending / Unactivated (future terms or initialized without terms)
+        $resPending = $this->actingAs($this->superuser)->get(route('master.licenses.index', ['status' => 'pending']));
+        $resPending->assertOk();
+        $this->assertEquals(2, $resPending->viewData('schools')->total());
+        $pendingIds = $resPending->viewData('schools')->pluck('id')->all();
+        $this->assertContains($school2->id, $pendingIds);
+        $this->assertContains($school3->id, $pendingIds);
+        $this->assertNotContains($school1->id, $pendingIds);
+        $this->assertNotContains($school4->id, $pendingIds);
+        $this->assertNotContains($school5->id, $pendingIds);
+        $this->assertNotContains($school6->id, $pendingIds); // Renewal gap must NOT appear in pending!
+        $this->assertNotContains($school7->id, $pendingIds);
+        $resPending->assertSee('id="school-license-row-'.$school2->id.'"', false);
+        $resPending->assertSee('id="school-license-row-'.$school3->id.'"', false);
+        $resPending->assertDontSee('id="school-license-row-'.$school1->id.'"', false);
+        $resPending->assertDontSee('id="school-license-row-'.$school4->id.'"', false);
+        $resPending->assertDontSee('id="school-license-row-'.$school5->id.'"', false);
+        $resPending->assertDontSee('id="school-license-row-'.$school6->id.'"', false);
+        $resPending->assertDontSee('id="school-license-row-'.$school7->id.'"', false);
+
+        // 5. Verify Status Filter: Expired (past term or renewal gap)
         $resExpired = $this->actingAs($this->superuser)->get(route('master.licenses.index', ['status' => 'expired']));
         $resExpired->assertOk();
-        $resExpired->assertSee($school5->name);
-        $resExpired->assertSee($school6->name);
-        $resExpired->assertDontSee($school4->name);
-        $resExpired->assertDontSee($school7->name);
+        $this->assertEquals(2, $resExpired->viewData('schools')->total());
+        $expiredIds = $resExpired->viewData('schools')->pluck('id')->all();
+        $this->assertContains($school5->id, $expiredIds);
+        $this->assertContains($school6->id, $expiredIds); // Critical Case: expired-to-future renewal gap is EXPIRED
+        $this->assertNotContains($school1->id, $expiredIds);
+        $this->assertNotContains($school2->id, $expiredIds);
+        $this->assertNotContains($school3->id, $expiredIds);
+        $this->assertNotContains($school4->id, $expiredIds);
+        $this->assertNotContains($school7->id, $expiredIds);
+        $resExpired->assertSee('id="school-license-row-'.$school5->id.'"', false);
+        $resExpired->assertSee('id="school-license-row-'.$school6->id.'"', false);
+        $resExpired->assertDontSee('id="school-license-row-'.$school1->id.'"', false);
+        $resExpired->assertDontSee('id="school-license-row-'.$school2->id.'"', false);
+        $resExpired->assertDontSee('id="school-license-row-'.$school3->id.'"', false);
+        $resExpired->assertDontSee('id="school-license-row-'.$school4->id.'"', false);
+        $resExpired->assertDontSee('id="school-license-row-'.$school7->id.'"', false);
+
+        // 6. Verify Status Filter: Uninitialized (no license initialized)
+        $resUninitialized = $this->actingAs($this->superuser)->get(route('master.licenses.index', ['status' => 'uninitialized']));
+        $resUninitialized->assertOk();
+        $this->assertEquals(4, $resUninitialized->viewData('schools')->total());
+        $uninitIds = $resUninitialized->viewData('schools')->pluck('id')->all();
+        $this->assertContains($school1->id, $uninitIds);
+        $this->assertNotContains($school2->id, $uninitIds);
+        $this->assertNotContains($school3->id, $uninitIds);
+        $this->assertNotContains($school4->id, $uninitIds);
+        $this->assertNotContains($school5->id, $uninitIds);
+        $this->assertNotContains($school6->id, $uninitIds);
+        $this->assertNotContains($school7->id, $uninitIds);
+        $resUninitialized->assertSee('id="school-license-row-'.$school1->id.'"', false);
+        $resUninitialized->assertDontSee('id="school-license-row-'.$school2->id.'"', false);
+        $resUninitialized->assertDontSee('id="school-license-row-'.$school3->id.'"', false);
+        $resUninitialized->assertDontSee('id="school-license-row-'.$school4->id.'"', false);
+        $resUninitialized->assertDontSee('id="school-license-row-'.$school5->id.'"', false);
+        $resUninitialized->assertDontSee('id="school-license-row-'.$school6->id.'"', false);
+        $resUninitialized->assertDontSee('id="school-license-row-'.$school7->id.'"', false);
+
+        // 7. Verify Filter: Tanpa Hak Aktif (unentitled_only = 1)
+        // MUST include: uninitialized (school1, setup), pending (school2, school3), expired (school5, school6)
+        // MUST NOT include: active (school4, school7)
+        $resUnentitled = $this->actingAs($this->superuser)->get(route('master.licenses.index', ['unentitled_only' => '1']));
+        $resUnentitled->assertOk();
+        $this->assertEquals($unentitledCount, $resUnentitled->viewData('schools')->total());
+        $unentitledIds = $resUnentitled->viewData('schools')->pluck('id')->all();
+        $this->assertContains($school1->id, $unentitledIds);
+        $this->assertContains($school2->id, $unentitledIds);
+        $this->assertContains($school3->id, $unentitledIds);
+        $this->assertContains($school5->id, $unentitledIds);
+        $this->assertContains($school6->id, $unentitledIds); // Critical Case: School 6 renewal gap MUST appear in Tanpa Hak Aktif
+        $this->assertNotContains($school4->id, $unentitledIds); // Active MUST NOT appear
+        $this->assertNotContains($school7->id, $unentitledIds); // Active MUST NOT appear
+        $resUnentitled->assertSee('id="school-license-row-'.$school1->id.'"', false);
+        $resUnentitled->assertSee('id="school-license-row-'.$school2->id.'"', false);
+        $resUnentitled->assertSee('id="school-license-row-'.$school3->id.'"', false);
+        $resUnentitled->assertSee('id="school-license-row-'.$school5->id.'"', false);
+        $resUnentitled->assertSee('id="school-license-row-'.$school6->id.'"', false);
+        $resUnentitled->assertDontSee('id="school-license-row-'.$school4->id.'"', false);
+        $resUnentitled->assertDontSee('id="school-license-row-'.$school7->id.'"', false);
     }
 
     public function test_administrative_reference_view_preserved(): void

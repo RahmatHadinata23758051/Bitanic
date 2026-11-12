@@ -41,83 +41,8 @@ class MasterLicenseController extends Controller
             });
         }
 
-        // Status Filter: active | pending | expired | uninitialized
-        $status = $request->input('status');
-        if ($status === 'active') {
-            $query->whereHas('license', function ($lq) use ($today) {
-                $lq->where(function ($sub) use ($today) {
-                    $sub->whereHas('terms', function ($tq) use ($today) {
-                        $tq->where('start_date', '<=', $today)
-                            ->where('expiration_date', '>', $today);
-                    })->orWhere(function ($fb) use ($today) {
-                        $fb->doesntHave('terms')
-                            ->whereNotNull('start_date')
-                            ->whereNotNull('expiration_date')
-                            ->where('start_date', '<=', $today)
-                            ->where('expiration_date', '>', $today);
-                    });
-                });
-            });
-        } elseif ($status === 'pending' || $status === 'unactivated') {
-            $query->whereHas('license', function ($lq) use ($today) {
-                $lq->where(function ($sub) use ($today) {
-                    $sub->doesntHave('terms')
-                        ->where(function ($fb) use ($today) {
-                            $fb->whereNull('start_date')
-                                ->orWhereNull('expiration_date')
-                                ->orWhere('start_date', '>', $today);
-                        });
-                })->orWhere(function ($sub) use ($today) {
-                    $sub->whereDoesntHave('terms', function ($tq) use ($today) {
-                        $tq->where('expiration_date', '<=', $today);
-                    })->whereDoesntHave('terms', function ($tq) use ($today) {
-                        $tq->where('start_date', '<=', $today)
-                            ->where('expiration_date', '>', $today);
-                    });
-                });
-            });
-        } elseif ($status === 'expired') {
-            $query->whereHas('license', function ($lq) use ($today) {
-                $lq->where(function ($sub) use ($today) {
-                    $sub->whereHas('terms', function ($tq) use ($today) {
-                        $tq->where('expiration_date', '<=', $today);
-                    })->orWhere(function ($fb) use ($today) {
-                        $fb->whereNotNull('expiration_date')->where('expiration_date', '<=', $today);
-                    });
-                })->whereDoesntHave('terms', function ($tq) use ($today) {
-                    $tq->where('start_date', '<=', $today)
-                        ->where('expiration_date', '>', $today);
-                });
-            });
-        } elseif ($status === 'uninitialized') {
-            $query->doesntHave('license');
-        }
-
-        // Filter: Schools without active license
-        if ($request->boolean('unentitled_only')) {
-            $query->where(function ($q) use ($today) {
-                $q->doesntHave('license')
-                    ->orWhereHas('license', function ($lq) use ($today) {
-                        $lq->whereDoesntHave('terms', function ($tq) use ($today) {
-                            $tq->where('start_date', '<=', $today)
-                                ->where('expiration_date', '>', $today);
-                        })->where(function ($fb) use ($today) {
-                            $fb->whereNull('start_date')
-                                ->orWhereNull('expiration_date')
-                                ->orWhere('start_date', '>', $today)
-                                ->orWhere('expiration_date', '<=', $today);
-                        });
-                    });
-            });
-        }
-
-        $schools = $query->paginate(15)->withQueryString();
-
-        // Global Metrics across schools
-        $totalSchools = School::count();
-        $totalLicenses = SchoolLicense::count();
-
-        $activeLicenses = School::whereHas('license', function ($lq) use ($today) {
+        // Canonical status conditions aligned strictly with SchoolLicenseResolver semantics
+        $activeLicenseCondition = function ($lq) use ($today) {
             $lq->where(function ($sub) use ($today) {
                 $sub->whereHas('terms', function ($tq) use ($today) {
                     $tq->where('start_date', '<=', $today)
@@ -130,42 +55,79 @@ class MasterLicenseController extends Controller
                         ->where('expiration_date', '>', $today);
                 });
             });
-        })->count();
+        };
 
-        $expiredLicenses = School::whereHas('license', function ($lq) use ($today) {
+        $expiredLicenseCondition = function ($lq) use ($today) {
             $lq->where(function ($sub) use ($today) {
-                $sub->whereHas('terms', function ($tq) use ($today) {
-                    $tq->where('expiration_date', '<=', $today);
-                })->orWhere(function ($fb) use ($today) {
-                    $fb->whereNotNull('expiration_date')->where('expiration_date', '<=', $today);
-                });
-            })->whereDoesntHave('terms', function ($tq) use ($today) {
-                $tq->where('start_date', '<=', $today)
-                    ->where('expiration_date', '>', $today);
-            });
-        })->count();
-
-        $uninitializedSchoolsCount = School::doesntHave('license')->count();
-
-        $pendingLicenses = School::whereHas('license', function ($lq) use ($today) {
-            $lq->where(function ($sub) use ($today) {
-                $sub->doesntHave('terms')
-                    ->where(function ($fb) use ($today) {
-                        $fb->whereNull('start_date')
-                            ->orWhereNull('expiration_date')
-                            ->orWhere('start_date', '>', $today);
+                // Case A: terms exist, has at least one expired term, but no active term today
+                $sub->where(function ($termsBranch) use ($today) {
+                    $termsBranch->whereHas('terms', function ($tq) use ($today) {
+                        $tq->where('expiration_date', '<=', $today);
+                    })->whereDoesntHave('terms', function ($tq) use ($today) {
+                        $tq->where('start_date', '<=', $today)
+                            ->where('expiration_date', '>', $today);
                     });
-            })->orWhere(function ($sub) use ($today) {
-                $sub->whereDoesntHave('terms', function ($tq) use ($today) {
-                    $tq->where('expiration_date', '<=', $today);
-                })->whereDoesntHave('terms', function ($tq) use ($today) {
-                    $tq->where('start_date', '<=', $today)
-                        ->where('expiration_date', '>', $today);
-                });
+                })
+                // Case B: no terms exist, license fallback dates are expired
+                    ->orWhere(function ($fallbackBranch) use ($today) {
+                        $fallbackBranch->doesntHave('terms')
+                            ->whereNotNull('expiration_date')
+                            ->where('expiration_date', '<=', $today);
+                    });
             });
-        })->count();
+        };
 
-        $unentitledSchoolsCount = $totalSchools - $activeLicenses;
+        $pendingLicenseCondition = function ($lq) use ($today) {
+            $lq->where(function ($sub) use ($today) {
+                // Case A: terms exist, all terms are strictly in the future (no active term, no expired term)
+                $sub->where(function ($futureBranch) use ($today) {
+                    $futureBranch->whereHas('terms')
+                        ->whereDoesntHave('terms', function ($tq) use ($today) {
+                            $tq->where('expiration_date', '<=', $today);
+                        })->whereDoesntHave('terms', function ($tq) use ($today) {
+                            $tq->where('start_date', '<=', $today)
+                                ->where('expiration_date', '>', $today);
+                        });
+                })
+                // Case B: no terms exist, initialized/unactivated or future fallback
+                    ->orWhere(function ($fallbackBranch) use ($today) {
+                        $fallbackBranch->doesntHave('terms')
+                            ->where(function ($fb) use ($today) {
+                                $fb->whereNull('start_date')
+                                    ->orWhereNull('expiration_date')
+                                    ->orWhere('start_date', '>', $today);
+                            });
+                    });
+            });
+        };
+
+        // Status Filter: active | pending | expired | uninitialized
+        $status = $request->input('status');
+        if ($status === 'active') {
+            $query->whereHas('license', $activeLicenseCondition);
+        } elseif ($status === 'pending' || $status === 'unactivated') {
+            $query->whereHas('license', $pendingLicenseCondition);
+        } elseif ($status === 'expired') {
+            $query->whereHas('license', $expiredLicenseCondition);
+        } elseif ($status === 'uninitialized') {
+            $query->doesntHave('license');
+        }
+
+        // Filter: Schools without active license (Tanpa Hak Aktif)
+        if ($request->boolean('unentitled_only')) {
+            $query->whereDoesntHave('license', $activeLicenseCondition);
+        }
+
+        $schools = $query->paginate(15)->withQueryString();
+
+        // Global Metrics across schools (Canonical SchoolLicenseResolver alignment)
+        $totalSchools = School::count();
+        $totalLicenses = SchoolLicense::count();
+        $activeLicenses = School::whereHas('license', $activeLicenseCondition)->count();
+        $pendingLicenses = School::whereHas('license', $pendingLicenseCondition)->count();
+        $expiredLicenses = School::whereHas('license', $expiredLicenseCondition)->count();
+        $uninitializedSchoolsCount = School::doesntHave('license')->count();
+        $unentitledSchoolsCount = School::whereDoesntHave('license', $activeLicenseCondition)->count();
 
         // Schools available for new license initialization
         $availableSchools = School::where('status', 'active')
