@@ -32,6 +32,7 @@ class MasterTrainerKitController extends Controller
         Gate::authorize('viewAny', TrainerKitInventory::class);
 
         $search = trim((string) $request->query('search', ''));
+        $tab = $request->query('tab', 'all');
         $status = $request->query('status');
         $batch = $request->query('batch');
         $schoolId = $request->query('school_id');
@@ -39,12 +40,17 @@ class MasterTrainerKitController extends Controller
 
         $query = TrainerKitInventory::with(['school', 'device', 'registeredBy', 'latestSaleRecord.school', 'handover']);
 
+        // Search Filter
         if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('serial_number', 'like', "%{$search}%")
                     ->orWhere('model_name', 'like', "%{$search}%")
                     ->orWhere('batch_number', 'like', "%{$search}%")
                     ->orWhere('notes', 'like', "%{$search}%")
+                    ->orWhereHas('school', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%")
+                            ->orWhere('npsn', 'like', "%{$search}%");
+                    })
                     ->orWhereHas('saleRecords', function ($sq) use ($search) {
                         $sq->where('sale_reference', 'like', "%{$search}%");
                     })
@@ -55,6 +61,18 @@ class MasterTrainerKitController extends Controller
             });
         }
 
+        // Operational Tab Filter
+        if (in_array($tab, ['factory_stock', 'stock'], true)) {
+            $query->where('status', TrainerKitInventory::STATUS_REGISTERED);
+        } elseif ($tab === 'school_owned') {
+            $query->whereNotNull('school_id');
+        } elseif ($tab === 'maintenance') {
+            $query->where('status', TrainerKitInventory::STATUS_MAINTENANCE);
+        } elseif ($tab === 'decommissioned') {
+            $query->where('status', TrainerKitInventory::STATUS_DECOMMISSIONED);
+        }
+
+        // Lifecycle Status Filter
         if (! empty($status)) {
             $query->where('status', $status);
         }
@@ -82,12 +100,25 @@ class MasterTrainerKitController extends Controller
 
         $inventories = $query->orderByDesc('id')->paginate(15)->withQueryString();
 
-        // High-level fleet metrics
+        // Accurate Business KPIs (Semantically Non-Disjoint Metrics)
         $totalCount = TrainerKitInventory::count();
         $registeredStockCount = TrainerKitInventory::where('status', TrainerKitInventory::STATUS_REGISTERED)->count();
+        $schoolOwnedCount = TrainerKitInventory::whereNotNull('school_id')->count();
+        $workstationLinkedCount = TrainerKitInventory::whereNotNull('device_id')->count();
+        $activatedCount = TrainerKitInventory::where('status', TrainerKitInventory::STATUS_ACTIVATED)->count();
+
+        // Legacy/additive lifecycle breakdown counters for test compatibility
         $soldCount = TrainerKitInventory::where('status', TrainerKitInventory::STATUS_SOLD)->count();
         $assignedCount = TrainerKitInventory::where('status', TrainerKitInventory::STATUS_ASSIGNED)->count();
-        $activatedCount = TrainerKitInventory::where('status', TrainerKitInventory::STATUS_ACTIVATED)->count();
+
+        $lifecycleDistribution = [
+            'registered' => $registeredStockCount,
+            'sold' => $soldCount,
+            'assigned' => $assignedCount,
+            'activated' => $activatedCount,
+            'maintenance' => TrainerKitInventory::where('status', TrainerKitInventory::STATUS_MAINTENANCE)->count(),
+            'decommissioned' => TrainerKitInventory::where('status', TrainerKitInventory::STATUS_DECOMMISSIONED)->count(),
+        ];
 
         $schools = School::orderBy('name')->get(['id', 'name', 'npsn', 'slug']);
         $batches = TrainerKitInventory::whereNotNull('batch_number')
@@ -98,15 +129,19 @@ class MasterTrainerKitController extends Controller
         return view('pages.master.trainer-kits.index', compact(
             'inventories',
             'search',
+            'tab',
             'status',
             'batch',
             'schoolId',
             'warrantyStatus',
             'totalCount',
             'registeredStockCount',
+            'schoolOwnedCount',
+            'workstationLinkedCount',
+            'activatedCount',
             'soldCount',
             'assignedCount',
-            'activatedCount',
+            'lifecycleDistribution',
             'schools',
             'batches'
         ));
