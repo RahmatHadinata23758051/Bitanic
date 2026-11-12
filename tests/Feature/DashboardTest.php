@@ -692,6 +692,12 @@ class DashboardTest extends TestCase
         $response->assertSee(route('master.schools.show', $school->id));
         $response->assertSee('Ahmad Praktikan');
         $response->assertSee('0012345678');
+        $response->assertSee('macro-distribution-map');
+        $response->assertSee('btn-map-zoom-in');
+        $response->assertSee('btn-map-zoom-out');
+        $response->assertSee('btn-map-fit-bounds');
+        $response->assertSee('btn-map-reset-indonesia');
+        $response->assertSee('focusSchoolOnDashboardMap');
     }
 
     public function test_guest_does_not_see_private_network_address_or_school_attendance(): void
