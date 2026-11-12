@@ -258,7 +258,7 @@
         <!-- Map Footer Attribution & Info -->
         <div class="p-3 bg-slate-50/80 border-t border-slate-100 text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-                Data Koordinat: Terverifikasi institusi &bull; Peta: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" class="underline text-slate-600">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" class="underline text-slate-600">CARTO</a>
+                Data Koordinat: Terverifikasi institusi &bull; Peta: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" class="underline text-slate-600">OpenStreetMap</a> contributors
             </div>
             <div class="text-slate-400">
                 Klik pin sekolah untuk melihat rincian lisensi dan navigasi stasiun.
@@ -526,10 +526,9 @@ function schoolDistributionApp(markersData) {
                 scrollWheelZoom: true,
             }).setView([-2.5489, 118.0149], 5);
 
-            // Base Carto Positron or OSM Tile Layer with compliant attribution
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
+            // Official OpenStreetMap Tile Layer (100% Free, No API Key Required)
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
                 maxZoom: 19
             }).addTo(this.map);
 
