@@ -13,6 +13,11 @@ class TrainerKitSeeder extends Seeder
      */
     public function run(): void
     {
+        // Hard Safety Gate: Direct execution guard against staging and production
+        if (app()->environment('production', 'staging')) {
+            throw new \RuntimeException('TrainerKitSeeder berisi data simulator perangkat meja praktik dan dilarang dieksekusi pada environment staging atau production.');
+        }
+
         $school = School::where('slug', 'smk-ppn-1-sukaraja')->first()
             ?? School::first()
             ?? School::create([

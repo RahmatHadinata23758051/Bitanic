@@ -21,6 +21,11 @@ class VocationalLmsSeeder extends Seeder
      */
     public function run(): void
     {
+        // Hard Safety Gate: Direct execution guard against staging and production
+        if (app()->environment('production', 'staging')) {
+            throw new \RuntimeException('VocationalLmsSeeder berisi akun demo, perangkat simulasi, dan data tiruan yang dilarang dieksekusi pada environment staging atau production.');
+        }
+
         // 1. School Settings
         SchoolSetting::updateOrCreate(
             ['id' => 1],
