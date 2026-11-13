@@ -146,6 +146,35 @@ class SchoolMasterCrudTest extends TestCase
         ]);
     }
 
+    public function test_superuser_can_create_new_school_with_auto_license_activation(): void
+    {
+        $payload = [
+            'name' => 'SMK Pertanian Auto Lisensi',
+            'npsn' => '20202099',
+            'slug' => 'smk-pertanian-auto-lisensi',
+            'province_code' => '32',
+            'regency_code' => '3202',
+            'district_code' => '3202210',
+            'status' => 'active',
+            'auto_activate_license' => '1',
+        ];
+
+        $response = $this->actingAs($this->superuser)
+            ->post(route('master.schools.store'), $payload);
+
+        $response->assertRedirect(route('master.schools.index'))
+            ->assertSessionHas('success');
+
+        $createdSchool = School::where('slug', 'smk-pertanian-auto-lisensi')->first();
+        $this->assertNotNull($createdSchool);
+
+        $license = $createdSchool->license;
+        $this->assertNotNull($license);
+        $this->assertSame('active', $license->status);
+        $this->assertCount(1, $license->terms);
+        $this->assertSame('initial_included', $license->terms->first()->term_type);
+    }
+
     public function test_unique_npsn_validation(): void
     {
         $payload = [
@@ -294,6 +323,40 @@ class SchoolMasterCrudTest extends TestCase
             'school_id' => $this->school->id,
             'action' => 'school.updated',
         ]);
+    }
+
+    public function test_school_update_can_activate_unlicensed_school(): void
+    {
+        $newSchool = School::create([
+            'name' => 'SMK Tanpa Lisensi Awal',
+            'slug' => 'smk-tanpa-lisensi-awal',
+            'province_code' => '32',
+            'regency_code' => '3202',
+            'status' => 'active',
+        ]);
+
+        $this->assertNull($newSchool->license);
+
+        $payload = [
+            'name' => 'SMK Tanpa Lisensi Awal (Aktifkan)',
+            'slug' => 'smk-tanpa-lisensi-awal',
+            'province_code' => '32',
+            'regency_code' => '3202',
+            'status' => 'active',
+            'auto_activate_license' => '1',
+        ];
+
+        $response = $this->actingAs($this->superuser)
+            ->put(route('master.schools.update', $newSchool), $payload);
+
+        $response->assertRedirect(route('master.schools.index'))
+            ->assertSessionHas('success');
+
+        $newSchool->refresh();
+        $license = $newSchool->license;
+        $this->assertNotNull($license);
+        $this->assertSame('active', $license->status);
+        $this->assertCount(1, $license->terms);
     }
 
     public function test_school_with_associated_records_cannot_be_hard_deleted(): void

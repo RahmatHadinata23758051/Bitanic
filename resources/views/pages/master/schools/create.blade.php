@@ -810,6 +810,32 @@
                         </div>
                     </div>
 
+                    {{-- Paket Hak Akses & Lisensi LMS Bundling (Solusi A) --}}
+                    <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/70 space-y-2">
+                        <div class="flex items-start gap-3">
+                            <div class="pt-0.5">
+                                <input
+                                    type="checkbox"
+                                    id="auto_activate_license"
+                                    name="auto_activate_license"
+                                    value="1"
+                                    checked
+                                    class="w-4 h-4 text-[#0c3c26] bg-white border-emerald-300 rounded focus:ring-[#0c3c26] cursor-pointer"
+                                >
+                            </div>
+                            <div class="space-y-1">
+                                <label for="auto_activate_license" class="text-xs font-bold text-slate-900 cursor-pointer flex flex-wrap items-center gap-2">
+                                    <i data-lucide="shield-check" class="w-4 h-4 text-[#0c3c26]"></i>
+                                    <span>Langsung Terbitkan &amp; Aktifkan Lisensi LMS Tahun Pertama (Bundling 1 Tahun)</span>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white uppercase tracking-wider">Otomatis Aktif</span>
+                                </label>
+                                <p class="text-[11px] text-slate-600 leading-relaxed">
+                                    Masa aktif 1 tahun kalender otomatis terhitung mulai hari ini. Sekolah langsung berstatus <strong class="text-emerald-800 font-semibold">AKTIF (Pin Hijau)</strong> pada peta dan dashboard tanpa perlu proses aktivasi terpisah.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Step 3 Actions -->
                     <div class="border-t border-slate-100 pt-5 flex items-center justify-between">
                         <button

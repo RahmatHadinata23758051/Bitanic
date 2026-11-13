@@ -579,6 +579,16 @@
                                                 <span class="hidden sm:inline">Peta</span>
                                             </button>
                                         @endif
+                                        @if($schoolItem['license_status'] !== 'active')
+                                            <a
+                                                href="{{ route('master.licenses.index', ['search' => $schoolItem['name']]) }}"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-300 transition-colors"
+                                                title="Aktivasi Lisensi LMS"
+                                            >
+                                                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-600"></i>
+                                                <span class="hidden md:inline">Aktivasi</span>
+                                            </a>
+                                        @endif
                                         <a
                                             href="{{ $schoolItem['workspace_url'] }}"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0c3c26] hover:bg-[#0a3120] text-white text-xs font-semibold shadow-2xs transition-colors"
@@ -1552,9 +1562,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     <span>Siswa: <strong>${pin.students_count}</strong></span>
                     <span>Trainer Kit: <strong>${pin.devices_count} Unit</strong></span>
                 </div>
-                <a href="${pin.workspace_url}" style="display: block; text-align: center; background: #0c3c26; color: white; text-decoration: none; font-size: 11px; font-weight: 600; padding: 7px 12px; border-radius: 8px; transition: background 0.15s ease;">
-                    Buka School Workspace Hub &rarr;
-                </a>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <a href="${pin.workspace_url}" style="display: block; text-align: center; background: #0c3c26; color: white; text-decoration: none; font-size: 11px; font-weight: 600; padding: 7px 12px; border-radius: 8px; transition: background 0.15s ease;">
+                        Buka School Workspace Hub &rarr;
+                    </a>
+                    ${pin.license_status !== 'active' ? `
+                        <a href="/master/licenses?search=${encodeURIComponent(pin.name)}" style="display: block; text-align: center; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; text-decoration: none; font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 8px; transition: background 0.15s ease;">
+                            ⚡ Aktivasi Lisensi LMS &rarr;
+                        </a>
+                    ` : ''}
+                </div>
             </div>
         `;
 

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\License\ActivateFirstYearLicenseAction;
+use App\Actions\License\InitializeSchoolLicenseAction;
 use App\Http\Controllers\Controller;
 use App\Models\ActivitySchedule;
 use App\Models\AuditLog;
@@ -83,8 +85,11 @@ class SchoolMasterController extends Controller
     /**
      * Store a newly created school in the global tenant registry.
      */
-    public function store(Request $request): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        InitializeSchoolLicenseAction $initLicenseAction,
+        ActivateFirstYearLicenseAction $activateLicenseAction
+    ): RedirectResponse {
         Gate::authorize('create', School::class);
 
         $validated = $request->validate([
@@ -194,8 +199,30 @@ class SchoolMasterController extends Controller
             return $school;
         });
 
+        $licenseActivated = false;
+        if ($school->status === 'active' && $request->boolean('auto_activate_license')) {
+            try {
+                $license = $initLicenseAction->execute($school, [
+                    'notes' => 'Inisialisasi lisensi otomatis saat pendaftaran sekolah.',
+                    'recorded_by' => Auth::id(),
+                ]);
+                $activateLicenseAction->execute($license, [
+                    'start_date' => now()->toDateString(),
+                    'notes' => 'Aktivasi otomatis hak akses lisensi LMS tahun pertama.',
+                    'recorded_by' => Auth::id(),
+                ]);
+                $licenseActivated = true;
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        $message = $licenseActivated
+            ? "Sekolah '{$school->name}' berhasil didaftarkan dan Lisensi LMS Tahun Pertama (Bundling 1 Tahun) langsung aktif."
+            : "Sekolah '{$school->name}' berhasil ditambahkan ke direktori master.";
+
         return redirect()->route('master.schools.index')
-            ->with('success', "Sekolah '{$school->name}' berhasil ditambahkan ke direktori master.");
+            ->with('success', $message);
     }
 
     /**
@@ -358,6 +385,8 @@ class SchoolMasterController extends Controller
     {
         Gate::authorize('update', $school);
 
+        $school->load(['license.terms']);
+
         $provinces = Province::orderBy('name')->get();
         $regencies = $school->province_code
             ? Regency::where('province_code', $school->province_code)->orderBy('name')->get()
@@ -372,8 +401,12 @@ class SchoolMasterController extends Controller
     /**
      * Update the specified school in the global tenant registry.
      */
-    public function update(Request $request, School $school): RedirectResponse
-    {
+    public function update(
+        Request $request,
+        School $school,
+        InitializeSchoolLicenseAction $initLicenseAction,
+        ActivateFirstYearLicenseAction $activateLicenseAction
+    ): RedirectResponse {
         Gate::authorize('update', $school);
 
         $validated = $request->validate([
@@ -461,8 +494,35 @@ class SchoolMasterController extends Controller
             ]);
         });
 
+        $licenseActivated = false;
+        if ($school->status === 'active' && $request->boolean('auto_activate_license')) {
+            try {
+                $license = $school->license()->first();
+                if (! $license) {
+                    $license = $initLicenseAction->execute($school, [
+                        'notes' => 'Inisialisasi lisensi saat pembaruan data sekolah.',
+                        'recorded_by' => Auth::id(),
+                    ]);
+                }
+                if ($license && $license->terms()->count() === 0) {
+                    $activateLicenseAction->execute($license, [
+                        'start_date' => now()->toDateString(),
+                        'notes' => 'Aktivasi hak akses lisensi LMS tahun pertama dari pembaruan data sekolah.',
+                        'recorded_by' => Auth::id(),
+                    ]);
+                    $licenseActivated = true;
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        $message = $licenseActivated
+            ? "Data sekolah '{$school->name}' berhasil diperbarui dan Lisensi LMS Tahun Pertama (Bundling 1 Tahun) telah aktif."
+            : "Data sekolah '{$school->name}' berhasil diperbarui.";
+
         return redirect()->route('master.schools.index')
-            ->with('success', "Data sekolah '{$school->name}' berhasil diperbarui.");
+            ->with('success', $message);
     }
 
     /**

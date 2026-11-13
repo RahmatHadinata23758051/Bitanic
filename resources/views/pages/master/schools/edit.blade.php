@@ -809,6 +809,62 @@
                         </div>
                     </div>
 
+                    @php
+                        $license = $school->license;
+                        $hasActiveTerms = $license && $license->terms->isNotEmpty();
+                    @endphp
+
+                    @if(! $hasActiveTerms)
+                        {{-- Opsi Aktivasi Lisensi LMS --}}
+                        <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/70 space-y-2">
+                            <div class="flex items-start gap-3">
+                                <div class="pt-0.5">
+                                    <input
+                                        type="checkbox"
+                                        id="auto_activate_license"
+                                        name="auto_activate_license"
+                                        value="1"
+                                        checked
+                                        class="w-4 h-4 text-[#0c3c26] bg-white border-emerald-300 rounded focus:ring-[#0c3c26] cursor-pointer"
+                                    >
+                                </div>
+                                <div class="space-y-1">
+                                    <label for="auto_activate_license" class="text-xs font-bold text-slate-900 cursor-pointer flex flex-wrap items-center gap-2">
+                                        <i data-lucide="shield-check" class="w-4 h-4 text-[#0c3c26]"></i>
+                                        <span>Aktifkan Lisensi LMS Tahun Pertama Sekarang (Bundling 1 Tahun)</span>
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-white uppercase tracking-wider">Status: Menunggu</span>
+                                    </label>
+                                    <p class="text-[11px] text-slate-600 leading-relaxed">
+                                        Sekolah ini belum memiliki masa aktif lisensi. Centang untuk langsung mengaktifkan masa berlaku 1 tahun kalender terhitung mulai hari ini agar sekolah langsung berstatus <strong class="text-emerald-800 font-semibold">AKTIF (Pin Hijau)</strong>.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        {{-- Status Lisensi Saat Ini Sudah Aktif --}}
+                        <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Status Lisensi LMS</div>
+                                    <div class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                        <span>Aktif (Nomor: {{ $license->license_number }})</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <a
+                                href="{{ route('master.licenses.show', $license) }}"
+                                class="text-[11px] font-semibold text-[#0c3c26] hover:underline inline-flex items-center gap-1"
+                            >
+                                <span>Kelola Lisensi</span>
+                                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                            </a>
+                        </div>
+                    @endif
+
                     <!-- Step 3 Actions -->
                     <div class="border-t border-slate-100 pt-5 flex items-center justify-between">
                         <button
